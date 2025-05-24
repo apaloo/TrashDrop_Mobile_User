@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrashDrop - Offline</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .offline-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .offline-icon {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+            color: var(--bs-primary);
+        }
+        .cached-content {
+            margin-top: 2rem;
+            border-top: 1px solid #dee2e6;
+            padding-top: 2rem;
+        }
+        .cached-link {
+            display: block;
+            margin: 0.5rem 0;
+            padding: 12px;
+            background-color: rgba(var(--bs-primary-rgb), 0.1);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--bs-body-color);
+            transition: all 0.2s ease;
+        }
+        .cached-link:hover {
+            background-color: rgba(var(--bs-primary-rgb), 0.2);
+        }
+        .cached-link i {
+            margin-right: 8px;
+        }
+        .reconnect-btn {
+            margin-top: 2rem;
+        }
+        .offline-status {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--bs-danger);
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container offline-container">
+        <div class="offline-status">
+            <span class="status-indicator"></span>
+            <span>Currently Offline</span>
+        </div>
+
+        <i class="bi bi-wifi-off offline-icon"></i>
+        <h1>You're offline</h1>
+        <p class="lead">Don't worry, you can still access your cached data and perform actions that will sync when you're back online.</p>
+        
+        <button id="reconnect-btn" class="btn btn-primary reconnect-btn">
+            <i class="bi bi-arrow-repeat"></i> Try to reconnect
+        </button>
+        
+        <div class="cached-content">
+            <h3>Available Offline</h3>
+            <p>The following pages are available offline:</p>
+            
+            <div class="cached-links">
+                <a href="/dashboard" class="cached-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="/scan" class="cached-link">
+                    <i class="bi bi-qr-code-scan"></i> Scan Bags
+                </a>
+                <a href="/profile" class="cached-link">
+                    <i class="bi bi-person-circle"></i> Profile
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Any actions you perform while offline will be synchronized automatically when your connection is restored.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check connection status periodically
+        function checkConnection() {
+            if (navigator.onLine) {
+                // If we're back online, reload the page
+                window.location.reload();
+            }
+        }
+
+        // Try to reconnect manually
+        document.getElementById('reconnect-btn').addEventListener('click', () => {
+            checkConnection();
+        });
+
+        // Check connection every 10 seconds
+        setInterval(checkConnection, 10000);
+
+        // Listen for online event
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+
+        // Apply dark mode if needed
+        function applyTheme() {
+            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const savedMode = localStorage.getItem('darkMode');
+            
+            if (savedMode === 'true' || (savedMode !== 'false' && prefersDarkMode)) {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+                document.body.classList.add('dark-mode');
+            } else {
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+                document.body.classList.remove('dark-mode');
+            }
+        }
+
+        // Apply theme on load
+        applyTheme();
+    </script>
+</body>
+</html>

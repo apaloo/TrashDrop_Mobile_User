@@ -1,0 +1,398 @@
+/* TrashDrop App Styles */
+
+:root {
+  --primary-color: #4CAF50;
+  --primary-dark: #388E3C;
+  --primary-light: #C8E6C9;
+  --accent-color: #FF5722;
+  --text-color: #212121;
+  --text-secondary: #757575;
+  --divider-color: #BDBDBD;
+  --success-color: #28a745;
+  --info-color: #17a2b8;
+  --warning-color: #ffc107;
+  --danger-color: #dc3545;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dark mode styles */
+.dark-mode {
+  --text-color: #f1f1f1;
+  --text-secondary: #aaaaaa;
+  --divider-color: #555555;
+  background-color: #121212;
+  color: var(--text-color);
+}
+
+.dark-mode .card,
+.dark-mode .modal-content,
+.dark-mode .list-group-item,
+.dark-mode .dropdown-menu,
+.dark-mode .card-footer {
+  background-color: #1e1e1e;
+  color: var(--text-color);
+  border-color: #333;
+}
+
+.dark-mode .text-muted {
+  color: #aaaaaa !important;
+}
+
+.dark-mode .btn-outline-secondary {
+  color: #aaaaaa;
+  border-color: #aaaaaa;
+}
+
+/* Navbar styles */
+.navbar-brand {
+  font-weight: 600;
+}
+
+/* Hero section */
+.hero {
+  padding: 4rem 0;
+  background-color: #f8f9fa;
+}
+
+.dark-mode .hero {
+  background-color: #1a1a1a;
+}
+
+/* Feature icons */
+.feature-icon {
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Action icons on dashboard */
+.action-icon {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+@media (max-width: 576px) {
+  .action-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+}
+
+/* Activity icons */
+.activity-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+/* Calendar icon for scheduled pickup */
+.calendar-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Form styles */
+.form-label {
+  font-weight: 500;
+}
+
+/* Card styles */
+.card {
+  border-radius: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+/* OTP input styling */
+.otp-input {
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+}
+
+/* PWA install button */
+.pwa-install-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: none;
+}
+
+/* Emergency logout button */
+#emergency-logout-fixed {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  opacity: 0.8;
+}
+
+#emergency-logout-fixed:hover {
+  opacity: 1;
+}
+
+/* Mobile bottom navigation */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 5px;
+  border-top: 1px solid var(--divider-color);
+  z-index: 1000;
+}
+
+.dark-mode .mobile-bottom-nav {
+  background-color: #1e1e1e;
+  border-top-color: #333;
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.75rem;
+  padding: 5px;
+}
+
+.mobile-nav-item i {
+  font-size: 1.25rem;
+  margin-bottom: 2px;
+}
+
+.mobile-nav-item.active {
+  color: var(--primary-color);
+}
+
+.mobile-nav-item:hover,
+.mobile-nav-item:focus {
+  color: var(--primary-color);
+}
+
+/* Smaller font utility class */
+.fs-7 {
+  font-size: 0.75rem !important;
+}
+
+/* QR scanner styles */
+#qr-reader {
+  max-width: 500px;
+  margin: 0 auto;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#qr-reader__dashboard {
+  padding: 10px;
+}
+
+#qr-reader__status {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+#qr-reader__camera_selection {
+  margin: 8px 0;
+  width: 100%;
+  padding: 5px;
+  border-radius: 4px;
+  border: 1px solid var(--divider-color);
+}
+
+.dark-mode #qr-reader__camera_selection {
+  background-color: #333;
+  color: #fff;
+  border-color: #555;
+}
+
+/* Scanner result styles */
+#scan-result {
+  animation: fadeIn 0.5s ease-in;
+}
+
+/* Spinner overlay */
+.spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.spinner-container {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .spinner-container {
+  background-color: #333;
+  color: white;
+}
+
+/* Map container styles */
+.map-container {
+  height: 300px;
+  width: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero {
+    padding: 2rem 0;
+  }
+  
+  .feature-icon,
+  .action-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+/* Profile page styles */
+.avatar-container {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+.dark-mode .avatar-container {
+  background-color: #333;
+}
+
+.avatar-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.password-strength-meter {
+  height: 5px;
+  transition: width 0.3s ease-in-out;
+}
+
+/* Form section styles for profile page */
+.form-section {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .form-section {
+  background-color: #1e1e1e;
+}
+
+.form-section h4 {
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+/* Toast notifications */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1050;
+}
+
+/* Progress bar animation */
+.progress-bar {
+  transition: width 0.5s ease;
+}
+
+/* Points badge animation */
+@keyframes pointsAdded {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.points-added {
+  animation: pointsAdded 0.5s ease;
+}
+
+/* Loading spinner */
+.spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.spinner-container {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.dark-mode .spinner-container {
+  background-color: #1e1e1e;
+}

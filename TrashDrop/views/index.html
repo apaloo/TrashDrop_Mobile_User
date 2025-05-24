@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="TrashDrop - Your mobile waste management solution for scheduling pickups, tracking collection, and earning rewards">
+    <title>TrashDrop - Waste Management Made Easy</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+    <!-- iOS Safari specific settings -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Skip to content link for keyboard users -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="/images/logo.svg" alt="TrashDrop Logo" width="28" height="28" class="d-inline-block align-top me-2">
+                TrashDrop
+            </a>
+            <div class="d-flex">
+                <a href="/login" class="btn btn-sm btn-outline-light me-2" aria-label="Log In">Log In</a>
+                <a href="/signup" class="btn btn-sm btn-light" aria-label="Sign Up">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero bg-light text-center py-3" role="banner">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-12 col-lg-6 text-center text-lg-start mb-3">
+                    <h1 class="fs-2 fw-bold text-success mb-2">Waste Management in Your Pocket</h1>
+                    <p class="mb-3">Schedule pickups, track collection, and earn rewards - all from your mobile device.</p>
+                    <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-3">
+                        <a href="/signup" class="btn btn-success px-4 py-2">Get Started</a>
+                        <a href="#how-it-works" class="btn btn-outline-success px-4 py-2">Learn More</a>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <img src="/images/hero-image.svg" alt="TrashDrop App Illustration" class="img-fluid rounded shadow-sm" style="max-height: 250px;">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main id="main-content">
+    <section id="how-it-works" class="py-3" aria-labelledby="how-it-works-heading">
+        <div class="container">
+            <h2 id="how-it-works-heading" class="text-center mb-3 fs-4 fw-bold">How TrashDrop Works</h2>
+            <div class="row g-3">
+                <div class="col-12 col-sm-6 col-md-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body text-center p-2 p-md-3">
+                            <div class="feature-icon bg-success bg-opacity-10 text-success rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                <i class="bi bi-qr-code-scan"></i>
+                            </div>
+                            <h5 class="card-title fs-6 fw-bold">Scan QR</h5>
+                            <p class="card-text small">Add bags to your account via QR code</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body text-center p-2 p-md-3">
+                            <div class="feature-icon bg-success bg-opacity-10 text-success rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <h5 class="card-title fs-6 fw-bold">Schedule</h5>
+                            <p class="card-text small">Request pickups at your convenience</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body text-center p-2 p-md-3">
+                            <div class="feature-icon bg-success bg-opacity-10 text-success rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                <i class="bi bi-truck"></i>
+                            </div>
+                            <h5 class="card-title fs-6 fw-bold">Track</h5>
+                            <p class="card-text small">Follow collection in real-time</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body text-center p-2 p-md-3">
+                            <div class="feature-icon bg-success bg-opacity-10 text-success rounded-circle mx-auto mb-2" style="width: 50px; height: 50px;">
+                                <i class="bi bi-award"></i>
+                            </div>
+                            <h5 class="card-title fs-6 fw-bold">Rewards</h5>
+                            <p class="card-text small">Earn points for proper disposal</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="benefits" class="py-3 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-3 fs-4 fw-bold">Benefits of TrashDrop</h2>
+            <div class="row g-3">
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body p-2 p-md-3">
+                            <h5 class="card-title fs-6 fw-bold"><i class="bi bi-clock text-success me-2"></i>Convenience</h5>
+                            <p class="card-text small">Schedule pickups and track in real-time</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body p-2 p-md-3">
+                            <h5 class="card-title fs-6 fw-bold"><i class="bi bi-globe text-success me-2"></i>Eco-Friendly</h5>
+                            <p class="card-text small">Reduce waste and help the environment</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body p-2 p-md-3">
+                            <h5 class="card-title fs-6 fw-bold"><i class="bi bi-star text-success me-2"></i>Rewards</h5>
+                            <p class="card-text small">Earn points for responsible disposal</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body p-2 p-md-3">
+                            <h5 class="card-title fs-6 fw-bold"><i class="bi bi-bell text-success me-2"></i>Alerts</h5>
+                            <p class="card-text small">Get reminders and status updates</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body p-2 p-md-3">
+                            <h5 class="card-title fs-6 fw-bold"><i class="bi bi-map text-success me-2"></i>Tracking</h5>
+                            <p class="card-text small">Follow your waste to proper disposal</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-3">
+                        <div class="card-body p-2 p-md-3">
+                            <h5 class="card-title fs-6 fw-bold"><i class="bi bi-shield-check text-success me-2"></i>Secure</h5>
+                            <p class="card-text small">Your data and service are reliable</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta bg-success text-white text-center py-3">
+        <div class="container">
+            <h2 class="mb-2 fs-4 fw-bold">Ready to Start?</h2>
+            <p class="mb-3 small">Join thousands making waste management easier and eco-friendly.</p>
+            <div class="d-grid gap-2 d-md-block">
+                <a href="/signup" class="btn btn-light px-4 py-2">Sign Up Free</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="app-promo py-3 bg-light">
+        <div class="container">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-md-6 text-center text-md-start">
+                    <h3 class="fs-5 fw-bold mb-2">Get the TrashDrop App</h3>
+                    <p class="small mb-3 mb-md-0">Download our mobile app for the best experience</p>
+                </div>
+                <div class="col-12 col-md-6 text-center text-md-end">
+                    <a href="#" class="btn btn-dark btn-sm me-2"><i class="bi bi-apple me-1"></i> App Store</a>
+                    <a href="#" class="btn btn-dark btn-sm"><i class="bi bi-google-play me-1"></i> Google Play</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </main>
+    <footer class="bg-dark text-white py-3 mt-auto" role="contentinfo">
+        <div class="container mb-5 mb-lg-0"> <!-- Add bottom margin on mobile for nav bar -->
+            <div class="row g-3">
+                <div class="col-12 col-sm-6 col-md-3">
+                    <h5 class="fs-6 fw-bold">TrashDrop</h5>
+                    <ul class="list-unstyled small">
+                        <li><a href="/" class="text-white">Home</a></li>
+                        <li><a href="/login" class="text-white">Login</a></li>
+                        <li><a href="/signup" class="text-white">Sign Up</a></li>
+                    </ul>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <h5 class="fs-6 fw-bold">Features</h5>
+                    <ul class="list-unstyled small">
+                        <li><a href="#" class="text-white">QR Scanning</a></li>
+                        <li><a href="#" class="text-white">Pickup Requests</a></li>
+                        <li><a href="#" class="text-white">Scheduling</a></li>
+                    </ul>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <h5 class="fs-6 fw-bold">Contact</h5>
+                    <ul class="list-unstyled small">
+                        <li><a href="mailto:support@trashdrop.com" class="text-white"><i class="bi bi-envelope me-1"></i> Email Us</a></li>
+                        <li><a href="tel:+15551234567" class="text-white"><i class="bi bi-telephone me-1"></i> Call Us</a></li>
+                    </ul>
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <h5 class="fs-6 fw-bold">Legal</h5>
+                    <ul class="list-unstyled small">
+                        <li><a href="#" class="text-white">Privacy Policy</a></li>
+                        <li><a href="#" class="text-white">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-3">
+            <p class="text-center small mb-0">&copy; 2025 TrashDrop. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <!-- Mobile App Bottom Navigation -->
+    <div class="d-lg-none mobile-bottom-nav shadow-lg">
+        <a href="/dashboard" class="mobile-nav-item">
+            <i class="bi bi-grid-fill"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="/scan" class="mobile-nav-item">
+            <i class="bi bi-qr-code-scan"></i>
+            <span>Scan</span>
+        </a>
+        <a href="/request-pickup" class="mobile-nav-item">
+            <i class="bi bi-truck"></i>
+            <span>Pickup</span>
+        </a>
+        <a href="/report-dumping" class="mobile-nav-item">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>Report</span>
+        </a>
+        <a href="/profile" class="mobile-nav-item">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Service Worker Registration -->
+    <script src="/js/register-sw.js"></script>
+    <!-- Accessibility Script -->
+    <script src="/js/accessibility.js"></script>
+    
+    <!-- Bootstrap JavaScript Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful');
+                }, function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

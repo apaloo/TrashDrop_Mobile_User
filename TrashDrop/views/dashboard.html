@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="TrashDrop Dashboard - Manage your waste collection, view upcoming pickups, and track your recycling points">
+    <title>Dashboard - TrashDrop</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Leaflet for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Offline map support -->
+    <link rel="stylesheet" href="/css/offline-map.css" />
+    <script src="/js/offline-map.js"></script>
+    
+    <!-- Additional styles for Active Pickup tracking -->
+    <style>
+        .user-marker i, .collector-marker i {
+            filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));
+        }
+        #active-pickup-map {
+            height: 200px;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .active-pickup-progress {
+            height: 8px;
+            border-radius: 4px;
+            background-color: rgba(var(--bs-primary-rgb), 0.2);
+            overflow: hidden;
+        }
+        .active-pickup-progress-bar {
+            height: 100%;
+            background-color: var(--bs-primary);
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Skip to content link for keyboard users -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                TrashDrop
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <!-- Navbar items removed as requested -->
+                </ul>
+                <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center me-3">
+                        <span id="connection-status" class="badge text-bg-success me-2">Online</span>
+                        <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+                    </div>
+                    <a href="/rewards" class="text-white me-3 text-decoration-none">
+                        <i class="bi bi-award-fill me-1"></i>
+                        <span id="user-points">0</span> points
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span id="user-name">User</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                            <li><a class="dropdown-item" href="/views/db-performance.html"><i class="bi bi-speedometer2 me-2"></i>DB Performance</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
+                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main id="main-content" class="container py-3">
+        <h1 class="mb-3 fs-4 fw-bold" id="dashboard-title">Dashboard</h1>
+
+        <!-- Offline Alert -->
+        <div id="offline-alert" class="alert alert-warning d-none mb-3" role="alert" aria-live="assertive">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-wifi-off me-2 fs-4"></i>
+                <div>
+                    <strong>You're offline</strong>
+                    <p class="mb-0">Your changes will be saved locally and synchronized when you're back online.</p>
+                </div>
+            </div>
+            <div class="mt-2 d-flex justify-content-center">
+                <button id="try-reconnect" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-repeat me-1"></i> Try to reconnect
+                </button>
+            </div>
+        </div>
+
+        <!-- Sync Status -->
+        <div id="sync-status" class="alert alert-info d-none mb-3">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Syncing...</span>
+                </div>
+                <div>Syncing offline data... <span id="sync-progress"></span></div>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="bi bi-bag text-success"></i>
+                            </div>
+                            <h6 class="card-subtitle text-muted mb-0 small">Available Bags</h6>
+                        </div>
+                        <h2 class="card-title mb-0 fs-3" id="available-bags-count">0</h2>
+                        <div class="mt-2">
+                            <span class="badge bg-success small">Ready for Use</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="bi bi-check-circle text-primary"></i>
+                            </div>
+                            <h6 class="card-subtitle text-muted mb-0 small">Completed Pickups</h6>
+                        </div>
+                        <h2 class="card-title mb-0 fs-3" id="completed-pickups-count">0</h2>
+                        <div class="mt-2">
+                            <span class="badge bg-primary small">Total</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="bi bi-recycle text-info"></i>
+                            </div>
+                            <h6 class="card-subtitle text-muted mb-0 small">Recycled Waste</h6>
+                        </div>
+                        <h2 class="card-title mb-0 fs-3"><span id="recycled-waste-kg">0</span> <small>kg</small></h2>
+                        <div class="mt-2">
+                            <span class="badge bg-info small">Environmental Impact</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2">
+                                <i class="bi bi-award text-warning"></i>
+                            </div>
+                            <h6 class="card-subtitle text-muted mb-0 small">Reward Points</h6>
+                        </div>
+                        <h2 class="card-title mb-0 fs-3" id="user-total-points">0</h2>
+                        <div class="mt-2">
+                            <span class="badge bg-warning text-dark small" id="user-level">Eco Starter</span>
+                            <a href="/rewards" class="ms-2 small">View Rewards</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Active Pickup Request Card -->
+        <div class="col-12 mb-3" id="active-pickup-container" style="display: none;" aria-hidden="true">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                    <h5 class="mb-0 fs-6 fw-bold">Active Pickup Request</h5>
+                    <span id="tracking-status" class="badge bg-warning text-dark">Waiting for collector</span>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-person-fill text-primary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Collector</small>
+                                    <span class="fw-bold" id="collector-name">Pending Assignment</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-geo-alt-fill text-success"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Distance</small>
+                                    <span class="fw-bold" id="collector-distance">Distance unavailable</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-clock-fill text-info"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Estimated Arrival</small>
+                                    <span class="fw-bold" id="estimated-arrival">ETA unavailable</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-trash text-warning"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Waste Type & Quantity</small>
+                                    <span class="fw-bold" id="waste-type-quantity">Not specified</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-secondary bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-house-door-fill text-secondary"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Pickup Location</small>
+                                    <span class="fw-bold" id="pickup-location">Not specified</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-2">
+                                    <i class="bi bi-award-fill text-danger"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Earned Points</small>
+                                    <span class="fw-bold" id="earned-points">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Map -->
+                    <div id="active-pickup-map"></div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-2">
+                        <button class="btn btn-outline-danger" id="cancel-pickup-btn" data-single-confirm="true">
+                            <i class="bi bi-x-circle me-1"></i> Cancel Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center">
+                    <div class="card-body d-flex flex-column p-3">
+                        <div class="mt-2 mb-2">
+                            <div class="action-icon bg-success bg-opacity-10 text-success rounded-circle mx-auto">
+                                <i class="bi bi-qr-code-scan"></i>
+                            </div>
+                        </div>
+                        <h5 class="card-title fs-6 fw-bold">Scan QR</h5>
+                        <p class="card-text flex-grow-1 small">Add bags by scanning QR code</p>
+                        <a href="/scan" class="btn btn-success btn-sm w-100 py-2">Scan Now</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center">
+                    <div class="card-body d-flex flex-column p-3">
+                        <div class="mt-2 mb-2">
+                            <div class="action-icon bg-primary bg-opacity-10 text-primary rounded-circle mx-auto">
+                                <i class="bi bi-truck"></i>
+                            </div>
+                        </div>
+                        <h5 class="card-title fs-6 fw-bold">Request Pickup</h5>
+                        <p class="card-text flex-grow-1 small">Schedule a waste pickup</p>
+                        <a href="/request-pickup" class="btn btn-primary btn-sm w-100 py-2">Request Now</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center">
+                    <div class="card-body d-flex flex-column p-3">
+                        <div class="mt-2 mb-2">
+                            <div class="action-icon bg-info bg-opacity-10 text-info rounded-circle mx-auto">
+                                <i class="bi bi-bag-plus"></i>
+                            </div>
+                        </div>
+                        <h5 class="card-title fs-6 fw-bold">Order Bags</h5>
+                        <p class="card-text flex-grow-1 small">Get new bags delivered</p>
+                        <a href="/order-bags" class="btn btn-info btn-sm w-100 py-2">Order Now</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm rounded-3 text-center">
+                    <div class="card-body d-flex flex-column p-3">
+                        <div class="mt-2 mb-2">
+                            <div class="action-icon bg-danger bg-opacity-10 text-danger rounded-circle mx-auto">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <h5 class="card-title fs-6 fw-bold">Report Dumping</h5>
+                        <p class="card-text flex-grow-1 small">Report illegal waste disposal</p>
+                        <a href="/report-dumping" class="btn btn-danger btn-sm w-100 py-2">Report Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Lists Section -->
+        
+        <!-- Dashboard Lists Section -->
+        <div class="row g-3">
+            <!-- Scheduled Pickup Card -->
+            <div class="col-12 mb-3" id="scheduled-pickup-container">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-2">
+                        <h5 class="mb-0 fs-6 fw-bold">Next Scheduled Pickup</h5>
+                        <a href="/schedule-pickup" class="btn btn-sm btn-light py-0 px-2">View All</a>
+                    </div>
+                    <div class="card-body p-3" id="scheduled-pickup-content">
+                        <div id="no-scheduled-pickup" style="display: none;">
+                            <div class="text-center py-4">
+                                <div class="mb-3">
+                                    <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+                                </div>
+                                <h6 class="mb-3">No Scheduled Pickups</h6>
+                                <p class="mb-4">You don't have any scheduled pickups. Schedule your first pickup now.</p>
+                                <a href="/schedule-pickup" class="btn btn-success">Schedule Pickup</a>
+                            </div>
+                        </div>
+                        <div id="has-scheduled-pickup">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="calendar-icon me-3 bg-success bg-opacity-10 text-success rounded p-2">
+                                    <i class="bi bi-calendar-check" style="font-size: 2rem;"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0" id="scheduled-pickup-date">May 25, 2025</h6>
+                                    <span class="text-muted" id="scheduled-pickup-time">Morning (8 AM - 12 PM)</span>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Waste Type:</strong> <span id="scheduled-waste-type">Recyclables</span></p>
+                                    <p class="mb-1"><strong>Bags:</strong> <span id="scheduled-bags-count">2</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Location:</strong> <span id="scheduled-location">Home</span></p>
+                                    <p class="mb-1"><strong>Schedule:</strong> <span id="scheduled-frequency">Weekly</span></p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="/schedule-pickup?edit=true" class="btn btn-outline-success flex-grow-1">Edit</a>
+                                <button type="button" class="btn btn-outline-danger flex-grow-1" id="cancel-scheduled-pickup">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Reports -->
+            <div class="col-12 mb-3">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-2">
+                        <h5 class="mb-0 fs-6 fw-bold">Recent Reports</h5>
+                        <span class="badge bg-light text-danger">2 New</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush" id="reports-list">
+                            <li class="list-group-item px-3 py-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1 small fw-bold">Construction Waste</h6>
+                                        <p class="mb-1 text-muted small">123 Green Street</p>
+                                        <small class="text-muted fs-7">Reported 2 hours ago</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-warning text-dark small">Pending Review</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="list-group-item px-3 py-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1 small fw-bold">Household Trash</h6>
+                                        <p class="mb-1 text-muted small">456 Park Avenue</p>
+                                        <small class="text-muted fs-7">Reported 1 day ago</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-success small">Cleaned</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="list-group-item px-3 py-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1 small fw-bold">Electronic Waste</h6>
+                                        <p class="mb-1 text-muted small">789 River Road</p>
+                                        <small class="text-muted fs-7">Reported 3 days ago</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-info small">In Progress</span>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <div class="d-grid">
+                            <a href="/report-dumping" class="btn btn-outline-danger">Report New Dumping</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="col-12 mb-3">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-header bg-info text-white py-2">
+                        <h5 class="mb-0 fs-6 fw-bold">Recent Activity</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush" id="activity-list">
+                            <li class="list-group-item px-3 py-2">
+                                <div class="d-flex align-items-start">
+                                    <div class="activity-icon bg-success bg-opacity-10 text-success rounded-circle me-2" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-1 small fw-bold">Pickup Completed</h6>
+                                        <p class="mb-1 small">3 bags from Home</p>
+                                        <small class="text-muted fs-7">Today, 2:30 PM</small>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <span class="badge bg-success small">+45 points</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="list-group-item px-3 py-2">
+                                <div class="d-flex align-items-start">
+                                    <div class="activity-icon bg-info bg-opacity-10 text-info rounded-circle me-2" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                                        <i class="bi bi-bag-check"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-1 small fw-bold">Bags Delivered</h6>
+                                        <p class="mb-1 small">5 recycling bags</p>
+                                        <small class="text-muted fs-7">Yesterday, 10:15 AM</small>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <span class="badge bg-info small">Delivered</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="list-group-item px-4 py-3">
+                                <div class="d-flex">
+                                    <div class="activity-icon bg-warning bg-opacity-10 text-warning rounded-circle me-3">
+                                        <i class="bi bi-qr-code"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-1">Bags Scanned</h6>
+                                        <p class="mb-1">Added 10 bags to your account</p>
+                                        <small class="text-muted">May 20, 2025</small>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <span class="badge bg-warning text-dark">Added</span>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-footer bg-white">
+                        <div class="d-grid">
+                            <a href="/activity" class="btn btn-outline-info">View All Activity</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="d-lg-none mobile-bottom-nav shadow-lg">
+        <!-- Mobile navigation items removed as requested -->
+        <a href="/request-pickup" class="mobile-nav-item">
+            <i class="bi bi-truck"></i>
+            <span>Pickup</span>
+        </a>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-auto">
+        <div class="container mb-5 mb-lg-0"> <!-- Add bottom margin on mobile for nav bar -->
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; 2025 TrashDrop. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <ul class="list-inline mb-0">
+                        <li class="list-inline-item"><a href="#" class="text-white">Privacy Policy</a></li>
+                        <li class="list-inline-item"><a href="#" class="text-white">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Emergency Logout Modal -->
+    <div class="modal fade" id="emergencyLogoutModal" tabindex="-1" aria-labelledby="emergencyLogoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="emergencyLogoutModalLabel">Emergency Logout</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to perform an emergency logout. This will clear all session data and immediately log you out.</p>
+                    <p>Are you sure you want to continue?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmEmergencyLogout" class="btn btn-danger">Emergency Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/offline-sync.js"></script>
+    <script src="/js/distanceCalculator.js"></script>
+    <script src="/js/active-pickup.js"></script>
+    <script src="/js/pickup-sync.js"></script>
+    <script src="/js/offline-bag-sync.js"></script>
+    <script src="/js/offline-points-sync.js"></script>
+    <script src="/js/map-offline.js"></script>
+    <script src="/js/register-sw.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <!-- Custom JS -->
+    <!-- Report Dumping Modal -->
+    <div class="modal fade report-modal" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-fullscreen-md-down modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="reportModalLabel">Report Illegal Dumping</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="unified-report-form">
+                        <!-- Photos Section -->
+                        <section class="mb-4">
+                            <h4 class="mb-3">Photos</h4>
+                            <p class="text-muted mb-3">Add up to 6 photos to document the illegal dumping.</p>
+                            
+                            <div class="photo-grid" id="photo-grid">
+                                <div class="photo-item photo-placeholder" id="add-photo">
+                                    <i class="bi bi-plus-lg"></i>
+                                </div>
+                                <!-- Photos will be added here dynamically -->
+                            </div>
+                        </section>
+                        
+                        <!-- Location Section -->
+                        <section class="mb-4">
+                            <h4 class="mb-3">Location</h4>
+                            <p class="text-muted mb-3">We've automatically detected your location. You can adjust it if needed.</p>
+                            
+                            <div class="form-group mb-3">
+                                <label for="location" class="form-label">Location Description</label>
+                                <input type="text" class="form-control" id="location" placeholder="e.g., Behind Main St Mall" required>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label class="form-label">Location on Map</label>
+                                <div id="map" style="height: 250px; width: 100%; border-radius: 8px;"></div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <span class="text-muted small">
+                                        <span id="latitude">0.000000</span>, 
+                                        <span id="longitude">0.000000</span>
+                                    </span>
+                                    <button id="use-current-location" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-geo-alt"></i> Use My Location
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <!-- Waste Classification Section -->
+                        <section class="mb-4">
+                            <h4 class="mb-3">Waste Classification</h4>
+                            <p class="text-muted mb-3">Select the main type of waste you observed.</p>
+                            
+                            <div class="waste-types mb-4">
+                                <button class="trash-type-btn w-100" data-trash-type="household">
+                                    <i class="bi bi-trash text-danger"></i>
+                                    <div>
+                                        <strong>Household Waste</strong>
+                                        <div class="small text-muted">Regular garbage, food waste</div>
+                                    </div>
+                                </button>
+                                
+                                <button class="trash-type-btn w-100" data-trash-type="construction">
+                                    <i class="bi bi-tools text-warning"></i>
+                                    <div>
+                                        <strong>Construction Debris</strong>
+                                        <div class="small text-muted">Building materials, concrete, wood</div>
+                                    </div>
+                                </button>
+                                
+                                <button class="trash-type-btn w-100" data-trash-type="electronics">
+                                    <i class="bi bi-laptop text-info"></i>
+                                    <div>
+                                        <strong>Electronic Waste</strong>
+                                        <div class="small text-muted">Computers, TVs, appliances</div>
+                                    </div>
+                                </button>
+                                
+                                <button class="trash-type-btn w-100" data-trash-type="hazardous">
+                                    <i class="bi bi-exclamation-triangle text-danger"></i>
+                                    <div>
+                                        <strong>Hazardous Materials</strong>
+                                        <div class="small text-muted">Chemicals, oil, batteries</div>
+                                    </div>
+                                </button>
+                                
+                                <button class="trash-type-btn w-100" data-trash-type="other">
+                                    <i class="bi bi-question-circle text-secondary"></i>
+                                    <div>
+                                        <strong>Other</strong>
+                                        <div class="small text-muted">Other types of waste</div>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <h5 class="mb-3">Approximate Size</h5>
+                            <div class="d-flex justify-content-between mb-3">
+                                <div class="size-option" data-size="small">
+                                    <i class="bi bi-box"></i>
+                                    <span>Small</span>
+                                    <div class="small text-muted">Fits in a bag</div>
+                                </div>
+                                <div class="size-option" data-size="medium">
+                                    <i class="bi bi-box-seam"></i>
+                                    <span>Medium</span>
+                                    <div class="small text-muted">Car trunk sized</div>
+                                </div>
+                                <div class="size-option" data-size="large">
+                                    <i class="bi bi-truck"></i>
+                                    <span>Large</span>
+                                    <div class="small text-muted">Pickup truck load</div>
+                                </div>
+                            </div>
+                        </section>
+                        
+                        <!-- Additional Details Section -->
+                        <section class="mb-4">
+                            <h4 class="mb-3">Additional Details</h4>
+                            
+                            <div class="form-group mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" rows="3" placeholder="Additional details about the dumping..."></textarea>
+                            </div>
+                            
+                            <div class="form-group mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select class="form-select" id="priority" required>
+                                    <option value="low">Low - Not urgent</option>
+                                    <option value="medium" selected>Medium - Should be addressed soon</option>
+                                    <option value="high">High - Hazardous or blocking access</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-check mb-4">
+                                <input class="form-check-input" type="checkbox" value="" id="anonymous-report">
+                                <label class="form-check-label" for="anonymous-report">
+                                    Submit this report anonymously
+                                </label>
+                                <div class="small text-muted">Your identity will not be associated with this report</div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="submit-report">Submit Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera View -->
+    <div class="camera-view" id="camera-view" style="display: none;" aria-hidden="true" role="region" aria-label="Camera Preview">
+        <video id="camera-stream" autoplay playsinline></video>
+        <div class="camera-controls">
+            <button class="btn btn-light rounded-circle p-3 me-2" id="switch-camera">
+                <i class="bi bi-arrow-repeat"></i>
+            </button>
+            <button class="btn btn-success rounded-circle p-3" id="capture-photo">
+                <i class="bi bi-camera"></i>
+            </button>
+            <button class="btn btn-light rounded-circle p-3 ms-2" id="select-from-gallery">
+                <i class="bi bi-images"></i>
+            </button>
+        </div>
+        <button class="btn btn-dark position-absolute top-0 end-0 m-3 rounded-circle" id="close-camera">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    
+    <!-- File input for gallery selection (hidden) -->
+    <input type="file" id="gallery-input" accept="image/*" multiple style="display: none;">
+    
+    <!-- Add CSS for report modal -->
+    <style>
+        /* Report modal styles */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .photo-item {
+            position: relative;
+            aspect-ratio: 1/1;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .photo-placeholder {
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            cursor: pointer;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .trash-type-btn {
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            background-color: white;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .trash-type-btn:hover {
+            border-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.05);
+        }
+        
+        .trash-type-btn.selected {
+            border-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+        
+        .trash-type-btn i {
+            margin-right: 12px;
+            font-size: 24px;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .size-option {
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+            margin: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        
+        .size-option:hover {
+            border-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.05);
+        }
+        
+        .size-option.selected {
+            border-color: #dc3545;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+        
+        .size-option i {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .camera-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 1100;
+        }
+        
+        .camera-view video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+            .photo-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+
+    <script src="/js/auth.js"></script>
+    <!-- Load pickup refresh fix first - highest priority for solving the disappearing card issue -->
+    <script src="/js/pickup-refresh-fix.js"></script>
+    <script src="/js/map-display-fix.js"></script>
+    <!-- Load Active Pickup Persistence second to ensure card is visible immediately on refresh -->
+    <script src="/js/active-pickup-persistence.js"></script>
+    <!-- Initialize persistence immediately during page load -->
+    <script>
+        // Run persistence check as early as possible during page load
+        if (window.ActivePickupPersistence && ActivePickupPersistence.hasActivePickup()) {
+            console.log('Early persistence check: Active pickup found, will preserve visibility');
+            // Set a flag for other scripts to use
+            window.hasPersistedActivePickup = true;
+        }
+    </script>
+    <script src="/js/active-pickup.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/emergency-logout.js"></script>
+    <!-- Accessibility Script -->
+    <script src="/js/accessibility.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ensure proper ARIA states for dynamic content
+        const updateAriaStates = function() {
+            // Update aria-hidden based on display state
+            document.querySelectorAll('[style*="display: none"]').forEach(el => {
+                el.setAttribute('aria-hidden', 'true');
+            });
+            
+            document.querySelectorAll('[style*="display: block"], [style*="display: flex"]').forEach(el => {
+                el.setAttribute('aria-hidden', 'false');
+            });
+            
+            // Add missing labels to interactive elements
+            document.querySelectorAll('button:not([aria-label])').forEach(btn => {
+                if (!btn.textContent.trim() && btn.querySelector('i')) {
+                    const iconClass = btn.querySelector('i').className;
+                    if (iconClass.includes('plus')) {
+                        btn.setAttribute('aria-label', 'Add');
+                    } else if (iconClass.includes('trash')) {
+                        btn.setAttribute('aria-label', 'Delete');
+                    } else if (iconClass.includes('edit')) {
+                        btn.setAttribute('aria-label', 'Edit');
+                    }
+                }
+            });
+        };
+        
+        // Run initially and set up observer for dynamic changes
+        updateAriaStates();
+        
+        // Set up observer for changes to display style
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === 'style') {
+                    updateAriaStates();
+                }
+            });
+        });
+        
+        // Observe all potentially dynamic elements
+        document.querySelectorAll('.card, .alert, .modal, [id*="container"]').forEach(el => {
+            observer.observe(el, { attributes: true });
+        });
+    });
+    </script>
+</body>
+</html>

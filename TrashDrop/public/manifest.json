@@ -1,0 +1,61 @@
+{
+  "name": "TrashDrop",
+  "short_name": "TrashDrop",
+  "description": "Waste Management Made Easy with Enhanced Offline Capabilities",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#4CAF50",
+  "theme_color": "#4CAF50",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshot-1.jpg",
+      "type": "image/jpeg",
+      "sizes": "540x720",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/images/screenshot-2.jpg",
+      "type": "image/jpeg",
+      "sizes": "720x540",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scan QR Code",
+      "short_name": "Scan",
+      "description": "Scan trash bag QR codes",
+      "url": "/scan",
+      "icons": [{ "src": "/images/icon-scan.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Request Pickup",
+      "short_name": "Pickup",
+      "description": "Request trash pickup",
+      "url": "/request-pickup",
+      "icons": [{ "src": "/images/icon-pickup.png", "sizes": "96x96" }]
+    }
+  ],
+  "dir": "ltr",
+  "lang": "en",
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "categories": ["utilities", "productivity", "lifestyle"],
+  "iarc_rating_id": ""
+}

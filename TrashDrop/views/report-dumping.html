@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Illegal Dumping - TrashDrop</title>
+    <meta name="description" content="Report illegal waste disposal with TrashDrop">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/images/icon-192.png">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        /* Standardized form section styling */
+        .form-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Photo grid styles */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .photo-item {
+            aspect-ratio: 1/1;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #dee2e6;
+        }
+        
+        .photo-placeholder {
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4CAF50;
+            cursor: pointer;
+            border: 2px dashed #4CAF50;
+            transition: all 0.2s ease;
+        }
+        
+        .photo-placeholder:hover {
+            background-color: #f1f8e9;
+            border-color: #4CAF50;
+        }
+        
+        #map-container {
+            height: 220px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        
+        #dump-map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .report-modal .modal-footer {
+            border-top: none;
+        }
+        
+        .form-step {
+            display: none;
+        }
+        
+        .form-step.active {
+            display: block;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #dee2e6;
+            margin: 0 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .step-dot.active {
+            background-color: #4CAF50;
+        }
+        
+        .trash-type-btn {
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            background-color: white;
+            text-align: left;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        
+        .trash-type-btn:hover {
+            border-color: #dc3545;
+            .photo-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+                margin-top: 16px;
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        /* Size options styling */
+        .size-option {
+            flex: 1;
+            margin: 0 5px;
+            text-align: center;
+            padding: 15px 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background-color: white;
+            transition: all 0.2s ease;
+        }
+        
+        .size-option:hover {
+            border-color: #dc3545;
+            background-color: #fff8f8;
+            transform: translateY(-2px);
+        }
+        
+        .size-option.selected {
+            border-color: #dc3545;
+            background-color: #fff8f8;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+        
+        .size-option i {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4 mb-5 pb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+            <h1 class="h3 mb-0">Report Dumping</h1>
+            <div>
+                <span id="connection-status" class="badge text-bg-success">Online</span>
+                <span id="report-offline-indicator" class="badge rounded-pill text-bg-warning ms-2 d-none">0</span>
+            </div>
+        </div>
+
+        <div class="alert alert-info text-center mb-4">
+            <i class="bi bi-info-circle"></i> Report illegal dumping to help keep our community clean
+        </div>
+        
+        <!-- Offline mode indicator -->
+        <div id="offline-alert" class="alert alert-warning text-center mb-4 d-none">
+            <i class="bi bi-wifi-off me-2"></i> You are currently offline. Your report will be saved locally and submitted when you reconnect.
+            <div class="mt-2 d-flex justify-content-center">
+                <button id="try-reconnect" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-repeat"></i> Try to reconnect
+                </button>
+            </div>
+        </div>
+            <h1 class="h3 mb-0">Report Dumping</h1>
+            <div></div> <!-- Empty div for spacing -->
+        </div>
+
+        <div class="alert alert-info text-center mb-4">
+            <i class="bi bi-info-circle"></i> Thank you for reporting illegal waste disposal. Your reports help keep our community clean and safe.
+        </div>
+        
+        <!-- Offline mode indicator -->
+        <div id="offline-indicator" class="alert alert-warning text-center mb-4" style="display: none;">
+            <i class="bi bi-wifi-off me-2"></i> You're offline. Reports will be submitted when you reconnect.
+        </div>
+
+        <!-- Progress indicator -->
+        <div class="progress-indicator mb-4">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="badge bg-danger">1. Photos</span>
+                <span class="badge bg-danger">2. Location</span>
+                <span class="badge bg-danger">3. Waste Type</span>
+                <span class="badge bg-danger">4. Details</span>
+            </div>
+            <div class="progress" style="height: 6px;">
+                <div class="progress-bar bg-danger" role="progressbar" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <!-- Photos Section -->
+        <div class="form-section">
+            <h2 class="h5 mb-3"><i class="bi bi-images me-2 text-success"></i>Photos</h2>
+            <p class="text-muted mb-3">Add up to 6 photos to document the illegal dumping.</p>
+            
+            <div class="photo-grid" id="photo-grid">
+                <div class="photo-item photo-placeholder" id="add-photo">
+                    <i class="bi fa-plus fa-2x"></i>
+                </div>
+                <!-- Photos will be added here dynamically -->
+            </div>
+            <div class="mt-2 small text-muted">
+                <i class="bi fa-info-circle me-1"></i> Click the plus icon to take a photo or select from gallery
+            </div>
+        </div>
+                        
+        <!-- Location Section -->
+        <div class="form-section">
+            <h2 class="h5 mb-3"><i class="bi fa-map-marker-alt me-2 text-success"></i>Location</h2>
+            <p class="text-muted mb-3">We've automatically detected your location. You can adjust it if needed.</p>
+            
+            <div class="mb-3">
+                <div id="map" style="height: 280px; width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6;"></div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <span class="text-muted small">
+                        <i class="bi fa-crosshairs me-1 text-success"></i>
+                        <span id="latitude">0.000000</span>, 
+                        <span id="longitude">0.000000</span>
+                    </span>
+                    <button id="use-current-location" class="btn btn-outline-danger btn-sm">
+                        <i class="bi fa-location-arrow me-1"></i> Use My Location
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Waste Classification Section -->
+        <div class="form-section">
+            <h2 class="h5 mb-3"><i class="bi fa-trash-alt me-2 text-success"></i>Waste Classification</h2>
+            <p class="text-muted mb-3">Select the main type of waste you observed.</p>
+            
+            <div class="waste-types mb-3">
+                <button class="trash-type-btn w-100" data-trash-type="household">
+                    <i class="bi fa-trash-alt text-success"></i>
+                    <div>
+                        <strong>Household Waste</strong>
+                        <div class="small text-muted">Regular garbage, food waste</div>
+                    </div>
+                </button>
+                
+                <button class="trash-type-btn w-100" data-trash-type="construction">
+                    <i class="bi fa-hard-hat text-warning"></i>
+                    <div>
+                        <strong>Construction Debris</strong>
+                        <div class="small text-muted">Building materials, concrete, wood</div>
+                    </div>
+                </button>
+                
+                <button class="trash-type-btn w-100" data-trash-type="electronics">
+                    <i class="bi fa-laptop text-info"></i>
+                    <div>
+                        <strong>Electronic Waste</strong>
+                        <div class="small text-muted">Computers, TVs, appliances</div>
+                    </div>
+                </button>
+                
+                <button class="trash-type-btn w-100" data-trash-type="hazardous">
+                    <i class="bi fa-skull-crossbones text-success"></i>
+                    <div>
+                        <strong>Hazardous Materials</strong>
+                        <div class="small text-muted">Chemicals, oil, batteries</div>
+                    </div>
+                </button>
+                
+                <button class="trash-type-btn w-100" data-trash-type="other">
+                    <i class="bi fa-question-circle text-secondary"></i>
+                    <div>
+                        <strong>Other</strong>
+                                        <div class="small text-muted">Other types of waste</div>
+                                    </div>
+                                </button>
+            </div>
+            
+            <h3 class="h6 mb-3 mt-4">Approximate Size</h3>
+            <div class="d-flex justify-content-between mb-3">
+                <button type="button" class="btn size-option" data-size="small">
+                    <i class="bi fa-box"></i>
+                    <span class="fw-bold">Small</span>
+                    <div class="small text-muted">Fits in a bag</div>
+                </button>
+                <button type="button" class="btn size-option" data-size="medium">
+                    <i class="bi fa-box-open"></i>
+                    <span class="fw-bold">Medium</span>
+                    <div class="small text-muted">Car trunk sized</div>
+                </button>
+                <button type="button" class="btn size-option" data-size="large">
+                    <i class="bi fa-truck-loading"></i>
+                    <span class="fw-bold">Large</span>
+                    <div class="small text-muted">Pickup truck load</div>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Additional Details Section -->
+        <div class="form-section">
+            <h2 class="h5 mb-3"><i class="bi fa-info-circle me-2 text-success"></i>Additional Details</h2>
+            <p class="text-muted mb-3">Please provide any additional information about the illegal dumping.</p>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" rows="3" placeholder="Additional details about the dumping..."></textarea>
+                <div class="form-text">Include any details that might help authorities locate and address the issue.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="priority" class="form-label">Priority</label>
+                <select class="form-select" id="priority" required>
+                    <option value="low">Low - Not urgent</option>
+                    <option value="medium" selected>Medium - Should be addressed soon</option>
+                    <option value="high">High - Hazardous or blocking access</option>
+                </select>
+            </div>
+            
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="anonymousReport">
+                <label class="form-check-label" for="anonymousReport">
+                    Submit this report anonymously
+                </label>
+                <div class="form-text">Your personal information will not be shared with the public.</div>
+            </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+            <a href="/dashboard" class="btn btn-outline-secondary me-md-2">
+                <i class="bi fa-times me-1"></i> Cancel
+            </a>
+            <button id="submit-report" class="btn btn-danger">
+                <i class="bi fa-paper-plane me-1"></i> Submit Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Camera View Modal -->
+    <div class="modal fade" id="camera-modal" tabindex="-1" aria-labelledby="cameraModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="cameraModalLabel">Take Photo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 bg-dark">
+                    <div class="camera-container position-relative" style="height: calc(100vh - 136px);">
+                        <video id="camera-stream" class="w-100 h-100" autoplay playsinline style="object-fit: cover;"></video>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between bg-dark">
+                    <button type="button" class="btn btn-outline-light rounded-circle" id="switch-camera" style="width: 50px; height: 50px;">
+                        <i class="bi fa-sync-alt"></i>
+                    </button>
+                    <button type="button" class="btn btn-danger rounded-circle" id="capture-photo" style="width: 70px; height: 70px;">
+                        <i class="bi fa-camera"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-light rounded-circle" id="select-from-gallery" style="width: 50px; height: 50px;">
+                        <i class="bi fa-images"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Input (Hidden) -->
+    <input type="file" id="gallery-input" accept="image/*" multiple style="display: none;">
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Auth JS - Must be loaded before report-dumping.js -->
+    <script src="/js/auth.js"></script>
+    <!-- Offline Sync JS -->
+    <script src="/js/offline-sync.js"></script>
+    <!-- App JS -->
+    <script src="/js/report-dumping.js"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan QR Code - TrashDrop</title>
+    <meta name="description" content="Scan bag QR codes with TrashDrop">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/images/icon-192.png">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        #qr-reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #dee2e6;
+            margin-bottom: 1rem;
+        }
+        
+        .form-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .scan-result-badge {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .recently-scanned-item {
+            border-left: 4px solid #4CAF50;
+            padding-left: 12px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .recently-scanned-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4 mb-5 pb-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+            <h1 class="h3 mb-0">Scan QR Code</h1>
+            <div>
+                <span id="connection-status" class="badge text-bg-success">Online</span>
+                <span id="scan-offline-indicator" class="badge rounded-pill text-bg-warning ms-2 d-none">0</span>
+            </div>
+        </div>
+
+        <div class="alert alert-info text-center mb-4">
+            <i class="bi bi-info-circle"></i> Please scan the QR code on your trash bag batch to add them to your account
+        </div>
+        
+        <!-- Offline mode indicator -->
+        <!-- Offline mode indicator -->
+        <div id="offline-alert" class="alert alert-warning text-center mb-4 d-none">
+            <i class="bi bi-wifi-off me-2"></i> You are currently offline. Your scans will be saved locally and synchronized when you reconnect.
+            <div class="mt-2 d-flex justify-content-center">
+                <button id="try-reconnect" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-repeat"></i> Try to reconnect
+                </button>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2 class="h5 mb-3">QR Code Scanner</h2>
+            
+            <!-- Scanner Container -->
+            <div id="scanner-container">
+                <div id="qr-reader" class="mb-4"></div>
+                
+                <div class="d-flex justify-content-center mb-3">
+                    <button id="switch-camera" class="btn btn-outline-success me-2">
+                        <i class="bi bi-camera-video me-1"></i> Switch Camera
+                    </button>
+                    <button id="start-scanner" class="btn btn-success">
+                        <i class="bi bi-qr-code-scan me-1"></i> Start Scanner
+                    </button>
+                </div>
+            </div>
+                        
+                        <!-- Manual entry removed as requested -->
+                        
+        </div>
+        
+        <!-- Scan Result -->
+        <div id="scan-result" class="form-section d-none">
+            <h2 class="h5 mb-3 text-success"><i class="bi bi-check-circle me-2"></i>Scan Successful</h2>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Batch Code</label>
+                        <div id="result-batch-code" class="form-control-plaintext">TD12345678</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Bag Type</label>
+                        <div id="result-bag-type" class="form-control-plaintext">Recyclables</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Points Earned</label>
+                        <div id="result-points" class="form-control-plaintext text-success fw-bold">+5 points</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-success mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                <span id="result-message">The bag has been successfully added to your account.</span>
+            </div>
+            
+            <div class="d-flex justify-content-between mb-3">
+                <button id="scan-again" class="btn btn-outline-success">
+                    <i class="bi bi-arrow-repeat me-1"></i> Scan Another
+                </button>
+                <a href="/dashboard" class="btn btn-success">
+                    <i class="bi bi-house me-1"></i> Return to Dashboard
+                </a>
+            </div>
+        </div>
+                
+        <!-- Recently Scanned Bags -->
+        <div class="form-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0"><i class="bi bi-bag-check me-2"></i>Recently Scanned Bags</h2>
+                <div>
+                    <span class="badge bg-success rounded-pill px-3" id="total-bags-count">0</span>
+                    <div class="spinner-border spinner-border-sm text-success d-none" id="bags-loading" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="recent-bags-container">
+                <ul class="list-group list-group-flush" id="recent-bags-list">
+                    <!-- Bags will be loaded here dynamically -->
+                    <li class="list-group-item py-3 text-center text-muted border-0">
+                        <i class="bi bi-bag-x fs-1 d-block mb-2 text-muted"></i>
+                        No bags scanned yet
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <small class="text-muted"><i class="bi bi-info-circle me-1"></i> Scan a QR code to add more bags</small>
+                <span id="offline-sync-badge" class="badge bg-warning d-none">Offline items: <span id="offline-count">0</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer removed to match request-pickup.html pattern -->
+
+    <!-- Pickup Request Selection Modal -->
+    <div class="modal fade" id="pickupRequestModal" tabindex="-1" aria-labelledby="pickupRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="pickupRequestModalLabel">Select Pickup Request</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Please select a pickup request to associate with your scanned bags:</p>
+                    <div class="list-group" id="pickup-request-list">
+                        <!-- Pickup requests will be populated here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offline Notification Modal -->
+    <div class="modal fade" id="offlineModal" tabindex="-1" aria-labelledby="offlineModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="offlineModalLabel"><i class="bi bi-wifi-off me-2"></i>Offline Mode</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are currently offline. Your scanned bags will be stored locally and synchronized when you are back online.</p>
+                    <div class="alert alert-info">
+                        <small><i class="bi bi-info-circle me-2"></i>Your data is safely stored on this device and will be automatically uploaded when you reconnect.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Logout Modal -->
+    <div class="modal fade" id="emergencyLogoutModal" tabindex="-1" aria-labelledby="emergencyLogoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="emergencyLogoutModalLabel">Emergency Logout</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to perform an emergency logout. This will clear all session data and immediately log you out.</p>
+                    <p>Are you sure you want to continue?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="confirmEmergencyLogout" class="btn btn-danger">Emergency Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <!-- QR Scanner -->
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode/dist/html5-qrcode.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/scanner-updated.js"></script>
+    <script src="/js/emergency-logout.js"></script>
+</body>
+</html>

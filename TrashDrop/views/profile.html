@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile & Settings - TrashDrop</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                TrashDrop
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/scan">Scan QR</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/schedule-pickup">Schedule</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/rewards">Rewards</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/profile">Profile</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <a href="/rewards" class="text-white me-3 text-decoration-none">
+                        <i class="bi bi-award-fill me-1"></i>
+                        <span id="user-points">0</span> points
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span id="user-name">User</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
+                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-3">
+        <h1 class="mb-3 fs-4 fw-bold">Profile & Settings</h1>
+
+        <!-- Profile Navigation Tabs -->
+        <ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button" role="tab" aria-controls="personal" aria-selected="true">Personal Info</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab" aria-controls="preferences" aria-selected="false">Preferences</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab" aria-controls="notifications" aria-selected="false">Notifications</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab" aria-controls="security" aria-selected="false">Security</button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="profileTabsContent">
+            <!-- Personal Info Tab -->
+            <div class="tab-pane fade show active" id="personal" role="tabpanel" aria-labelledby="personal-tab">
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-body p-4">
+                        <div class="row">
+                            <div class="col-md-4 mb-4 mb-md-0">
+                                <div class="text-center">
+                                    <div class="position-relative d-inline-block">
+                                        <div class="avatar-container mb-3 mx-auto rounded-circle overflow-hidden bg-light" style="width: 150px; height: 150px;">
+                                            <img id="avatar-preview" src="/images/default-avatar.png" alt="Profile Picture" class="img-fluid">
+                                        </div>
+                                        <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0" id="change-avatar">
+                                            <i class="bi bi-camera"></i>
+                                        </button>
+                                    </div>
+                                    <input type="file" id="avatar-upload" class="d-none" accept="image/*">
+                                    <div class="mt-2">
+                                        <h5 id="profile-full-name" class="mb-1">User Name</h5>
+                                        <span class="text-muted" id="profile-member-since">Member since: Jan 2025</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <form id="personal-info-form">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="first_name" class="form-label">First Name</label>
+                                            <input type="text" class="form-control" id="first_name" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="last_name" class="form-label">Last Name</label>
+                                            <input type="text" class="form-control" id="last_name" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="email" class="form-label">Email Address</label>
+                                            <input type="email" class="form-control" id="email" required readonly>
+                                            <div class="form-text">Email address cannot be changed</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="phone" class="form-label">Phone Number</label>
+                                            <input type="tel" class="form-control" id="phone" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="address" class="form-label">Address</label>
+                                            <input type="text" class="form-control" id="address" required>
+                                        </div>
+                                        <div class="col-12 d-grid d-md-flex justify-content-md-end mt-4">
+                                            <button type="submit" class="btn btn-success" id="save-personal-info">
+                                                <i class="bi bi-save me-2"></i>Save Changes
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferences Tab -->
+            <div class="tab-pane fade" id="preferences" role="tabpanel" aria-labelledby="preferences-tab">
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-body p-4">
+                        <form id="preferences-form">
+                            <div class="mb-4">
+                                <h5 class="mb-3">Theme</h5>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="dark_mode">
+                                    <label class="form-check-label" for="dark_mode">Dark Mode</label>
+                                    <div class="form-text">Enable dark theme for better viewing in low light</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5 class="mb-3">Language</h5>
+                                <select class="form-select" id="language">
+                                    <option value="en">English (US)</option>
+                                    <option value="es">Español</option>
+                                    <option value="fr">Français</option>
+                                    <option value="de">Deutsch</option>
+                                </select>
+                                <div class="form-text">Select your preferred language for the application</div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5 class="mb-3">Accessibility</h5>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="high_contrast">
+                                    <label class="form-check-label" for="high_contrast">High Contrast</label>
+                                </div>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="large_text">
+                                    <label class="form-check-label" for="large_text">Larger Text</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="reduce_motion">
+                                    <label class="form-check-label" for="reduce_motion">Reduce Motion</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 d-grid d-md-flex justify-content-md-end mt-4">
+                                <button type="submit" class="btn btn-success" id="save-preferences">
+                                    <i class="bi bi-save me-2"></i>Save Preferences
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Tab -->
+            <div class="tab-pane fade" id="notifications" role="tabpanel" aria-labelledby="notifications-tab">
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-body p-4">
+                        <form id="notifications-form">
+                            <div class="mb-4">
+                                <h5 class="mb-3">Push Notifications</h5>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enable_push" checked>
+                                    <label class="form-check-label" for="enable_push">Enable Push Notifications</label>
+                                </div>
+                                
+                                <div class="ms-4 mt-3">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="notify_pickup_reminders" checked>
+                                        <label class="form-check-label" for="notify_pickup_reminders">Pickup Reminders</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="notify_bag_scans" checked>
+                                        <label class="form-check-label" for="notify_bag_scans">Bag Scans</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="notify_points_earned" checked>
+                                        <label class="form-check-label" for="notify_points_earned">Points Earned</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="notify_news" checked>
+                                        <label class="form-check-label" for="notify_news">News & Updates</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5 class="mb-3">Email Notifications</h5>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enable_email" checked>
+                                    <label class="form-check-label" for="enable_email">Enable Email Notifications</label>
+                                </div>
+                                
+                                <div class="ms-4 mt-3">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="email_pickup_summary" checked>
+                                        <label class="form-check-label" for="email_pickup_summary">Weekly Pickup Summary</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="email_points_summary" checked>
+                                        <label class="form-check-label" for="email_points_summary">Monthly Points Summary</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="email_special_offers">
+                                        <label class="form-check-label" for="email_special_offers">Special Offers & Promotions</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 d-grid d-md-flex justify-content-md-end mt-4">
+                                <button type="submit" class="btn btn-success" id="save-notifications">
+                                    <i class="bi bi-save me-2"></i>Save Notification Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Tab -->
+            <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-body p-4">
+                        <div class="mb-4">
+                            <h5 class="mb-3">Change Password</h5>
+                            <form id="change-password-form">
+                                <div class="mb-3">
+                                    <label for="current_password" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="current_password" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="new_password" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="new_password" required>
+                                    <div class="progress mt-2" style="height: 5px;">
+                                        <div id="password-strength-meter" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <small id="password-strength-text" class="form-text">Password strength: Too weak</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirm_password" required>
+                                </div>
+                                <div class="d-grid d-md-flex justify-content-md-end">
+                                    <button type="submit" class="btn btn-primary" id="change-password-btn">
+                                        <i class="bi bi-lock-fill me-2"></i>Update Password
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="mb-4">
+                            <h5 class="mb-3">Login Sessions</h5>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <p class="mb-0"><strong>Current Device</strong></p>
+                                    <small class="text-muted" id="current-device">Chrome on macOS • Active now</small>
+                                </div>
+                                <span class="badge bg-success">Active</span>
+                            </div>
+                            <div class="d-grid d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-outline-danger" id="logout-all-devices">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Logout from All Devices
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div>
+                            <h5 class="mb-3">Account Actions</h5>
+                            <div class="d-grid gap-2 d-md-flex">
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                    <i class="bi bi-trash me-2"></i>Delete Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="d-lg-none mobile-bottom-nav shadow-lg">
+        <a href="/dashboard" class="mobile-nav-item">
+            <i class="bi bi-house-door"></i>
+            <span>Home</span>
+        </a>
+        <a href="/scan" class="mobile-nav-item">
+            <i class="bi bi-qr-code-scan"></i>
+            <span>Scan</span>
+        </a>
+        <a href="/schedule-pickup" class="mobile-nav-item">
+            <i class="bi bi-calendar"></i>
+            <span>Schedule</span>
+        </a>
+        <a href="/rewards" class="mobile-nav-item">
+            <i class="bi bi-trophy"></i>
+            <span>Rewards</span>
+        </a>
+        <a href="/profile" class="mobile-nav-item active">
+            <i class="bi bi-person"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
+    <!-- Delete Account Modal -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteAccountModalLabel">Delete Account</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone.
+                    </div>
+                    <p>Deleting your account will:</p>
+                    <ul>
+                        <li>Remove all your personal information</li>
+                        <li>Delete your pickup history and reports</li>
+                        <li>Cancel any scheduled pickups</li>
+                        <li>Remove all your earned points</li>
+                    </ul>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="confirm-delete">
+                        <label class="form-check-label" for="confirm-delete">
+                            I understand that this action is permanent
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="delete-password" class="form-label">Enter your password to confirm</label>
+                        <input type="password" class="form-control" id="delete-password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-delete-btn" disabled>
+                        <i class="bi bi-trash me-2"></i>Delete My Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Logout Modal -->
+    <div class="modal fade" id="emergencyLogoutModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Emergency Logout</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will immediately log you out of all devices and clear all local data. Use this if you believe your account security is compromised.</p>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Warning:</strong> Any unsaved changes will be lost.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-emergency-logout">
+                        <i class="bi bi-shield-exclamation me-2"></i>Emergency Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="toast-container"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/offline-sync.js"></script>
+    <script src="/js/emergency-logout.js"></script>
+    <script src="/js/profile.js"></script>
+</body>
+</html>

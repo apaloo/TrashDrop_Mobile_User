@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rewards - TrashDrop</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+    <style>
+        /* Custom styles for rewards page */
+        .reward-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            height: 100%;
+        }
+        .reward-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .reward-image {
+            height: 180px;
+            object-fit: cover;
+        }
+        .level-progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+        .points-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+        .reward-category {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+        .level-card {
+            border-width: 2px !important;
+        }
+        .current-level {
+            border-color: #28a745 !important;
+            background-color: rgba(40, 167, 69, 0.05);
+        }
+        .locked-reward {
+            position: relative;
+        }
+        .locked-reward::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 0.25rem 0.25rem 0 0;
+        }
+        .locked-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            text-align: center;
+            color: white;
+        }
+        .history-date {
+            min-width: 100px;
+        }
+        .history-points {
+            min-width: 80px;
+        }
+        @media (max-width: 768px) {
+            .reward-image {
+                height: 140px;
+            }
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                TrashDrop
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/scan">Scan QR</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/schedule-pickup">Schedule</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/rewards">Rewards</a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <span class="text-white me-3">
+                        <i class="bi bi-award-fill me-1"></i>
+                        <span id="user-points">0</span> points
+                    </span>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span id="user-name">User</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
+                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-3">
+        <h1 class="mb-3 fs-4 fw-bold">Points & Rewards</h1>
+        
+        <!-- User Level Overview -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4">
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                                <i class="bi bi-award fs-2 text-warning"></i>
+                            </div>
+                            <div>
+                                <h2 class="fs-5 fw-bold mb-0">Your Points</h2>
+                                <p class="fs-2 fw-bold mb-0 text-warning" id="total-points">0</p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Progress to Next Level</span>
+                                <span id="level-progress-text">0/100</span>
+                            </div>
+                            <div class="progress level-progress mb-1">
+                                <div class="progress-bar bg-warning" id="level-progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <h3 class="fs-5 fw-bold mb-2">Your Level</h3>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-2 level-card current-level h-100">
+                                    <div class="card-body text-center p-3">
+                                        <i class="bi bi-star-fill text-warning fs-1 mb-2"></i>
+                                        <h4 class="fs-6 fw-bold mb-0" id="current-level">Eco Starter</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-2 level-card border-secondary h-100">
+                                    <div class="card-body text-center p-3">
+                                        <i class="bi bi-star text-secondary fs-1 mb-2"></i>
+                                        <h4 class="fs-6 fw-bold mb-0" id="next-level">Eco Enthusiast</h4>
+                                        <small class="text-muted">Next Level</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tabs for Rewards and History -->
+        <ul class="nav nav-tabs mb-4" id="rewards-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="rewards-tab" data-bs-toggle="tab" data-bs-target="#rewards-content" type="button" role="tab" aria-controls="rewards-content" aria-selected="true">
+                    <i class="bi bi-gift me-1"></i> Available Rewards
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-content" type="button" role="tab" aria-controls="history-content" aria-selected="false">
+                    <i class="bi bi-clock-history me-1"></i> Points History
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="levels-tab" data-bs-toggle="tab" data-bs-target="#levels-content" type="button" role="tab" aria-controls="levels-content" aria-selected="false">
+                    <i class="bi bi-bar-chart-line me-1"></i> Levels & Tiers
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Rewards Tab -->
+            <div class="tab-pane fade show active" id="rewards-content" role="tabpanel" aria-labelledby="rewards-tab">
+                <!-- Filter Options -->
+                <div class="mb-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                        <h3 class="fs-5 fw-bold mb-0">Available Rewards</h3>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary reward-filter active" data-filter="all">All</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary reward-filter" data-filter="merchandise">Merchandise</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary reward-filter" data-filter="discount">Discounts</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary reward-filter" data-filter="impact">Impact</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary reward-filter" data-filter="service">Services</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Rewards Grid -->
+                <div class="row g-3" id="rewards-grid">
+                    <!-- Rewards will be populated here dynamically -->
+                    <div class="col-12 text-center py-5" id="no-rewards-message" style="display: none;">
+                        <i class="bi bi-emoji-frown fs-1 text-muted mb-3"></i>
+                        <h4>No rewards available</h4>
+                        <p class="text-muted">Keep recycling to earn more points and unlock rewards!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Tab -->
+            <div class="tab-pane fade" id="history-content" role="tabpanel" aria-labelledby="history-tab">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Date</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col">Points</th>
+                                        <th scope="col">Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="points-history-table">
+                                    <!-- Points history will be populated here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center py-5" id="no-history-message" style="display: none;">
+                            <i class="bi bi-clock fs-1 text-muted mb-3"></i>
+                            <h4>No points history yet</h4>
+                            <p class="text-muted">Start recycling to earn points!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Levels Tab -->
+            <div class="tab-pane fade" id="levels-content" role="tabpanel" aria-labelledby="levels-tab">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body">
+                                <h3 class="fs-5 fw-bold mb-3">TrashDrop Levels</h3>
+                                <div class="list-group list-group-flush">
+                                    <div class="list-group-item px-0 py-3 d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-light rounded-circle p-2">
+                                                <i class="bi bi-star text-secondary"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h5 class="mb-1 fs-6">Eco Starter</h5>
+                                            <p class="mb-0 small text-muted">0-99 points</p>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-secondary">Beginner</span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item px-0 py-3 d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-light rounded-circle p-2">
+                                                <i class="bi bi-star-half text-primary"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h5 class="mb-1 fs-6">Eco Enthusiast</h5>
+                                            <p class="mb-0 small text-muted">100-249 points</p>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-primary">Intermediate</span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item px-0 py-3 d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-light rounded-circle p-2">
+                                                <i class="bi bi-star-fill text-info"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h5 class="mb-1 fs-6">Eco Guardian</h5>
+                                            <p class="mb-0 small text-muted">250-499 points</p>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-info">Advanced</span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item px-0 py-3 d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-light rounded-circle p-2">
+                                                <i class="bi bi-stars text-warning"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h5 class="mb-1 fs-6">Eco Warrior</h5>
+                                            <p class="mb-0 small text-muted">500-999 points</p>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-warning text-dark">Expert</span>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item px-0 py-3 d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-light rounded-circle p-2">
+                                                <i class="bi bi-trophy text-success"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h5 class="mb-1 fs-6">Eco Champion</h5>
+                                            <p class="mb-0 small text-muted">1000+ points</p>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-success">Elite</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body">
+                                <h3 class="fs-5 fw-bold mb-3">Level Benefits</h3>
+                                
+                                <div class="accordion" id="benefitsAccordion">
+                                    <div class="accordion-item border-0 mb-2">
+                                        <h2 class="accordion-header" id="headingOne">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                                <span class="badge bg-secondary me-2">Starter</span> Eco Starter Benefits
+                                            </button>
+                                        </h2>
+                                        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#benefitsAccordion">
+                                            <div class="accordion-body">
+                                                <ul class="mb-0">
+                                                    <li>Access to basic rewards</li>
+                                                    <li>Standard pickup scheduling</li>
+                                                    <li>Basic user profile</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item border-0 mb-2">
+                                        <h2 class="accordion-header" id="headingTwo">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                                <span class="badge bg-primary me-2">Intermediate</span> Eco Enthusiast Benefits
+                                            </button>
+                                        </h2>
+                                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#benefitsAccordion">
+                                            <div class="accordion-body">
+                                                <ul class="mb-0">
+                                                    <li>All Eco Starter benefits</li>
+                                                    <li>Access to intermediate rewards</li>
+                                                    <li>Priority scheduling (24 hour window)</li>
+                                                    <li>Monthly environmental impact report</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item border-0 mb-2">
+                                        <h2 class="accordion-header" id="headingThree">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                                <span class="badge bg-info me-2">Advanced</span> Eco Guardian Benefits
+                                            </button>
+                                        </h2>
+                                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#benefitsAccordion">
+                                            <div class="accordion-body">
+                                                <ul class="mb-0">
+                                                    <li>All Eco Enthusiast benefits</li>
+                                                    <li>Access to advanced rewards</li>
+                                                    <li>Priority scheduling (12 hour window)</li>
+                                                    <li>Exclusive access to eco-friendly workshops</li>
+                                                    <li>Community recognition badge</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item border-0 mb-2">
+                                        <h2 class="accordion-header" id="headingFour">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                                <span class="badge bg-warning text-dark me-2">Expert</span> Eco Warrior Benefits
+                                            </button>
+                                        </h2>
+                                        <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#benefitsAccordion">
+                                            <div class="accordion-body">
+                                                <ul class="mb-0">
+                                                    <li>All Eco Guardian benefits</li>
+                                                    <li>Access to expert rewards</li>
+                                                    <li>Priority scheduling (6 hour window)</li>
+                                                    <li>Quarterly eco-friendly product delivery</li>
+                                                    <li>Early access to new app features</li>
+                                                    <li>Personalized waste reduction plan</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item border-0">
+                                        <h2 class="accordion-header" id="headingFive">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                                <span class="badge bg-success me-2">Elite</span> Eco Champion Benefits
+                                            </button>
+                                        </h2>
+                                        <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive" data-bs-parent="#benefitsAccordion">
+                                            <div class="accordion-body">
+                                                <ul class="mb-0">
+                                                    <li>All Eco Warrior benefits</li>
+                                                    <li>Access to elite rewards</li>
+                                                    <li>On-demand scheduling</li>
+                                                    <li>Invitation to annual sustainability summit</li>
+                                                    <li>Custom TrashDrop eco merchandise package</li>
+                                                    <li>Featured spotlight in community newsletter</li>
+                                                    <li>Participation in local environmental policy forums</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0 text-muted">&copy; 2023 TrashDrop. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="#" class="text-muted me-3">Privacy Policy</a>
+                    <a href="#" class="text-muted me-3">Terms of Service</a>
+                    <a href="#" class="text-muted">Contact Us</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="d-lg-none mobile-bottom-nav shadow-lg">
+        <a href="/dashboard" class="mobile-nav-item">
+            <i class="bi bi-house"></i>
+            <span>Home</span>
+        </a>
+        <a href="/scan" class="mobile-nav-item">
+            <i class="bi bi-qr-code-scan"></i>
+            <span>Scan</span>
+        </a>
+        <a href="/request-pickup" class="mobile-nav-item">
+            <i class="bi bi-truck"></i>
+            <span>Pickup</span>
+        </a>
+        <a href="/rewards" class="mobile-nav-item active">
+            <i class="bi bi-award"></i>
+            <span>Rewards</span>
+        </a>
+    </div>
+
+    <!-- Redeem Reward Modal -->
+    <div class="modal fade" id="redeemModal" tabindex="-1" aria-labelledby="redeemModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="redeemModalLabel">Redeem Reward</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <img id="reward-image-preview" src="" alt="Reward" class="img-fluid rounded mb-3" style="max-height: 200px;">
+                        <h3 id="reward-name-preview" class="fs-5 fw-bold">Reward Name</h3>
+                        <p id="reward-description-preview" class="text-muted">Reward description goes here</p>
+                        <div class="d-flex justify-content-center align-items-center">
+                            <i class="bi bi-award-fill text-warning me-2 fs-5"></i>
+                            <span id="reward-cost-preview" class="fs-5 fw-bold">100</span>
+                            <span class="ms-1">points</span>
+                        </div>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Are you sure you want to redeem this reward? This action cannot be undone.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirm-redeem">Confirm Redemption</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="successModalLabel">Reward Redeemed!</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-4">
+                        <i class="bi bi-check-circle-fill text-success display-1"></i>
+                    </div>
+                    <h4>Congratulations!</h4>
+                    <p>You have successfully redeemed <span id="redeemed-reward-name">your reward</span>.</p>
+                    <p class="mb-0">Your new points balance: <span id="new-points-balance" class="fw-bold">0</span> points</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/emergency-logout.js"></script>
+    <script src="/js/offline-sync.js"></script>
+    <script src="/js/offline-points-sync.js"></script>
+    <script src="/js/mock-points-api.js"></script>
+    <script src="/js/rewards.js"></script>
+</body>
+</html>

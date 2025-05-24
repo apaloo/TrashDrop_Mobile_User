@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Pickup - TrashDrop</title>
+    <meta name="description" content="Request a trash pickup with TrashDrop">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/images/icon-192.png">
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <!-- Custom styles -->
+    <style>
+        #map-container {
+            height: 220px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #pickup-map {
+            height: 100%;
+            width: 100%;
+        }
+        .form-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .price-tag {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+    <style>
+        #map-container {
+            height: 300px;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #pickup-map {
+            height: 100%;
+            width: 100%;
+        }
+        .form-section {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .price-tag {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .location-input-container {
+            position: relative;
+        }
+        #locations-dropdown {
+            position: absolute;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 0 0 5px 5px;
+            z-index: 1000;
+            display: none;
+        }
+        .location-item {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+        .location-item:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4 mb-5 pb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+            <h1 class="h3 mb-0">Request Pickup</h1>
+            <div>
+                <span id="connection-status" class="badge text-bg-success">Online</span>
+                <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning ms-2 d-none">0</span>
+            </div>
+        </div>
+
+        <div class="alert alert-info text-center mb-4">
+            <i class="bi bi-info-circle"></i> Request a one-time pickup for your trash
+        </div>
+        
+        <!-- Offline mode indicator -->
+        <div id="offline-alert" class="alert alert-warning text-center mb-4 d-none">
+            <i class="bi bi-wifi-off me-2"></i> You are currently offline. Your request will be saved locally and submitted when you reconnect.
+            <div class="mt-2 d-flex justify-content-center">
+                <button id="try-reconnect" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-repeat"></i> Try to reconnect
+                </button>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2 class="h5 mb-3">Pickup Location</h2>
+            <div class="row align-items-center gy-3">
+                <div class="col-md-5 pe-md-4">
+                    <div class="mb-md-0">
+                        <label for="saved-location" class="form-label">Select from Saved Locations</label>
+                        <select class="form-select" id="saved-location" required>
+                            <option value="" selected disabled>-- Select a saved location --</option>
+                            <!-- Locations will be populated by JavaScript -->
+                        </select>
+                        <div class="form-text mt-2">You can only select from your saved locations</div>
+                    </div>
+                </div>
+                <div class="col-md-7 ps-md-4">
+                    <div id="map-container" class="border rounded overflow-hidden" style="height: 220px;">
+                        <div id="pickup-map"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hidden fields for coordinates, not shown to user -->
+            <input type="hidden" id="latitude">
+            <input type="hidden" id="longitude">
+        </div>
+
+        <div class="form-section">
+            <h2 class="h5 mb-3">Pickup Details</h2>
+            
+            <!-- Instant pickup doesn't need date/time selection -->
+            
+            <div class="mb-3">
+                <label for="bags-count" class="form-label">Number of Bags</label>
+                <select class="form-select" id="bags-count">
+                    <option value="1">1 Bag</option>
+                    <option value="2">2 Bags</option>
+                    <option value="3">3 Bags</option>
+                    <option value="4">4 Bags</option>
+                    <option value="5">5 Bags</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="priority" class="form-label">Priority</label>
+                <select class="form-select" id="priority">
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Waste Type</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="waste-type" id="waste-general" value="general" checked>
+                    <label class="form-check-label" for="waste-general">
+                        General Waste
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="waste-type" id="waste-recycling" value="recycling">
+                    <label class="form-check-label" for="waste-recycling">
+                        Recycling <span class="badge bg-success ms-2">+5 points</span>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="waste-type" id="waste-plastic" value="plastic">
+                    <label class="form-check-label" for="waste-plastic">
+                        Plastic <span class="badge bg-success ms-2">+10 points</span>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="waste-type" id="waste-organic" value="organic">
+                    <label class="form-check-label" for="waste-organic">
+                        Organic Waste
+                    </label>
+                </div>
+                <div class="form-text mt-2" id="reward-message">
+                    <i class="bi bi-info-circle"></i> Earn reward points by properly segregating recycling and plastic waste!
+                </div>
+            </div>
+            
+            <!-- Special instructions removed for instant pickup -->
+            
+            <div class="mb-3">
+                <label for="notes" class="form-label">Additional Notes</label>
+                <textarea class="form-control" id="notes" rows="2" placeholder="Any other information for the collector"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h2 class="h5 mb-3">Pricing & Rewards</h2>
+            <div class="price-tag">$<span id="fee-amount">5</span>.00</div>
+            <div class="text-center text-muted small mb-3">Standard pickup fee</div>
+            
+            <div class="alert alert-success mb-3" id="points-reward" style="display: none;">
+                <div class="d-flex align-items-center">
+                    <div class="me-3"><i class="bi bi-award-fill" style="font-size: 2rem;"></i></div>
+                    <div>
+                        <strong>You'll earn <span id="points-amount">0</span> points!</strong>
+                        <div class="small">Thank you for helping the environment through waste segregation</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <button id="request-pickup-btn" class="btn btn-success btn-lg" onclick="handlePickupRequestClick()">
+                    Request Pickup
+                </button>
+            </div>
+        </div>
+        
+        <div class="mt-3 text-center">
+            <a href="/schedule-pickup" class="btn btn-link">Need a recurring pickup? Schedule here</a>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    
+    <!-- Custom scripts -->
+    <script src="/js/auth.js"></script>
+    <script src="/js/offline-sync.js"></script>
+    <script src="/js/pickup-sync.js"></script>
+    <script src="/js/map-offline.js"></script>
+    <script src="/js/register-sw.js"></script>
+    <script src="/js/pickup-request.js"></script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    
+    <!-- Inline map initialization to avoid 404 errors -->
+    <script>
+        // Direct handler for the request pickup button
+        function handlePickupRequestClick() {
+            console.log('Request pickup button clicked directly');
+            
+            // Create a mock pickup request and store it
+            const mockPickupData = {
+                id: 'pickup-' + Date.now(),
+                status: 'pending',
+                location: document.getElementById('saved-location')?.options[document.getElementById('saved-location').selectedIndex]?.text || '123 Main Street',
+                coordinates: 'POINT(-74.0060 40.7128)',
+                waste_type: document.querySelector('input[name="waste-type"]:checked')?.value || 'recycling',
+                bags_count: document.getElementById('bags-count')?.value || 2,
+                points: 5,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+            
+            // Store in localStorage for persistence
+            localStorage.setItem('active_pickup_data', JSON.stringify(mockPickupData));
+            localStorage.setItem('pickup_requested_at', new Date().toISOString());
+            localStorage.setItem('pickup_request_debug', 'Redirecting from request-pickup.html');
+            
+            // Set a flag to force showing the container
+            localStorage.setItem('force_show_active_pickup', 'true');
+            
+            console.log('Created mock pickup request:', mockPickupData);
+            
+            // Redirect to dashboard
+            window.location.href = '/dashboard?newRequest=true';
+            
+            // Fallback in case the redirect doesn't happen immediately
+            setTimeout(() => {
+                console.log('Fallback redirect triggered');
+                window.location.replace('/dashboard?newRequest=true&fallback=true');
+            }, 1000);
+        }
+        
+        // For debugging
+        console.log('Request pickup page loaded');
+        window.addEventListener('load', function() {
+            console.log('Window fully loaded');
+            const btn = document.getElementById('request-pickup-btn');
+            if (btn) {
+                console.log('Found request-pickup-btn');
+                btn.addEventListener('click', function() {
+                    console.log('Click event fired through addEventListener');
+                });
+            } else {
+                console.error('request-pickup-btn not found!');
+            }
+        });
+    </script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize map
+            const defaultLocation = [40.7128, -74.0060]; // Default to NYC
+            const mapContainer = document.getElementById('pickup-map');
+            
+            if (mapContainer) {
+                // Initialize Leaflet map
+                const map = L.map('pickup-map').setView(defaultLocation, 13);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+                
+                // Add a marker at the default location
+                const marker = L.marker(defaultLocation, {draggable: true}).addTo(map);
+                
+                // Initialize location selection
+                const locationSelect = document.getElementById('saved-location');
+                if (locationSelect) {
+                    // Add some sample locations for testing
+                    const sampleLocations = [
+                        { id: 'loc1', name: 'Home', address: '123 Main St', lat: 40.7128, lng: -74.0060 },
+                        { id: 'loc2', name: 'Work', address: '456 Office Ave', lat: 40.7300, lng: -73.9950 },
+                        { id: 'loc3', name: 'Park', address: '789 Green St', lat: 40.7200, lng: -74.0100 }
+                    ];
+                    
+                    // Populate dropdown
+                    sampleLocations.forEach(loc => {
+                        const option = document.createElement('option');
+                        option.value = loc.id;
+                        option.textContent = `${loc.name}: ${loc.address}`;
+                        locationSelect.appendChild(option);
+                    });
+                    
+                    // Handle location selection
+                    locationSelect.addEventListener('change', function(e) {
+                        const locationId = e.target.value;
+                        const location = sampleLocations.find(loc => loc.id === locationId);
+                        
+                        if (location) {
+                            map.setView([location.lat, location.lng], 15);
+                            marker.setLatLng([location.lat, location.lng]);
+                        }
+                    });
+                }
+                
+                // Handle waste type selection for points
+                const wasteTypeRadios = document.querySelectorAll('input[name="waste-type"]');
+                const pointsRewardElement = document.getElementById('points-reward');
+                const pointsAmountElement = document.getElementById('points-amount');
+                
+                wasteTypeRadios.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        let points = 0;
+                        const wasteType = document.querySelector('input[name="waste-type"]:checked').value;
+                        
+                        if (wasteType === 'recycling') {
+                            points = 5;
+                        } else if (wasteType === 'plastic') {
+                            points = 10;
+                        }
+                        
+                        if (pointsRewardElement && pointsAmountElement) {
+                            if (points > 0) {
+                                pointsAmountElement.textContent = points;
+                                pointsRewardElement.style.display = 'block';
+                            } else {
+                                pointsRewardElement.style.display = 'none';
+                            }
+                        }
+                    });
+                });
+                
+                // The request button is handled by pickup-request.js
+                // This prevents duplicate event handlers
+            }
+        });
+    </script>
+</body>
+</html>

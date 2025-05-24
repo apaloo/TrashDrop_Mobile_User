@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Database Performance | TrashDrop</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="../public/css/styles.css">
+  <style>
+    .metric-card {
+      border-left: 4px solid #198754;
+      transition: all 0.3s ease;
+    }
+    .metric-card:hover {
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .metric-card.warning {
+      border-left-color: #ffc107;
+    }
+    .metric-card.danger {
+      border-left-color: #dc3545;
+    }
+    .query-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .query-item {
+      border-left: 3px solid #ccc;
+      padding-left: 15px;
+      margin-bottom: 10px;
+      transition: all 0.2s ease;
+    }
+    .query-item:hover {
+      background-color: rgba(0,0,0,0.03);
+    }
+    .query-item.slow {
+      border-left-color: #ffc107;
+    }
+    .query-item.error {
+      border-left-color: #dc3545;
+    }
+    .chart-container {
+      height: 250px;
+      position: relative;
+    }
+    .filter-bar {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 20px;
+    }
+    .badge-query-type {
+      font-size: 0.7rem;
+      padding: 3px 7px;
+    }
+    .badge-select { background-color: #0d6efd; color: white; }
+    .badge-insert { background-color: #198754; color: white; }
+    .badge-update { background-color: #fd7e14; color: white; }
+    .badge-delete { background-color: #dc3545; color: white; }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="dashboard.html">
+        <img src="../public/images/trashdrop-logo.png" alt="TrashDrop Logo" height="30" class="me-2">
+        TrashDrop
+      </a>
+      <div class="ms-auto d-flex align-items-center">
+        <div class="points-display me-3">
+          <i class="bi bi-coin me-1"></i>
+          <span class="points-value" id="userPoints">0</span> points
+        </div>
+        <div class="dropdown">
+          <button class="btn btn-primary dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle me-1"></i>
+            <span id="userName">User</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+            <li><a class="dropdown-item" href="#" id="profileLink"><i class="bi bi-person me-2"></i>Profile</a></li>
+            <li><a class="dropdown-item" href="#" id="settingsLink"><i class="bi bi-gear me-2"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#" id="logoutButton"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container mt-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <h1 class="mb-0">Database Performance Monitor</h1>
+      <button id="refreshBtn" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+      </button>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row mb-4">
+      <div class="col-md-3 mb-3">
+        <div class="metric-card card h-100">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Total Queries</h6>
+            <h2 class="card-title" id="totalQueries">0</h2>
+            <p class="card-text text-muted"><small id="queriesPerMinute">0 queries/min</small></p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="metric-card card h-100">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Average Response Time</h6>
+            <h2 class="card-title" id="avgResponseTime">0 ms</h2>
+            <p class="card-text text-muted"><small id="responseTimeTrend">No data</small></p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="metric-card warning card h-100">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Slow Queries</h6>
+            <h2 class="card-title" id="slowQueryCount">0</h2>
+            <p class="card-text text-muted"><small id="slowQueryPercentage">0% of total</small></p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="metric-card danger card h-100">
+          <div class="card-body">
+            <h6 class="card-subtitle mb-2 text-muted">Query Errors</h6>
+            <h2 class="card-title" id="errorCount">0</h2>
+            <p class="card-text text-muted"><small id="errorPercentage">0% of total</small></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Graphs -->
+    <div class="row mb-4">
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Query Response Time</h5>
+            <div class="btn-group btn-group-sm" role="group">
+              <button type="button" class="btn btn-outline-secondary time-range active" data-range="1h">1h</button>
+              <button type="button" class="btn btn-outline-secondary time-range" data-range="6h">6h</button>
+              <button type="button" class="btn btn-outline-secondary time-range" data-range="24h">24h</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="responseTimeChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-header">
+            <h5 class="mb-0">Query Types</h5>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="queryTypesChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar mb-4">
+      <div class="row align-items-center">
+        <div class="col-md-3 mb-2 mb-md-0">
+          <select id="queryTypeFilter" class="form-select form-select-sm">
+            <option value="all">All Query Types</option>
+            <option value="select">Select</option>
+            <option value="insert">Insert</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-2 mb-md-0">
+          <select id="tableFilter" class="form-select form-select-sm">
+            <option value="all">All Tables</option>
+            <!-- Will be populated dynamically -->
+          </select>
+        </div>
+        <div class="col-md-3 mb-2 mb-md-0">
+          <select id="statusFilter" class="form-select form-select-sm">
+            <option value="all">All Status</option>
+            <option value="success">Success</option>
+            <option value="error">Error</option>
+            <option value="slow">Slow (>500ms)</option>
+          </select>
+        </div>
+        <div class="col-md-3 text-md-end">
+          <button id="resetMetricsBtn" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-trash me-1"></i> Reset Metrics
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Queries -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Queries</h5>
+        <span class="badge bg-secondary" id="queryCount">0 queries</span>
+      </div>
+      <div class="card-body">
+        <div class="query-list" id="recentQueries">
+          <!-- Queries will be added here dynamically -->
+          <div class="text-center py-5 text-muted">
+            No queries recorded yet
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slow Queries -->
+    <div class="row mb-4">
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Slow Queries</h5>
+            <span class="badge bg-warning text-dark" id="slowQueryBadge">0 queries</span>
+          </div>
+          <div class="card-body">
+            <div class="query-list" id="slowQueries">
+              <!-- Slow queries will be added here dynamically -->
+              <div class="text-center py-5 text-muted">
+                No slow queries recorded
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Query Errors</h5>
+            <span class="badge bg-danger" id="errorBadge">0 errors</span>
+          </div>
+          <div class="card-body">
+            <div class="query-list" id="errorQueries">
+              <!-- Error queries will be added here dynamically -->
+              <div class="text-center py-5 text-muted">
+                No errors recorded
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Performance Monitoring Settings</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="slowQueryThreshold" class="form-label">Slow Query Threshold (ms)</label>
+            <input type="number" class="form-control" id="slowQueryThreshold" min="100" step="100" value="500">
+            <div class="form-text">Queries taking longer than this will be marked as slow</div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="maxStoredQueries" class="form-label">Maximum Stored Queries</label>
+            <input type="number" class="form-control" id="maxStoredQueries" min="50" step="50" value="100">
+            <div class="form-text">Maximum number of queries to store in memory</div>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-6 mb-3">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="logToConsole" checked>
+              <label class="form-check-label" for="logToConsole">Log to Console</label>
+            </div>
+            <div class="form-text">Log query performance information to browser console</div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="verboseLogging">
+              <label class="form-check-label" for="verboseLogging">Verbose Logging</label>
+            </div>
+            <div class="form-text">Log all queries to console (not just slow ones and errors)</div>
+          </div>
+        </div>
+        <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../public/js/auth.js"></script>
+  <script src="../public/js/db-monitor.js"></script>
+  <script src="../public/js/db-test.js"></script>
+  <script>
+    // Import supabase client
+    import('../src/config/supabase.js')
+      .then(module => {
+        window.supabase = module.default;
+        console.log("Supabase client imported successfully");
+      })
+      .catch(error => {
+        console.error("Error importing Supabase client:", error);
+      });
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize Charts
+      const responseTimeCtx = document.getElementById('responseTimeChart').getContext('2d');
+      const queryTypesCtx = document.getElementById('queryTypesChart').getContext('2d');
+      
+      // Response time chart
+      const responseTimeChart = new Chart(responseTimeCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Avg Response Time (ms)',
+            data: [],
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            tension: 0.2,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Response Time (ms)'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Time'
+              }
+            }
+          }
+        }
+      });
+      
+      // Query types chart
+      const queryTypesChart = new Chart(queryTypesCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Select', 'Insert', 'Update', 'Delete'],
+          datasets: [{
+            data: [0, 0, 0, 0],
+            backgroundColor: [
+              '#0d6efd',
+              '#198754',
+              '#fd7e14',
+              '#dc3545'
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+            }
+          }
+        }
+      });
+      
+      // Functions to update UI
+      function updateMetrics() {
+        if (!window.dbMonitor) {
+          console.log("DB Monitor not available yet");
+          return;
+        }
+        
+        const summary = dbMonitor.getMetrics('summary');
+        const allMetrics = dbMonitor.getMetrics('all');
+        
+        // Update summary metrics
+        document.getElementById('totalQueries').textContent = summary.totalQueries;
+        document.getElementById('avgResponseTime').textContent = `${summary.avgDuration.toFixed(2)} ms`;
+        document.getElementById('slowQueryCount').textContent = summary.slowQueryCount;
+        document.getElementById('errorCount').textContent = summary.errorCount;
+        
+        // Calculate percentages
+        const slowPercentage = summary.totalQueries ? ((summary.slowQueryCount / summary.totalQueries) * 100).toFixed(1) : 0;
+        const errorPercentage = summary.totalQueries ? ((summary.errorCount / summary.totalQueries) * 100).toFixed(1) : 0;
+        
+        document.getElementById('slowQueryPercentage').textContent = `${slowPercentage}% of total`;
+        document.getElementById('errorPercentage').textContent = `${errorPercentage}% of total`;
+        
+        // Update query lists
+        updateQueryList('recentQueries', allMetrics.queries.slice(-20).reverse());
+        updateQueryList('slowQueries', dbMonitor.getMetrics('slow').slowQueries.slice(-10).reverse());
+        updateQueryList('errorQueries', dbMonitor.getMetrics('errors').errors.slice(-10).reverse());
+        
+        // Update badges
+        document.getElementById('queryCount').textContent = `${allMetrics.queries.length} queries`;
+        document.getElementById('slowQueryBadge').textContent = `${summary.slowQueryCount} queries`;
+        document.getElementById('errorBadge').textContent = `${summary.errorCount} errors`;
+        
+        // Update charts
+        updateCharts(allMetrics);
+        
+        // Update table filter options
+        updateTableFilterOptions(allMetrics.queries);
+      }
+      
+      function updateQueryList(containerId, queries) {
+        const container = document.getElementById(containerId);
+        if (!queries || queries.length === 0) {
+          container.innerHTML = '<div class="text-center py-5 text-muted">No queries recorded</div>';
+          return;
+        }
+        
+        container.innerHTML = '';
+        queries.forEach(query => {
+          const isSlowClass = query.isSlow ? ' slow' : '';
+          const isErrorClass = query.status === 'error' ? ' error' : '';
+          const timestamp = new Date(query.timestamp).toLocaleTimeString();
+          
+          const operationDisplay = query.operation || 'unknown';
+          const badgeClass = getBadgeClassForOperation(operationDisplay);
+          
+          let durationDisplay = '';
+          if (query.duration) {
+            durationDisplay = `<span class="ms-2">${query.duration.toFixed(2)} ms</span>`;
+          }
+          
+          let errorDisplay = '';
+          if (query.status === 'error' || query.error) {
+            errorDisplay = `<div class="text-danger mt-1">${query.error || 'Error occurred'}</div>`;
+          }
+          
+          let rowCountDisplay = '';
+          if (query.rowCount !== undefined) {
+            rowCountDisplay = `<span class="badge bg-secondary ms-2">${query.rowCount} row${query.rowCount !== 1 ? 's' : ''}</span>`;
+          }
+          
+          container.innerHTML += `
+            <div class="query-item${isSlowClass}${isErrorClass}">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <span class="badge ${badgeClass}">${operationDisplay}</span>
+                  <strong>${query.table || 'unknown'}</strong>
+                  ${rowCountDisplay}
+                </div>
+                <div class="text-muted small">
+                  ${timestamp}${durationDisplay}
+                </div>
+              </div>
+              ${errorDisplay}
+              <div class="small text-muted mt-1">${query.params || ''}</div>
+            </div>
+          `;
+        });
+      }
+      
+      function getBadgeClassForOperation(operation) {
+        if (operation.startsWith('select')) return 'badge-query-type badge-select';
+        if (operation.startsWith('insert')) return 'badge-query-type badge-insert';
+        if (operation.startsWith('update')) return 'badge-query-type badge-update';
+        if (operation.startsWith('delete')) return 'badge-query-type badge-delete';
+        return 'badge-query-type bg-secondary';
+      }
+      
+      function updateCharts(metrics) {
+        // Count query types
+        const queryCounts = {
+          select: 0,
+          insert: 0,
+          update: 0,
+          delete: 0
+        };
+        
+        metrics.queries.forEach(query => {
+          const op = query.operation || '';
+          if (op.startsWith('select')) queryCounts.select++;
+          else if (op.startsWith('insert')) queryCounts.insert++;
+          else if (op.startsWith('update')) queryCounts.update++;
+          else if (op.startsWith('delete')) queryCounts.delete++;
+        });
+        
+        // Update query types chart
+        queryTypesChart.data.datasets[0].data = [
+          queryCounts.select,
+          queryCounts.insert,
+          queryCounts.update,
+          queryCounts.delete
+        ];
+        queryTypesChart.update();
+        
+        // Update response time chart (simplified, in a real app you'd aggregate by time periods)
+        const timeLabels = [];
+        const responseTimes = [];
+        
+        // Get last 20 queries for the chart
+        const recentQueries = metrics.queries.slice(-20);
+        
+        recentQueries.forEach(query => {
+          if (query.timestamp && query.duration) {
+            const time = new Date(query.timestamp).toLocaleTimeString();
+            timeLabels.push(time);
+            responseTimes.push(query.duration);
+          }
+        });
+        
+        responseTimeChart.data.labels = timeLabels;
+        responseTimeChart.data.datasets[0].data = responseTimes;
+        responseTimeChart.update();
+      }
+      
+      function updateTableFilterOptions(queries) {
+        const tableFilter = document.getElementById('tableFilter');
+        const currentValue = tableFilter.value;
+        
+        // Extract unique table names
+        const tableNames = new Set();
+        queries.forEach(query => {
+          if (query.table) tableNames.add(query.table);
+        });
+        
+        // Clear existing options except the first one
+        while (tableFilter.options.length > 1) {
+          tableFilter.options.remove(1);
+        }
+        
+        // Add new options
+        tableNames.forEach(table => {
+          const option = new Option(table, table);
+          tableFilter.add(option);
+        });
+        
+        // Restore previous selection if it exists
+        if (currentValue !== 'all' && Array.from(tableNames).includes(currentValue)) {
+          tableFilter.value = currentValue;
+        }
+      }
+      
+      // Event listeners
+      document.getElementById('refreshBtn').addEventListener('click', updateMetrics);
+      
+      document.getElementById('resetMetricsBtn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to reset all performance metrics? This cannot be undone.')) {
+          if (window.dbMonitor) {
+            dbMonitor.resetMetrics();
+            updateMetrics();
+          }
+        }
+      });
+      
+      document.getElementById('saveSettingsBtn').addEventListener('click', function() {
+        if (window.dbMonitor) {
+          const slowQueryThreshold = parseInt(document.getElementById('slowQueryThreshold').value);
+          const maxStoredQueries = parseInt(document.getElementById('maxStoredQueries').value);
+          const logToConsole = document.getElementById('logToConsole').checked;
+          const verboseLogging = document.getElementById('verboseLogging').checked;
+          
+          dbMonitor.configure({
+            slowQueryThreshold,
+            maxStoredQueries,
+            logToConsole: verboseLogging ? 'verbose' : logToConsole
+          });
+          
+          alert('Settings saved successfully');
+        }
+      });
+      
+      // Filter events
+      const filters = ['queryTypeFilter', 'tableFilter', 'statusFilter'];
+      filters.forEach(filterId => {
+        document.getElementById(filterId).addEventListener('change', updateFilteredQueries);
+      });
+      
+      function updateFilteredQueries() {
+        if (!window.dbMonitor) return;
+        
+        const typeFilter = document.getElementById('queryTypeFilter').value;
+        const tableFilter = document.getElementById('tableFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        
+        const allQueries = dbMonitor.getMetrics('all').queries;
+        
+        // Apply filters
+        const filteredQueries = allQueries.filter(query => {
+          // Type filter
+          if (typeFilter !== 'all') {
+            const op = query.operation || '';
+            if (!op.startsWith(typeFilter)) return false;
+          }
+          
+          // Table filter
+          if (tableFilter !== 'all' && query.table !== tableFilter) return false;
+          
+          // Status filter
+          if (statusFilter === 'slow' && !query.isSlow) return false;
+          if (statusFilter === 'error' && query.status !== 'error') return false;
+          if (statusFilter === 'success' && query.status !== 'success') return false;
+          
+          return true;
+        });
+        
+        updateQueryList('recentQueries', filteredQueries.slice(-20).reverse());
+        document.getElementById('queryCount').textContent = `${filteredQueries.length} queries`;
+      }
+      
+      // Setup auto-refresh
+      const refreshInterval = setInterval(updateMetrics, 5000);
+      
+      // Time range buttons for response time chart
+      document.querySelectorAll('.time-range').forEach(button => {
+        button.addEventListener('click', function() {
+          document.querySelectorAll('.time-range').forEach(btn => btn.classList.remove('active'));
+          this.classList.add('active');
+          // In a real app, you would update the chart with data for the selected time range
+        });
+      });
+      
+      // Initialize metrics display
+      setTimeout(updateMetrics, 1000); // Initial delay to ensure dbMonitor is loaded
+    });
+  </script>
+</body>
+</html>
