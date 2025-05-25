@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Protocol interceptor must be the first script to run, before even meta tags are processed -->
+    <script src="/js/protocol-interceptor.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <meta name="description" content="TrashDrop Dashboard - Manage your waste collection, view upcoming pickups, and track your recycling points">
@@ -866,10 +868,16 @@
         }
     </style>
 
+    <!-- Supabase Authentication Fix - runs first to ensure proper Supabase integration -->
+    <script src="/js/supabase-auth-fix.js"></script>
+    <!-- Authentication Diagnostic - runs second to diagnose and fix auth issues -->
+    <script src="/js/auth-diagnostic.js"></script>
     <script src="/js/auth.js"></script>
     <!-- Load pickup refresh fix first - highest priority for solving the disappearing card issue -->
     <script src="/js/pickup-refresh-fix.js"></script>
     <script src="/js/map-display-fix.js"></script>
+    <!-- Load authentication helper for token management -->
+    <script src="/js/utils/auth-helper.js"></script>
     <!-- Load Active Pickup Persistence second to ensure card is visible immediately on refresh -->
     <script src="/js/active-pickup-persistence.js"></script>
     <!-- Initialize persistence immediately during page load -->

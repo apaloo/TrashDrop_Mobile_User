@@ -14,10 +14,11 @@
     <!-- iOS Safari specific settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Base URL script to handle navigation URLs correctly -->
+    <script src="/js/base-url.js"></script>
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <!-- Skip to content link for keyboard users -->
-    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+
     <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
         <div class="container">
             <a class="navbar-brand" href="/">
@@ -25,8 +26,22 @@
                 TrashDrop
             </a>
             <div class="d-flex">
-                <a href="/login" class="btn btn-sm btn-outline-light me-2" aria-label="Log In">Log In</a>
-                <a href="/signup" class="btn btn-sm btn-light" aria-label="Sign Up">Sign Up</a>
+                <!-- Using inline form to bypass Safari HTTPS upgrade -->
+                <a href="javascript:void(0)" onclick="navigateSafely('http://localhost:3000/login')" class="btn btn-sm btn-outline-light me-2" aria-label="Log In">Log In</a>
+                <a href="javascript:void(0)" onclick="navigateSafely('http://localhost:3000/signup')" class="btn btn-sm btn-light" aria-label="Sign Up">Sign Up</a>
+                
+                <script>
+                    // Special navigation function that works in Safari
+                    function navigateSafely(url) {
+                        // For Safari, open in new tab to bypass SSL restrictions
+                        if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) {
+                            window.open(url, '_blank');
+                        } else {
+                            // For other browsers, navigate in same window
+                            window.location.href = url;
+                        }
+                    }
+                </script>
             </div>
         </div>
     </nav>
@@ -259,8 +274,43 @@
     <!-- Bootstrap JavaScript Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Safari Login Helper Script -->
+    <script src="/js/safari-login-helper.js"></script>
+    
     <!-- Service Worker Registration -->
     <script>
+        // Navigation button event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Login button
+            var loginBtn = document.getElementById('login-btn');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Login button clicked');
+                    // Force HTTP protocol to prevent automatic HTTPS upgrade
+                    var loginUrl = 'http://127.0.0.1:3000/login';
+                    // Try using window.location.replace which might have different security handling
+                    try {
+                        window.location.replace(loginUrl);
+                    } catch(err) {
+                        console.log('Error with replace, trying assign', err);
+                        window.location.href = loginUrl;
+                    }
+                });
+            }
+            
+            // Signup button
+            var signupBtn = document.getElementById('signup-btn');
+            if (signupBtn) {
+                signupBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Signup button clicked');
+                    window.location.href = 'http://127.0.0.1:3000/signup';
+                });
+            }
+        });
+
+        // Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/service-worker.js').then(function(registration) {

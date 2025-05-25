@@ -1,0 +1,184 @@
+# TrashDrop Mobile Application
+
+A mobile-optimized Progressive Web Application (PWA) for managing waste pickup requests, scanning recycling bags, and reporting illegal dumping.
+
+## Features
+
+- **User Authentication**: Secure phone-based signup and login with OTP verification
+- **Profile Management**: Personal information, preferences, and security settings
+- **Pickup Requests**: Schedule and track waste pickup requests
+- **QR Scanner**: Scan and register recycling bags with points system
+- **Offline Support**: Full functionality even without an internet connection
+- **Map Integration**: Location-based services with offline map capabilities
+- **Points & Rewards**: Earn points for recycling activities
+- **Dark Mode**: Customizable UI theme
+
+## Technologies Used
+
+- **Frontend**: HTML5, CSS3, JavaScript, Bootstrap 5
+- **Backend**: Node.js, Express
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: JWT, Supabase Auth
+- **Storage**: IndexedDB for offline data
+- **Maps**: Leaflet.js
+- **QR Scanning**: HTML5 QR Scanner
+
+## Prerequisites
+
+- Node.js (v16 or higher)
+- npm (v8 or higher)
+- Supabase account and project
+
+## Installation
+
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd TrashDrop
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Create a `.env` file in the root directory with the following variables:
+   ```
+   # Application Settings
+   PORT=3000
+   NODE_ENV=production
+   
+   # Security
+   SESSION_SECRET=your-session-secret
+   JWT_SECRET=your-jwt-secret
+   SESSION_DURATION=86400000  # 24 hours in milliseconds
+   
+   # Supabase Configuration
+   SUPABASE_URL=your-supabase-url
+   SUPABASE_KEY=your-supabase-key
+   SUPABASE_ANON_KEY=your-supabase-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+   
+   # Service API Keys
+   SMS_API_KEY=your-sms-service-api-key
+   ```
+
+4. Start the development server:
+   ```
+   npm run dev
+   ```
+
+## Deployment
+
+### Option 1: Deploy to Heroku
+
+1. Create a Heroku account if you don't have one
+2. Install the Heroku CLI and log in:
+   ```
+   npm install -g heroku
+   heroku login
+   ```
+
+3. Create a new Heroku app:
+   ```
+   heroku create trashdrop-app
+   ```
+
+4. Set up environment variables in Heroku:
+   ```
+   heroku config:set NODE_ENV=production
+   heroku config:set SESSION_SECRET=your-session-secret
+   heroku config:set JWT_SECRET=your-jwt-secret
+   heroku config:set SUPABASE_URL=your-supabase-url
+   heroku config:set SUPABASE_KEY=your-supabase-key
+   heroku config:set SUPABASE_ANON_KEY=your-supabase-anon-key
+   heroku config:set SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+   heroku config:set SMS_API_KEY=your-sms-service-api-key
+   ```
+
+5. Deploy the application:
+   ```
+   git push heroku main
+   ```
+
+### Option 2: Deploy to a VPS or Cloud Provider
+
+1. SSH into your server:
+   ```
+   ssh user@your-server-ip
+   ```
+
+2. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd TrashDrop
+   ```
+
+3. Install dependencies:
+   ```
+   npm install --production
+   ```
+
+4. Create a `.env` file with the required environment variables
+
+5. Set up a process manager like PM2:
+   ```
+   npm install -g pm2
+   pm2 start server.js --name trashdrop
+   pm2 save
+   pm2 startup
+   ```
+
+6. Configure Nginx as a reverse proxy (optional):
+   ```
+   server {
+       listen 80;
+       server_name yourdomain.com;
+       
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host $host;
+           proxy_cache_bypass $http_upgrade;
+       }
+   }
+   ```
+
+### Option 3: Deploy using Docker
+
+1. Create a Dockerfile in the root directory:
+   ```
+   FROM node:16-alpine
+   WORKDIR /app
+   COPY package*.json ./
+   RUN npm install --production
+   COPY . .
+   EXPOSE 3000
+   CMD ["node", "server.js"]
+   ```
+
+2. Build and run the Docker image:
+   ```
+   docker build -t trashdrop .
+   docker run -p 3000:3000 --env-file .env trashdrop
+   ```
+
+## Development Mode
+
+To run the application in development mode with hot reloading:
+
+```
+npm run dev
+```
+
+## License
+
+This project is licensed under the ISC License.
+
+## Acknowledgements
+
+- Supabase for the backend infrastructure
+- Bootstrap for the UI components
+- HTML5 QR Scanner for QR code scanning capabilities

@@ -20,4 +20,7 @@ router.post('/reset-password', authController.resetPassword);
 // Logout route
 router.post('/logout', authController.logout);
 
+// Get Supabase configuration for client
+router.get('/config', authController.getConfig);
+
 module.exports = router;

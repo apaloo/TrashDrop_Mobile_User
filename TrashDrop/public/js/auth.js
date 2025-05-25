@@ -10,13 +10,33 @@
   }
   
   // Initialize Supabase client
-  // Determine the protocol based on the environment
-  const protocol = window.location.hostname === 'localhost' ? 'http://' : 'https://';
+  // Always use HTTP for localhost/127.0.0.1 to prevent Safari HTTPS connection issues
+  const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const protocol = isLocalhost ? 'http://' : (window.location.protocol === 'https:' ? 'https://' : 'http://');
   
-  // Supabase configuration
-  // For production, use the actual values
-  const supabaseUrl = 'https://cpeyavpxqcloupolbvyh.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwZXlhdnB4cWNsb3Vwb2xidnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTY4OTYsImV4cCI6MjA2MTA3Mjg5Nn0.5rxsiRuLHCpeJZ5TqoIA5X4UwoAAuxIpNu_reafwwbQ';
+  // Supabase configuration - these will be fetched from the server config endpoint
+  let supabaseUrl = '';
+  let supabaseKey = '';
+  
+  // Initialize Supabase credentials
+  async function initSupabaseCredentials() {
+    try {
+      const response = await fetch('/api/auth/config');
+      if (response.ok) {
+        const config = await response.json();
+        supabaseUrl = config.supabaseUrl;
+        supabaseKey = config.supabaseKey;
+        console.log('Supabase configuration loaded from server');
+      } else {
+        console.error('Failed to load Supabase configuration from server');
+      }
+    } catch (error) {
+      console.error('Error loading Supabase configuration:', error);
+    }
+  }
+  
+  // Call the initialization function
+  initSupabaseCredentials();
   
   // JWT token handling functions
   const jwtHelpers = {
@@ -96,31 +116,53 @@
     };
   };
   
-  // Try to initialize the real Supabase client, fall back to mock if there's an error
-  try {
-    if (window.supabase) {
-      supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-      console.log('Supabase client initialized successfully');
-    } else {
-      console.warn('Supabase client not available in window, loading from CDN');
-      // Load Supabase from CDN if not available
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-      script.onload = function() {
+  // Initialize Supabase client asynchronously
+  async function initializeSupabaseClient() {
+    try {
+      // First, ensure we have the credentials
+      if (!supabaseUrl || !supabaseKey) {
+        await initSupabaseCredentials();
+      }
+      
+      // Check if credentials were successfully loaded
+      if (!supabaseUrl || !supabaseKey) {
+        console.error('Failed to load Supabase credentials');
+        throw new Error('Missing Supabase credentials');
+      }
+      
+      if (window.supabase) {
         supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-        console.log('Supabase client loaded from CDN and initialized');
-      };
-      script.onerror = function() {
-        console.error('Failed to load Supabase from CDN, using mock client');
-        supabase = createMockSupabaseClient();
-      };
-      document.head.appendChild(script);
+        console.log('Supabase client initialized successfully');
+      } else {
+        console.warn('Supabase client not available in window, loading from CDN');
+        // Load Supabase from CDN if not available
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+        
+        if (window.supabase) {
+          supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+          console.log('Supabase client loaded from CDN and initialized');
+        } else {
+          throw new Error('Failed to load Supabase from CDN');
+        }
+      }
+      
+      return supabase;
+    } catch (error) {
+      console.warn('Supabase client initialization error:', error);
+      console.log('Using mock Supabase client for development');
+      supabase = createMockSupabaseClient();
+      return supabase;
     }
-  } catch (error) {
-    console.warn('Supabase client initialization error:', error);
-    console.log('Using mock Supabase client for development');
-    supabase = createMockSupabaseClient();
   }
+  
+  // Call the initialization function
+  initializeSupabaseClient();
   
   // User storage for development
   // Making it available globally for other scripts to access

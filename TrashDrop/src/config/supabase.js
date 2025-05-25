@@ -1,13 +1,14 @@
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 
-// Environment settings
-const isDevelopment = process.env.NODE_ENV !== 'production';
+// Import centralized configuration
+const config = require('./index');
 
-// Get Supabase credentials from environment variables
-const supabaseUrl = process.env.SUPABASE_URL || 'https://cpeyavpxqcloupolbvyh.supabase.co';
-const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwZXlhdnB4cWNsb3Vwb2xidnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTY4OTYsImV4cCI6MjA2MTA3Mjg5Nn0.5rxsiRuLHCpeJZ5TqoIA5X4UwoAAuxIpNu_reafwwbQ';
-const jwtSecret = process.env.JWT_SECRET || 'trash-drop-super-secret-jwt-key-for-development';
+// Get configuration values from centralized config
+const isDevelopment = config.server.isDevelopment;
+const supabaseUrl = config.supabase.url;
+const supabaseKey = config.supabase.anonKey;
+const jwtSecret = config.security.jwtSecret;
 
 /**
  * Performance monitoring initialization

@@ -1,9 +1,10 @@
 const { supabase, jwtHelpers } = require('../config/supabase');
 const smsService = require('../utils/smsService');
 const devHelper = require('../utils/devHelper');
+const config = require('../config');
 
-// Environment check
-const isDevelopment = process.env.NODE_ENV !== 'production';
+// Environment check using centralized config
+const isDevelopment = config.server.isDevelopment;
 
 // Sign up with phone number
 exports.signup = async (req, res) => {
@@ -233,41 +234,45 @@ exports.verifyOTP = async (req, res) => {
   }
 };
 
-// Login with phone and password
+// Login with phone/email and password
 exports.login = async (req, res) => {
   try {
     console.log('Login request received:', req.body);
-    const { phone, password } = req.body;
-    
-    if (!phone || !password) {
+
+    // Accept either phone or email
+    const { phone, email, password } = req.body;
+    const identifier = phone || email;
+
+    if (!identifier || !password) {
       console.error('Login error: Missing required fields');
-      return res.status(400).json({ error: 'Phone number and password are required' });
+      return res.status(400).json({ error: 'Phone/email and password are required' });
     }
 
-    console.log(`Processing login for phone ${phone}`);
-    
+    console.log(`Processing login for identifier ${identifier}`);
+
     if (isDevelopment) {
       console.log('Development mode: Simulating successful login');
-      
+
       // In development, create a mock user and token
       const mockUserId = 'dev-user-' + Date.now();
       const mockUser = {
         id: mockUserId,
-        phone: phone,
+        phone: phone || '',
+        email: email || 'dev@example.com',
         role: 'user',
-        email: 'dev@example.com',
         created_at: new Date().toISOString()
       };
-      
+
       // Generate a real JWT token even in development mode
       const jwtToken = jwtHelpers.generateToken({
         id: mockUserId,
-        phone: phone,
+        phone: mockUser.phone,
+        email: mockUser.email,
         role: 'user'
       });
-      
+
       console.log('Generated JWT token for development login');
-      
+
       return res.status(200).json({
         success: true,
         user: mockUser,
@@ -275,33 +280,37 @@ exports.login = async (req, res) => {
         message: 'Login successful (development mode)'
       });
     }
-    
+
     // In production, use Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
-      phone,
+      ...(phone ? { phone } : { email }),
       password
     });
-    
+
     if (error) {
       console.error('Login error:', error.message);
       return res.status(401).json({ error: error.message });
     }
-    
+
     console.log('Login successful for user:', data.user.id);
-    
+
     // Get user profile to add role information
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
-    
+
+    if (profileError) {
+      console.log('Profile retrieval error (may be expected if profile not set):', profileError.message);
+    }
+
     // Merge profile data with user data
     const userData = {
       ...data.user,
       ...(profileData || {})
     };
-    
+
     // Generate JWT token
     const jwtToken = jwtHelpers.generateToken({
       id: data.user.id,
@@ -309,10 +318,11 @@ exports.login = async (req, res) => {
       email: userData.email,
       role: profileData?.role || 'user'
     });
-    
-    console.log('Generated JWT token for authenticated user');
-    
-    res.status(200).json({ 
+
+    console.log('Generated JWT token for production login');
+
+    res.status(200).json({
+      success: true,
       user: userData,
       token: jwtToken,
       message: 'Login successful'
@@ -418,5 +428,19 @@ exports.logout = async (req, res) => {
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({ error: 'Failed to logout' });
+  }
+};
+
+// Get Supabase configuration for client-side usage
+exports.getConfig = async (req, res) => {
+  try {
+    // Get client-safe configuration from the centralized config module
+    const clientConfig = config.supabase.getClientConfig();
+    
+    // Send configuration
+    return res.status(200).json(clientConfig);
+  } catch (error) {
+    console.error('Error providing configuration:', error);
+    res.status(500).json({ error: 'Failed to get configuration' });
   }
 };

@@ -36,8 +36,26 @@ button:focus,
 [role="button"]:focus,
 input:focus,
 select:focus,
-textarea:focus {
+textarea:focus,
+.form-check-input:focus,
+.form-select:focus,
+.dropdown-item:focus,
+.page-link:focus,
+.nav-link:focus {
   box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.25);
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  position: relative;
+  z-index: 5;
+  text-decoration: underline;
+}
+
+/* Keyboard focus utility class */
+.focus-visible:focus {
+  outline: 2px solid var(--primary-color) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.25) !important;
+  text-decoration: underline;
 }
 
 /* Improved contrast for text on colored backgrounds */
@@ -54,6 +72,42 @@ textarea:focus {
   .btn-info {
     forced-color-adjust: none;
   }
+  
+  /* Ensure links are always underlined in high contrast mode */
+  a {
+    text-decoration: underline !important;
+  }
+  
+  /* Ensure buttons have visible borders */
+  .btn {
+    border: 2px solid currentColor !important;
+  }
+}
+
+/* High contrast class for users who prefer higher contrast */
+.high-contrast {
+  --primary-color: #007700;
+  --primary-dark: #005500;
+  --accent-color: #ff0000;
+  --text-color: #000000;
+  --text-secondary: #333333;
+  --bg-light: #ffffff;
+  --bg-dark: #000000;
+}
+
+.high-contrast .text-muted {
+  color: #555555 !important;
+}
+
+.high-contrast.dark-mode {
+  --text-color: #ffffff;
+  --text-secondary: #cccccc;
+  --bg-light: #000000;
+  --bg-dark: #ffffff;
+}
+
+.high-contrast.dark-mode .text-muted {
+  color: #aaaaaa !important;
 }
 
 /* Improved text readability */
@@ -72,6 +126,16 @@ textarea:focus {
   h3, .h3 { font-size: 1.25rem; }
   h4, .h4 { font-size: 1.15rem; }
   h5, .h5 { font-size: 1rem; }
+  
+  /* Improve line height for readability on small screens */
+  body {
+    line-height: 1.6;
+  }
+  
+  /* Make form elements more touch-friendly */
+  input, select, textarea, button, .btn {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
 }
 
 /* Responsive spacing adjustments */
@@ -109,6 +173,24 @@ textarea:focus {
   .list-group-item {
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
+  }
+  
+  /* Improve spacing between clickable elements */
+  .btn + .btn,
+  .form-check + .form-check,
+  .nav-item + .nav-item {
+    margin-top: 0.5rem;
+  }
+  
+  /* Ensure adequate touch target size for icons */
+  .btn-icon,
+  button.close,
+  .mobile-nav-item i {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -164,6 +246,37 @@ textarea:focus {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* Visually hide but keep accessible to screen readers */
+.sr-only-focusable:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Improved aria-live region styling */
+[aria-live] {
+  position: relative;
+}
+
+/* Add visual cues for required fields that are accessible */
+label.required::after {
+  content: ' *';
+  color: var(--danger-color, #dc3545);
+}
+
+/* Improved keyboard tabbing visualization */
+*:focus-visible {
+  outline: 3px solid var(--primary-color, #4CAF50) !important;
+  outline-offset: 3px !important;
+  border-radius: 2px;
 }
 
 /* Improved table responsiveness */

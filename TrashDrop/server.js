@@ -7,7 +7,7 @@ const session = require('express-session');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 
 // Check environment
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -18,39 +18,73 @@ console.log(`Starting server in ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} 
 // Middleware
 app.use(cors());
 
-// Configure Helmet differently based on environment
-if (isDevelopment) {
-  // In development, disable the content security policy
-  app.use(helmet({
-    contentSecurityPolicy: false
-  }));
-  console.log('Content Security Policy disabled for development');
-} else {
-  // In production, use stricter security settings
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdn.jsdelivr.net", "cdn.tailwindcss.com"],
-        styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com"],
-        imgSrc: ["'self'", "data:", "blob:"],
-        connectSrc: ["'self'", process.env.SUPABASE_URL],
-      }
+// Redirect middleware for handling requests without port specified and protocol issues
+app.use((req, res, next) => {
+  const host = req.get('host');
+  const isSafari = /^((?!chrome|android).)*safari/i.test(req.headers['user-agent'] || '');
+  
+  // For Safari browsers, detect if they're trying to access via HTTPS on localhost
+  // and redirect them to the special Safari entry page
+  if (isSafari && req.protocol === 'https' && 
+      (host.includes('localhost') || host.includes('127.0.0.1'))) {
+    // Instead of just redirecting to HTTP, send them to our special Safari entry page
+    if (req.path !== '/safari-entry.html') {
+      console.log(`Safari detected trying to use HTTPS. Redirecting to Safari entry page`);
+      return res.redirect('/safari-entry.html');
     }
-  }));
-}
+  }
+  
+  // Force HTTP for localhost and 127.0.0.1 to avoid HTTPS issues in Safari
+  if ((host === '127.0.0.1' || host === 'localhost' || host === '127.0.0.1:80' || host === 'localhost:80') && 
+      req.protocol === 'https') {
+    const newUrl = `http://${host.split(':')[0]}:${PORT}${req.originalUrl}`;
+    console.log(`Redirecting from ${req.protocol}://${host}${req.originalUrl} to ${newUrl} (HTTPS→HTTP)`);
+    return res.redirect(newUrl);
+  }
+  
+  // If accessed via 127.0.0.1 or localhost without port, redirect to include port 3000
+  if (host === '127.0.0.1' || host === 'localhost' || host === '127.0.0.1:80' || host === 'localhost:80') {
+    const newUrl = `http://${host.split(':')[0]}:${PORT}${req.originalUrl}`;
+    console.log(`Redirecting from ${req.protocol}://${host}${req.originalUrl} to ${newUrl} (adding port)`);
+    return res.redirect(newUrl);
+  }
+  
+  next();
+});
+
+// Configure Helmet with relaxed CSP for local development
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "unpkg.com"],
+      imgSrc: ["'self'", "data:", "blob:", "*.openstreetmap.org", "*.tile.openstreetmap.org", "*.osm.org", "https://*"],
+      connectSrc: ["'self'", process.env.SUPABASE_URL, "*.openstreetmap.org", "*.tile.openstreetmap.org", "*.osm.org", "https://*"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+      objectSrc: ["'none'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      baseUri: ["'self'"]
+    }
+  },
+  // Disable HSTS to prevent HTTPS enforcement for localhost
+  hsts: false
+}));
+console.log('Content Security Policy configured with unsafe-inline for development and HSTS disabled for localhost');
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'trashdrop-secret-key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    // Force secure:false for localhost/development to avoid HTTPS requirements
+    secure: process.env.NODE_ENV === 'production' && !['localhost', '127.0.0.1'].includes(process.env.HOST || ''),
+    maxAge: parseInt(process.env.SESSION_DURATION || 86400000) // Default: 24 hours
   }
 }));
 
@@ -84,6 +118,21 @@ app.get('/signup', (req, res) => {
 
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'login.html'));
+});
+
+// Alternative route to the same login page to bypass Safari security restrictions
+app.get('/account-access', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'login.html'));
+});
+
+// Login processing page specifically for Safari browser
+app.get('/login-process', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'login-process.html'));
+});
+
+// Special Safari entry point to help with Safari's security restrictions
+app.get('/safari', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'safari-entry.html'));
 });
 
 app.get('/scan', (req, res) => {

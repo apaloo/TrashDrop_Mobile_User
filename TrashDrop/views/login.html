@@ -1,15 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Protocol interceptor must be the first script to run, before even meta tags are processed -->
+    <script src="/js/protocol-interceptor.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="Log in to your TrashDrop account - Access waste collection scheduling, tracking, and rewards">
     <title>Login - TrashDrop</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
+    <!-- Base URL script to handle navigation URLs correctly -->
+    <script src="/js/base-url.js"></script>
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
     <nav class="navbar navbar-expand-lg navbar-dark bg-success">
         <div class="container">
             <a class="navbar-brand" href="/">
@@ -21,37 +30,37 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/login">Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/signup">Sign Up</a>
-                    </li>
+                    <!-- Navigation links removed -->
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container py-5">
+    <main id="main-content" class="container py-5" role="main">
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="card shadow-sm">
                     <div class="card-body p-4">
-                        <h2 class="text-center mb-4">Login to Your Account</h2>
-                        <form id="login-form" class="needs-validation" novalidate>
+                        <h2 id="login-heading" class="text-center mb-4">Login to Your Account</h2>
+                        <form id="login-form" class="needs-validation" novalidate aria-labelledby="login-heading">
                             <div class="mb-3">
                                 <label for="phoneNumber" class="form-label">Phone Number</label>
-                                <input type="tel" class="form-control" id="phoneNumber" placeholder="+1234567890" required>
+                                <input type="tel" class="form-control" id="phoneNumber" placeholder="+1234567890" required 
+                                    pattern="[+][0-9]{10,15}" autocomplete="tel" aria-describedby="phoneHelp">
+                                <div id="phoneHelp" class="form-text">Enter your phone number with country code (e.g., +1234567890)</div>
                                 <div class="invalid-feedback">
-                                    Please enter your phone number.
+                                    Please enter a valid phone number with country code.
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label for="password" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password" required>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="password" required autocomplete="current-password" aria-describedby="passwordHelp">
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword" aria-label="Toggle password visibility">
+                                        <i class="bi bi-eye" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                <div id="passwordHelp" class="form-text">Enter your TrashDrop account password</div>
                                 <div class="invalid-feedback">
                                     Please enter your password.
                                 </div>
@@ -64,7 +73,7 @@
                                 <a href="/reset-password" class="text-success">Forgot password?</a>
                             </div>
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-success btn-lg">Login</button>
+                                <button type="submit" class="btn btn-success btn-lg" aria-label="Login to your account">Login</button>
                             </div>
                         </form>
                     </div>
@@ -74,9 +83,9 @@
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <footer class="bg-dark text-white py-4 mt-auto">
+    <footer class="bg-dark text-white py-4 mt-auto" role="contentinfo">
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
@@ -122,5 +131,29 @@
     <script src="/js/auth.js"></script>
     <script src="/js/login.js"></script>
     <script src="/js/emergency-logout.js"></script>
+    <script>
+        // Password visibility toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            
+            if (togglePassword && passwordInput) {
+                togglePassword.addEventListener('click', function() {
+                    // Toggle password visibility
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    
+                    // Toggle eye icon
+                    const eyeIcon = this.querySelector('i');
+                    eyeIcon.classList.toggle('bi-eye');
+                    eyeIcon.classList.toggle('bi-eye-slash');
+                    
+                    // Announce to screen readers
+                    const announcement = type === 'text' ? 'Password visible' : 'Password hidden';
+                    this.setAttribute('aria-label', `Toggle password visibility: ${announcement}`);
+                });
+            }
+        });
+    </script>
 </body>
 </html>

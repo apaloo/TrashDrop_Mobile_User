@@ -218,33 +218,17 @@ if (window.ActivePickupManager) {
             }
             
             try {
-                // IMPORTANT: Clean up any existing map first
-                // This is crucial to prevent "Map container is already initialized" errors
-                if (activePickupMap) {
-                    console.log('Removing existing map instance');
-                    activePickupMap.remove();
-                    activePickupMap = null;
-                }
-                
-                // Also check if the container has a Leaflet ID directly
+                // Check if a map is already attached to this container
                 if (mapContainer._leaflet_id) {
-                    console.log('Container has leftover Leaflet data, cleaning up');
-                    // Instead of replacing the container, clear its contents and ID
-                    // This approach works better with your base URL handling solution
-                    mapContainer.innerHTML = '';
-                    
-                    // Remove the Leaflet ID
-                    delete mapContainer._leaflet_id;
-                    
-                    // Clear any other Leaflet-related properties
-                    for (const prop in mapContainer) {
-                        if (prop.startsWith('_leaflet')) {
-                            delete mapContainer[prop];
-                        }
+                    console.log('Map container already has a map, removing it');
+                    // If the container already has a map, we need to clean it up first
+                    if (activePickupMap) {
+                        activePickupMap.remove();
+                        activePickupMap = null;
                     }
                 }
                 
-                // Now initialize a new map on the clean container
+                // Initialize a new map
                 console.log('Creating new map instance');
                 activePickupMap = L.map(mapContainer).setView([userCoords.latitude, userCoords.longitude], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(activePickupMap);

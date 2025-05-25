@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting...</title>
+    <script>
+        // Get the current path (everything after the domain)
+        const path = window.location.pathname;
+        
+        // Check if we're on the root domain without port 3000
+        if (window.location.hostname === '127.0.0.1' && window.location.port !== '3000') {
+            // Redirect to the same path but with port 3000
+            window.location.href = 'http://127.0.0.1:3000' + path;
+        }
+    </script>
+</head>
+<body>
+    <div style="text-align: center; margin-top: 100px;">
+        <h2>Redirecting to the correct server...</h2>
+        <p>If you are not redirected automatically, please click <a id="redirect-link" href="#">here</a>.</p>
+    </div>
+    <script>
+        // Set the href for the manual redirect link
+        document.getElementById('redirect-link').href = 'http://127.0.0.1:3000' + window.location.pathname;
+    </script>
+</body>
+</html>

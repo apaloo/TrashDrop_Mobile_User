@@ -141,7 +141,7 @@ if (window.ActivePickupManager) {
             updatePickupInfoUI(activePickup);
             
             // Add a delay before initializing the map to ensure the container is visible
-            setTimeout(function() {
+            setTimeout(() => {
                 initializeActivePickupMap(activePickup);
             }, 500);
         }
@@ -159,7 +159,7 @@ if (window.ActivePickupManager) {
             // Update waste type and quantity
             const wasteTypeQuantityEl = document.querySelector(domSelectors.wasteTypeQuantity);
             if (wasteTypeQuantityEl) {
-                wasteTypeQuantityEl.textContent = activePickup.waste_type + ' (' + activePickup.bags_count + ' bags)';
+                wasteTypeQuantityEl.textContent = `${activePickup.waste_type} (${activePickup.bags_count} bags)`;
             }
             
             // Update pickup location
@@ -217,80 +217,47 @@ if (window.ActivePickupManager) {
                 return;
             }
             
-            try {
-                // IMPORTANT: Clean up any existing map first
-                // This is crucial to prevent "Map container is already initialized" errors
-                if (activePickupMap) {
-                    console.log('Removing existing map instance');
-                    activePickupMap.remove();
-                    activePickupMap = null;
-                }
-                
-                // Also check if the container has a Leaflet ID directly
-                if (mapContainer._leaflet_id) {
-                    console.log('Container has leftover Leaflet data, cleaning up');
-                    // Instead of replacing the container, clear its contents and ID
-                    // This approach works better with your base URL handling solution
-                    mapContainer.innerHTML = '';
+            // Initialize map if it doesn't exist
+            if (!activePickupMap) {
+                try {
+                    console.log('Creating new map instance');
+                    activePickupMap = L.map(mapContainer).setView([userCoords.latitude, userCoords.longitude], 13);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(activePickupMap);
                     
-                    // Remove the Leaflet ID
-                    delete mapContainer._leaflet_id;
+                    // Add user marker
+                    userMarker = L.marker([userCoords.latitude, userCoords.longitude])
+                        .addTo(activePickupMap)
+                        .bindPopup('Your location')
+                        .openPopup();
                     
-                    // Clear any other Leaflet-related properties
-                    for (const prop in mapContainer) {
-                        if (prop.startsWith('_leaflet')) {
-                            delete mapContainer[prop];
+                    // If collector coordinates exist, add collector marker
+                    if (activePickup.collector_coordinates) {
+                        const collectorCoords = parseCoordinates(activePickup.collector_coordinates);
+                        if (collectorCoords) {
+                            collectorMarker = L.marker([collectorCoords.latitude, collectorCoords.longitude])
+                                .addTo(activePickupMap)
+                                .bindPopup('Collector location');
+                                
+                            // Fit bounds to include both markers
+                            const bounds = L.latLngBounds(
+                                [userCoords.latitude, userCoords.longitude],
+                                [collectorCoords.latitude, collectorCoords.longitude]
+                            );
+                            activePickupMap.fitBounds(bounds, { padding: [50, 50] });
+                            
+                            // Update distance and ETA
+                            updateDistanceAndETA(userCoords, collectorCoords);
                         }
                     }
-                }
-                
-                // Now initialize a new map on the clean container
-                console.log('Creating new map instance');
-                activePickupMap = L.map(mapContainer).setView([userCoords.latitude, userCoords.longitude], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(activePickupMap);
-                
-                // Add user marker
-                userMarker = L.marker([userCoords.latitude, userCoords.longitude])
-                    .addTo(activePickupMap)
-                    .bindPopup('Your location')
-                    .openPopup();
-                
-                // If collector coordinates exist, add collector marker
-                if (activePickup.collector_coordinates) {
-                    const collectorCoords = parseCoordinates(activePickup.collector_coordinates);
-                    if (collectorCoords) {
-                        collectorMarker = L.marker([collectorCoords.latitude, collectorCoords.longitude])
-                            .addTo(activePickupMap)
-                            .bindPopup('Collector location');
-                            
-                        // Fit bounds to include both markers
-                        const bounds = L.latLngBounds(
-                            [userCoords.latitude, userCoords.longitude],
-                            [collectorCoords.latitude, collectorCoords.longitude]
-                        );
-                        activePickupMap.fitBounds(bounds, { padding: [50, 50] });
-                        
-                        // Update distance and ETA
-                        updateDistanceAndETA(userCoords, collectorCoords);
-                    }
-                }
-                
-                // Force a resize after initialization
-                setTimeout(function() {
-                    if (activePickupMap) {
+                    
+                    // Force a resize after initialization
+                    setTimeout(() => {
                         activePickupMap.invalidateSize();
-                    }
-                }, 100);
-                
-            } catch (error) {
-                console.error('Error initializing map:', error);
-            }
-            
-            // Ensure map is correctly positioned
-            if (activePickupMap) {
-                console.log('Ensuring map is correctly positioned');
-                activePickupMap.setView([userCoords.latitude, userCoords.longitude], 13);
-                activePickupMap.invalidateSize();
+                    }, 100);
+                    
+                } catch (error) {
+                    console.error('Error initializing map:', error);
+                }
             }
         }
         
@@ -303,7 +270,7 @@ if (window.ActivePickupManager) {
             try {
                 // Handle POINT format: 'POINT(longitude latitude)'
                 if (coordString.startsWith('POINT')) {
-                    const match = coordString.match(/POINT\(([-0-9.]+)\s+([-0-9.]+)\)/);
+                    const match = coordString.match(/POINT\(([\-0-9.]+)\s+([\-0-9.]+)\)/);
                     if (match && match.length === 3) {
                         return {
                             longitude: parseFloat(match[1]),
@@ -334,11 +301,9 @@ if (window.ActivePickupManager) {
             // Update distance text
             const distanceEl = document.querySelector(domSelectors.distanceText);
             if (distanceEl) {
-                if (distanceKm < 1) {
-                    distanceEl.textContent = Math.round(distanceKm * 1000) + ' meters away';
-                } else {
-                    distanceEl.textContent = distanceKm.toFixed(1) + ' km away';
-                }
+                distanceEl.textContent = distanceKm < 1 ? 
+                    `${Math.round(distanceKm * 1000)} meters away` : 
+                    `${distanceKm.toFixed(1)} km away`;
             }
             
             // Calculate ETA (assuming 30 km/h average speed)
@@ -347,11 +312,9 @@ if (window.ActivePickupManager) {
             // Update ETA text
             const etaEl = document.querySelector(domSelectors.etaText);
             if (etaEl) {
-                if (etaMinutes < 1) {
-                    etaEl.textContent = 'Less than a minute';
-                } else {
-                    etaEl.textContent = etaMinutes + ' ' + (etaMinutes === 1 ? 'minute' : 'minutes');
-                }
+                etaEl.textContent = etaMinutes < 1 ? 
+                    'Less than a minute' : 
+                    `${etaMinutes} ${etaMinutes === 1 ? 'minute' : 'minutes'}`;
             }
         }
         

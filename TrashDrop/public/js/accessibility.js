@@ -33,6 +33,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add prefers-reduced-motion support
     applyReducedMotionPreferences();
+    
+    // Initialize accessibility preferences from localStorage
+    initializeAccessibilityPreferences();
+    
+    // Set up event listeners for accessibility toggle controls
+    setupAccessibilityControls();
 });
 
 /**
@@ -451,21 +457,114 @@ function makeTablesResponsive() {
  * Apply user's motion preferences to reduce animations
  */
 function applyReducedMotionPreferences() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        // Add a class to the body element that we can target with CSS
-        document.body.classList.add('reduced-motion');
+    // Check system preference for reduced motion
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const userPreference = localStorage.getItem('reduceMotion') === 'true';
+    
+    // Apply if either system preference or user preference is set
+    if (prefersReducedMotion || userPreference) {
+        document.documentElement.classList.add('reduced-motion');
         
-        // Remove specific animations
-        document.querySelectorAll('.animate, .fade, .slide').forEach(el => {
-            el.style.animation = 'none';
-            el.style.transition = 'none';
+        // Disable all CSS transitions and animations
+        const style = document.createElement('style');
+        style.innerHTML = '*, *::before, *::after { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }';
+        document.head.appendChild(style);
+        
+        // If we have the preference toggle, update it
+        const reduceMotionToggle = document.getElementById('reduce_motion');
+        if (reduceMotionToggle) {
+            reduceMotionToggle.checked = true;
+        }
+    }
+}
+
+/**
+ * Initialize accessibility preferences from localStorage
+ */
+function initializeAccessibilityPreferences() {
+    // High contrast mode
+    if (localStorage.getItem('highContrast') === 'true') {
+        document.documentElement.classList.add('high-contrast');
+        // Update toggle if it exists
+        const highContrastToggle = document.getElementById('high_contrast');
+        if (highContrastToggle) {
+            highContrastToggle.checked = true;
+        }
+    }
+    
+    // Larger text mode
+    if (localStorage.getItem('largeText') === 'true') {
+        document.documentElement.classList.add('large-text');
+        document.body.style.fontSize = '1.2rem';
+        // Update toggle if it exists
+        const largeTextToggle = document.getElementById('large_text');
+        if (largeTextToggle) {
+            largeTextToggle.checked = true;
+        }
+    }
+    
+    // Reduced motion (handled in applyReducedMotionPreferences)
+}
+
+/**
+ * Set up event listeners for accessibility toggle controls
+ */
+function setupAccessibilityControls() {
+    // High contrast mode toggle
+    const highContrastToggle = document.getElementById('high_contrast');
+    if (highContrastToggle) {
+        highContrastToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.documentElement.classList.add('high-contrast');
+                localStorage.setItem('highContrast', 'true');
+                announceToScreenReader('High contrast mode enabled');
+            } else {
+                document.documentElement.classList.remove('high-contrast');
+                localStorage.setItem('highContrast', 'false');
+                announceToScreenReader('High contrast mode disabled');
+            }
         });
-        
-        // Disable smooth scrolling
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
-                // Let the default behavior handle it instead of smooth scrolling
-            });
+    }
+    
+    // Larger text toggle
+    const largeTextToggle = document.getElementById('large_text');
+    if (largeTextToggle) {
+        largeTextToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.documentElement.classList.add('large-text');
+                document.body.style.fontSize = '1.2rem';
+                localStorage.setItem('largeText', 'true');
+                announceToScreenReader('Larger text mode enabled');
+            } else {
+                document.documentElement.classList.remove('large-text');
+                document.body.style.fontSize = '';
+                localStorage.setItem('largeText', 'false');
+                announceToScreenReader('Larger text mode disabled');
+            }
+        });
+    }
+    
+    // Reduced motion toggle
+    const reduceMotionToggle = document.getElementById('reduce_motion');
+    if (reduceMotionToggle) {
+        reduceMotionToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.documentElement.classList.add('reduced-motion');
+                const style = document.createElement('style');
+                style.id = 'reduced-motion-style';
+                style.innerHTML = '*, *::before, *::after { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }';
+                document.head.appendChild(style);
+                localStorage.setItem('reduceMotion', 'true');
+                announceToScreenReader('Reduced motion mode enabled');
+            } else {
+                document.documentElement.classList.remove('reduced-motion');
+                const style = document.getElementById('reduced-motion-style');
+                if (style) style.remove();
+                localStorage.setItem('reduceMotion', 'false');
+                announceToScreenReader('Reduced motion mode disabled');
+            }
         });
     }
 }
+
+// The primary applyReducedMotionPreferences function is defined above

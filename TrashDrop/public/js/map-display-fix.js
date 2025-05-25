@@ -1,11 +1,24 @@
 /**
  * Map Display Fix
  * This script ensures the map displays properly in the active pickup card
+ * regardless of authentication status or page state
  */
 
+console.log('Map display fix: Script loaded');
+
+// Initialize immediately when script loads
+initializeMap();
+
+// Then initialize again after DOM is fully loaded for better reliability
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Map display fix: DOM fully loaded');
-    setTimeout(initializeMap, 500);
+    // Wait for a short delay to ensure all other scripts have run
+    setTimeout(initializeMap, 1000);
+    
+    // Also set up a demo pickup for testing in development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        setupDemoPickup();
+    }
 });
 
 /**
@@ -130,6 +143,81 @@ document.addEventListener('click', function(event) {
         setTimeout(initializeMap, 300);
     }
 });
+
+/**
+ * Set up a demo pickup for testing in development environments
+ */
+function setupDemoPickup() {
+    console.log('Map display fix: Setting up demo pickup');
+    
+    // Create a mock pickup for demonstration
+    const demoPickup = {
+        id: 'demo-' + Date.now(),
+        status: 'active',
+        waste_type: 'Mixed Recyclables',
+        quantity: '2 bags',
+        bags_count: 2,
+        pickup_location: '123 Main St, Anytown',
+        coordinates: 'POINT(-122.419416 37.774929)',  // San Francisco
+        collector_name: 'John (Demo)',
+        collector_coordinates: 'POINT(-122.415 37.772)', // Nearby location
+        points_earned: 50,
+        created_at: new Date().toISOString()
+    };
+    
+    // Save to localStorage for persistence
+    localStorage.setItem('active_pickup_data', JSON.stringify(demoPickup));
+    localStorage.removeItem('pickup_cancelled');
+    
+    // Make the active pickup container visible
+    const container = document.getElementById('active-pickup-container');
+    if (container) {
+        container.style.display = 'block';
+        container.setAttribute('aria-hidden', 'false');
+    }
+    
+    // Update the UI with demo data
+    updatePickupUI(demoPickup);
+    
+    // Initialize the map
+    setTimeout(initializeMap, 500);
+}
+
+/**
+ * Update the pickup UI with data
+ */
+function updatePickupUI(pickup) {
+    // Update the collector name
+    const collectorEl = document.getElementById('collector-name');
+    if (collectorEl) {
+        collectorEl.textContent = pickup.collector_name || 'Pending Assignment';
+    }
+    
+    // Update waste type and quantity
+    const wasteEl = document.getElementById('waste-type-quantity');
+    if (wasteEl) {
+        wasteEl.textContent = `${pickup.waste_type} (${pickup.bags_count || 0} bags)`;
+    }
+    
+    // Update pickup location
+    const locationEl = document.getElementById('pickup-location');
+    if (locationEl) {
+        locationEl.textContent = pickup.pickup_location || 'Not specified';
+    }
+    
+    // Update earned points
+    const pointsEl = document.getElementById('earned-points');
+    if (pointsEl) {
+        pointsEl.textContent = pickup.points_earned || '0';
+    }
+    
+    // Update tracking status
+    const statusEl = document.getElementById('tracking-status');
+    if (statusEl) {
+        statusEl.textContent = 'Collector en route';
+        statusEl.className = 'badge bg-warning text-dark';
+    }
+}
 
 // Listen for changes to the active pickup container's visibility
 const observer = new MutationObserver(function(mutations) {
