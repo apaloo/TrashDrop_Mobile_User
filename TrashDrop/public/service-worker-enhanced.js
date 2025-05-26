@@ -3,9 +3,11 @@
  * Provides comprehensive offline functionality for the TrashDrop PWA
  */
 
-const CACHE_NAME = 'trashdrop-v2';
-const DYNAMIC_CACHE = 'trashdrop-dynamic-v1';
-const API_CACHE = 'trashdrop-api-v1';
+const CACHE_NAME = 'trashdrop-v3';
+const DYNAMIC_CACHE = 'trashdrop-dynamic-v2';
+const API_CACHE = 'trashdrop-api-v2';
+const OFFLINE_PAGE = '/offline.html';
+const SPLASH_PAGE = '/splash.html';
 
 // Static assets to cache on install
 const ASSETS_TO_CACHE = [
@@ -16,13 +18,25 @@ const ASSETS_TO_CACHE = [
   '/request-pickup',
   '/report-dumping',
   '/profile',
+  '/activity',
+  '/reports',
+  '/offline.html',
+  '/splash.html',
   '/css/styles.css',
+  '/css/accessibility.css',
+  '/css/navbar-fix.css',
+  '/css/offline-map.css',
+  '/css/pwa-install-prompt.css',
   '/js/auth.js',
   '/js/dashboard.js',
   '/js/scanner-updated.js',
   '/js/pickup-request.js',
   '/js/report-dumping.js',
   '/js/profile.js',
+  '/js/navbar.js',
+  '/js/mobile-nav.js',
+  '/js/protocol-interceptor.js',
+  '/js/base-url.js',
   '/js/offline-sync.js',
   '/js/offline-bag-sync.js',
   '/js/offline-points-sync.js',
@@ -31,15 +45,24 @@ const ASSETS_TO_CACHE = [
   '/js/map-offline.js',
   '/js/emergency-logout.js',
   '/js/register-sw.js',
+  '/js/pwa-install-prompt.js',
+  '/js/active-pickup-persistence.js',
+  '/js/distanceCalculator.js',
+  '/js/active-pickup.js',
   '/images/logo.svg',
   '/images/default-avatar.png',
+  '/images/icon-152.png',
+  '/images/icon-167.png',
+  '/images/icon-180.png',
   '/images/icon-192.png',
   '/images/icon-512.png',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
-  'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js'
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js'
 ];
 
 // Install event - cache assets
@@ -165,7 +188,7 @@ async function cacheFirstStrategy(request) {
     // For navigation requests, return the offline page
     if (request.mode === 'navigate') {
       const cache = await caches.open(CACHE_NAME);
-      return cache.match('/offline.html') || new Response('You are offline');
+      return cache.match(OFFLINE_PAGE) || new Response('You are offline');
     }
     
     return new Response('Resource not available offline');

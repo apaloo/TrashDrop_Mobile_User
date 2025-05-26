@@ -1,0 +1,364 @@
+/**
+ * TrashDrop Responsive Enhancements
+ * Comprehensive responsive styling to ensure perfect UI fit across all devices
+ */
+
+/* Base Responsive Variables */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  
+  /* Base font sizes for responsive typography */
+  --base-font-size: 16px;
+  --small-font-size: 14px;
+  --header-font-size: 20px;
+  --title-font-size: 24px;
+}
+
+/* Global Responsive Enhancements */
+html {
+  font-size: var(--base-font-size);
+  height: -webkit-fill-available;
+}
+
+body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  overflow-x: hidden;
+  padding-top: calc(64px + var(--safe-area-inset-top)); /* Increased padding to prevent content from being hidden */
+  padding-bottom: calc(65px + var(--safe-area-inset-bottom));
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+/* Top navigation bar positioning */
+.navbar.fixed-top {
+  padding-top: var(--safe-area-inset-top);
+  height: calc(60px + var(--safe-area-inset-top));
+  z-index: 1030;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: fixed !important; /* Ensure navbar stays fixed */
+  width: 100%;
+  top: 0;
+}
+
+/* Bottom mobile navigation bar positioning */
+.mobile-nav-bar {
+  padding-bottom: var(--safe-area-inset-bottom);
+  height: calc(56px + var(--safe-area-inset-bottom));
+  z-index: 1030;
+}
+
+/* Emergency logout button */
+.emergency-logout-btn {
+  position: fixed;
+  bottom: calc(70px + var(--safe-area-inset-bottom));
+  left: 10px;
+  z-index: 1025;
+  max-width: 140px;
+  font-size: 0.85rem;
+  padding: 0.375rem 0.5rem;
+}
+
+/* Container width optimizations */
+.container, .container-fluid {
+  padding-left: calc(10px + var(--safe-area-inset-left));
+  padding-right: calc(10px + var(--safe-area-inset-right));
+  max-width: 100%;
+  width: 98%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Responsive Typography */
+h1, .h1 { font-size: calc(var(--title-font-size) * 1.1); }
+h2, .h2 { font-size: var(--title-font-size); }
+h3, .h3 { font-size: calc(var(--header-font-size) * 1.1); }
+h4, .h4 { font-size: var(--header-font-size); }
+h5, .h5 { font-size: calc(var(--base-font-size) * 1.1); }
+h6, .h6 { font-size: var(--base-font-size); }
+
+/* Card optimizations for small screens */
+.card {
+  margin-bottom: 1rem;
+}
+
+.card-body {
+  padding: 1rem;
+}
+
+/* Modal optimizations */
+.modal-content {
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.modal-header, .modal-footer {
+  padding: 0.75rem 1rem;
+}
+
+.modal-body {
+  padding: 1rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Form control sizing for better mobile input */
+.form-control, .form-select, .btn {
+  min-height: 44px; /* Improved tap targets */
+}
+
+/* Form label visibility */
+.form-label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+/* Table responsiveness */
+.table-responsive {
+  margin-bottom: 1rem;
+}
+
+/* Map container responsiveness */
+.map-container {
+  width: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Responsive Grid for Dashboard Cards */
+.dashboard-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Media Queries for Different Device Sizes */
+
+/* Extra small devices (phones) */
+@media (max-width: 575.98px) {
+  :root {
+    --base-font-size: 14px;
+    --small-font-size: 12px;
+    --header-font-size: 18px;
+    --title-font-size: 20px;
+  }
+  
+  /* Tighter container padding on small screens */
+  .container, .container-fluid {
+    padding-left: calc(8px + var(--safe-area-inset-left));
+    padding-right: calc(8px + var(--safe-area-inset-right));
+  }
+  
+  .card-body {
+    padding: 0.75rem;
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .display-1, .display-2, .display-3, .display-4 {
+    font-size: calc(1.2rem + 1.5vw);
+  }
+  
+  /* Hide certain elements on very small screens */
+  .xs-hide {
+    display: none !important;
+  }
+  
+  /* Full width modal on phones */
+  .modal-dialog {
+    margin: 0;
+    max-width: 100%;
+    height: 100%;
+  }
+  
+  .modal-content {
+    border-radius: 0;
+    min-height: 100%;
+  }
+  
+  /* Optimize row gutters */
+  .row {
+    --bs-gutter-x: 0.75rem;
+  }
+}
+
+/* Small devices (landscape phones) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  :root {
+    --base-font-size: 15px;
+    --header-font-size: 19px;
+    --title-font-size: 22px;
+  }
+  
+  /* Adjusted container padding for small devices */
+  .container, .container-fluid {
+    padding-left: calc(10px + var(--safe-area-inset-left));
+    padding-right: calc(10px + var(--safe-area-inset-right));
+  }
+  
+  /* Optimize row gutters */
+  .row {
+    --bs-gutter-x: 1rem;
+  }
+  
+  /* Hide certain elements on small screens */
+  .sm-hide {
+    display: none !important;
+  }
+}
+
+/* Medium devices (tablets) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  body {
+    padding-bottom: 0; /* No bottom nav on tablets */
+  }
+  
+  /* Adjusted container padding for medium devices */
+  .container, .container-fluid {
+    padding-left: calc(15px + var(--safe-area-inset-left));
+    padding-right: calc(15px + var(--safe-area-inset-right));
+    max-width: 96%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  /* Hide certain elements on medium screens */
+  .md-hide {
+    display: none !important;
+  }
+}
+
+/* Large devices (desktops) */
+@media (min-width: 992px) {
+  body {
+    padding-bottom: 0; /* No bottom nav on desktops */
+  }
+  
+  /* Optimized container padding for larger screens */
+  .container, .container-fluid {
+    max-width: 95%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .container {
+    padding-left: calc(1.5rem + var(--safe-area-inset-left));
+    padding-right: calc(1.5rem + var(--safe-area-inset-right));
+  }
+  
+  /* Hide certain elements on large screens */
+  .lg-hide {
+    display: none !important;
+  }
+}
+
+/* PWA-specific Enhancements */
+.pwa-mode {
+  /* Apply special PWA mode styles */
+  --pwa-background: #f8f9fa;
+  --pwa-text-color: #212529;
+}
+
+/* Dark mode adjustments for better readability */
+@media (prefers-color-scheme: dark) {
+  .pwa-mode {
+    --pwa-background: #212529;
+    --pwa-text-color: #f8f9fa;
+  }
+}
+
+/* Display Mode Detection */
+@media all and (display-mode: standalone), all and (display-mode: fullscreen) {
+  body {
+    /* Add specific styles for standalone/fullscreen modes */
+    background-color: var(--pwa-background, inherit);
+    color: var(--pwa-text-color, inherit);
+  }
+}
+
+/* Orientation-specific adjustments */
+@media screen and (orientation: portrait) {
+  .landscape-only {
+    display: none !important;
+  }
+}
+
+@media screen and (orientation: landscape) {
+  .portrait-only {
+    display: none !important;
+  }
+  
+  /* Adjust layout for landscape orientation on mobile */
+  @media (max-width: 767.98px) {
+    .mobile-nav-bar {
+      height: calc(45px + var(--safe-area-inset-bottom));
+    }
+    
+    body {
+      padding-bottom: calc(45px + var(--safe-area-inset-bottom));
+    }
+  }
+}
+
+/* Notch and Cutout Handling */
+@supports(padding: max(0px)) {
+  body {
+    padding-left: max(env(safe-area-inset-left), 15px);
+    padding-right: max(env(safe-area-inset-right), 15px);
+  }
+  
+  .modal-footer {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  }
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: more) {
+  :root {
+    --bs-primary: #0000EE;
+    --bs-success: #008000;
+    --bs-danger: #CC0000;
+    --bs-warning: #FF8800;
+    --bs-info: #0099CC;
+  }
+  
+  .btn, .card, .form-control {
+    border-width: 2px !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    padding: 0 !important;
+  }
+  
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}

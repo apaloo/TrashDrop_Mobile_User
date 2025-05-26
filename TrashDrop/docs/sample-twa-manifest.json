@@ -1,0 +1,100 @@
+{
+  "packageId": "com.trashdrop.app",
+  "host": "271d-154-161-136-76.ngrok-free.app",
+  "name": "TrashDrop",
+  "launcherName": "TrashDrop",
+  "display": "standalone",
+  "themeColor": "#4CAF50",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#FFFFFF",
+  "enableNotifications": true,
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "shortName": "Home",
+      "url": "/dashboard",
+      "description": "View your dashboard"
+    },
+    {
+      "name": "Scan QR",
+      "shortName": "Scan",
+      "url": "/scan",
+      "description": "Scan a QR code"
+    },
+    {
+      "name": "Request Pickup",
+      "shortName": "Pickup",
+      "url": "/request-pickup",
+      "description": "Request a waste pickup"
+    }
+  ],
+  "shareTarget": {
+    "action": "/share-target/",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    },
+    "playBilling": {
+      "enabled": false
+    },
+    "webNfc": {
+      "enabled": false
+    }
+  },
+  "webManifestUrl": "https://271d-154-161-136-76.ngrok-free.app/manifest.json",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "enableSiteSettingsShortcut": true,
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://271d-154-161-136-76.ngrok-free.app/manifest.json",
+  "orientation": "portrait",
+  "iconUrl": "https://271d-154-161-136-76.ngrok-free.app/images/icon-512.png",
+  "maskableIconUrl": "https://271d-154-161-136-76.ngrok-free.app/images/icon-512.png",
+  "monochromeIconUrl": "",
+  "startUrl": "/dashboard",
+  "appVersion": "1.0.0",
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/dashboard"
+    },
+    {
+      "name": "Scan QR",
+      "short_name": "Scan",
+      "url": "/scan"
+    },
+    {
+      "name": "Request Pickup",
+      "short_name": "Pickup",
+      "url": "/request-pickup"
+    }
+  ],
+  "fullScopeUrl": "https://271d-154-161-136-76.ngrok-free.app/",
+  "minSdkVersion": 19,
+  "isChromeOSOnly": false,
+  "splashScreenFadeOutDuration": 300,
+  "enableNotifications": true,
+  "permissions": [
+    "INTERNET",
+    "ACCESS_NETWORK_STATE",
+    "ACCESS_FINE_LOCATION",
+    "ACCESS_COARSE_LOCATION",
+    "CAMERA"
+  ]
+}

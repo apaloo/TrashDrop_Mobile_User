@@ -18,4 +18,16 @@ router.get('/user', bagController.getUserBags);
 // Verify a bag by ID
 router.get('/verify/:bagId', bagController.verifyBag);
 
+// Order new bags for delivery
+router.post('/order', bagController.orderBags);
+
+// Get bag orders for the authenticated user
+router.get('/orders', bagController.getUserOrders);
+
+// Get order details by tracking ID
+router.get('/order/:trackingId', bagController.getOrderByTracking);
+
+// Get the user's available bag count
+router.get('/count', bagController.getBagCount);
+
 module.exports = router;

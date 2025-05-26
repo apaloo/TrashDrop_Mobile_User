@@ -4,17 +4,35 @@
     <!-- Protocol interceptor must be the first script to run, before even meta tags are processed -->
     <script src="/js/protocol-interceptor.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes">
     <meta name="description" content="TrashDrop Dashboard - Manage your waste collection, view upcoming pickups, and track your recycling points">
     <title>Dashboard - TrashDrop</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/accessibility.css">
+    <link rel="stylesheet" href="/css/navbar-fix.css">
+    <link rel="stylesheet" href="/css/pwa-install-prompt.css">
+    <link rel="stylesheet" href="/css/pwa-fullscreen.css">
+    <link rel="stylesheet" href="/css/immersive-mode.css">
+    <link rel="stylesheet" href="/css/responsive-enhancements.css">
+    <link rel="stylesheet" href="/css/device-optimizations.css">
+    <link rel="stylesheet" href="/css/navbar-content-fix.css">
+    <link rel="stylesheet" href="/css/modal-fixes.css">
+    <link rel="stylesheet" href="/css/dark-theme.css">
+    <link rel="stylesheet" href="/css/mobile-nav-fix.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="fullscreen" content="yes">
+    <meta name="display-mode" content="fullscreen">
+    <!-- Apple PWA support -->
+    <link rel="apple-touch-icon" href="/images/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/images/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/icon-180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/images/icon-167.png">
     
     <!-- Leaflet for maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -24,7 +42,13 @@
     <link rel="stylesheet" href="/css/offline-map.css" />
     <script src="/js/offline-map.js"></script>
     
-    <!-- Additional styles for Active Pickup tracking -->
+    <!-- Navbar font consistency fix -->
+    <link rel="stylesheet" href="/css/navbar-fix.css" />
+    
+    <!-- Enhanced responsive design -->
+    <link rel="stylesheet" href="/css/responsive-enhancements.css" />
+    
+    <!-- Additional styles for Active Pickup tracking and Mobile Navigation -->
     <style>
         .user-marker i, .collector-marker i {
             filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));
@@ -45,53 +69,85 @@
             height: 100%;
             background-color: var(--bs-primary);
         }
+        
+        /* Mobile navigation styles now provided by mobile-nav.js */
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <!-- Skip to content link for keyboard users -->
-    <a href="#main-content" class="skip-to-content">Skip to main content</a>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+
+    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
         <div class="container">
-            <a class="navbar-brand" href="/dashboard">
-                <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                TrashDrop
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <!-- Navbar items removed as requested -->
-                </ul>
+            <!-- Mobile view (simplified) -->
+            <div class="d-flex d-lg-none justify-content-between align-items-center w-100">
+                <a class="navbar-brand" href="/dashboard">
+                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                    TrashDrop
+                </a>
                 <div class="d-flex align-items-center">
-                    <div class="d-flex align-items-center me-3">
-                        <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                        <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
-                    </div>
+                    <span id="connection-status-mobile" class="badge text-bg-success me-2">Online</span>
+                    <span id="pickup-offline-indicator-mobile" class="badge rounded-pill text-bg-warning d-none">0</span>
                     <a href="/rewards" class="text-white me-3 text-decoration-none">
-                        <i class="bi bi-award-fill me-1"></i>
-                        <span id="user-points">0</span> points
+                        <i class="bi bi-award-fill"></i>
+                        <span id="user-points-mobile">0</span>
                     </a>
                     <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-1"></i>
-                            <span id="user-name">User</span>
+                        <button class="btn btn-sm btn-outline-light rounded-circle p-1" type="button" id="userDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle"></i>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownMobile">
                             <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                            <li><a class="dropdown-item" href="/views/db-performance.html"><i class="bi bi-speedometer2 me-2"></i>DB Performance</a></li>
+                            <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
+                            <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Desktop view (full) -->
+            <div class="d-none d-lg-flex justify-content-between align-items-center w-100">
+                <a class="navbar-brand" href="/dashboard">
+                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                    TrashDrop
+                </a>
+                <button class="navbar-toggler d-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse show" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <!-- Navbar items removed as requested -->
+                    </ul>
+                    <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center me-3">
+                            <span id="connection-status" class="badge text-bg-success me-2">Online</span>
+                            <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+                        </div>
+                        <a href="/rewards" class="text-white me-3 text-decoration-none">
+                            <i class="bi bi-award-fill me-1"></i>
+                            <span id="user-points">0</span> points
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-1"></i>
+                                <span id="user-name">User</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                                <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                                <li><a class="dropdown-item" href="/views/db-performance.html"><i class="bi bi-speedometer2 me-2"></i>DB Performance</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
+                                <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main id="main-content" class="container py-3">
+    <main id="main-content" class="container py-3" style="padding-top: 1.5rem !important; margin-top: 0.5rem;">
         <h1 class="mb-3 fs-4 fw-bold" id="dashboard-title">Dashboard</h1>
 
         <!-- Offline Alert -->
@@ -134,6 +190,12 @@
                         <h2 class="card-title mb-0 fs-3" id="available-bags-count">0</h2>
                         <div class="mt-2">
                             <span class="badge bg-success small">Ready for Use</span>
+                            <script>
+                                function openOrderBagsModal() {
+                                    const modal = new bootstrap.Modal(document.getElementById('order-bags-modal'));
+                                    modal.show();
+                                }
+                            </script>
                         </div>
                     </div>
                 </div>
@@ -275,8 +337,8 @@
             </div>
         </div>
         
-        <!-- Action Buttons -->
-        <div class="row g-3 mb-3">
+        <!-- Action Buttons - Visible only on desktop and tablets -->
+        <div class="row g-3 mb-3 d-none d-lg-flex">
             <div class="col-6 col-sm-6 col-md-3">
                 <div class="card h-100 border-0 shadow-sm rounded-3 text-center">
                     <div class="card-body d-flex flex-column p-3">
@@ -506,14 +568,7 @@
         </div>
     </div>
 
-    <!-- Mobile Bottom Navigation -->
-    <div class="d-lg-none mobile-bottom-nav shadow-lg">
-        <!-- Mobile navigation items removed as requested -->
-        <a href="/request-pickup" class="mobile-nav-item">
-            <i class="bi bi-truck"></i>
-            <span>Pickup</span>
-        </a>
-    </div>
+    <!-- Mobile Bottom Navigation will be inserted by mobile-nav.js -->
 
     <footer class="bg-dark text-white py-4 mt-auto">
         <div class="container mb-5 mb-lg-0"> <!-- Add bottom margin on mobile for nav bar -->
@@ -540,12 +595,153 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>You are about to perform an emergency logout. This will clear all session data and immediately log you out.</p>
-                    <p>Are you sure you want to continue?</p>
+                    <p>This will immediately log you out and clear all session data. Use this only in case of emergency.</p>
+                    <p><strong>Are you sure you want to proceed?</strong></p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" id="confirmEmergencyLogout" class="btn btn-danger">Emergency Logout</button>
+                    <button type="button" class="btn btn-danger" id="confirm-emergency-logout">Emergency Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Order Bags Modal -->
+    <div class="modal fade" id="order-bags-modal" tabindex="-1" aria-labelledby="orderBagsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="orderBagsModalLabel">Order Trash Bags</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="order-bags-alert" class="alert d-none" role="alert"></div>
+                    
+                    <div id="order-bags-form">
+                        <div class="mb-3">
+                            <label for="delivery-address" class="form-label">Delivery Address</label>
+                            <select class="form-select" id="delivery-address" required>
+                                <option value="" selected disabled>Select a delivery address</option>
+                                <!-- Addresses will be populated from user profile -->
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Bag Types</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="general" id="general-bags" checked>
+                                                <label class="form-check-label" for="general-bags">
+                                                    <strong>General Waste</strong>
+                                                </label>
+                                            </div>
+                                            <div class="mt-2">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">Qty</span>
+                                                    <input type="number" class="form-control" id="general-bags-qty" value="1" min="1" max="10">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="recycling" id="recycling-bags">
+                                                <label class="form-check-label" for="recycling-bags">
+                                                    <strong>Recycling</strong>
+                                                </label>
+                                            </div>
+                                            <div class="mt-2">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">Qty</span>
+                                                    <input type="number" class="form-control" id="recycling-bags-qty" value="1" min="1" max="10" disabled>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="organic" id="organic-bags">
+                                                <label class="form-check-label" for="organic-bags">
+                                                    <strong>Organic</strong>
+                                                </label>
+                                            </div>
+                                            <div class="mt-2">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">Qty</span>
+                                                    <input type="number" class="form-control" id="organic-bags-qty" value="1" min="1" max="10" disabled>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-body p-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="hazardous" id="hazardous-bags">
+                                                <label class="form-check-label" for="hazardous-bags">
+                                                    <strong>Hazardous</strong>
+                                                </label>
+                                            </div>
+                                            <div class="mt-2">
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text">Qty</span>
+                                                    <input type="number" class="form-control" id="hazardous-bags-qty" value="1" min="1" max="5" disabled>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="delivery-notes" class="form-label">Delivery Notes (Optional)</label>
+                            <textarea class="form-control" id="delivery-notes" rows="2" placeholder="Add any special delivery instructions here"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="agree-terms">
+                                <label class="form-check-label" for="agree-terms">
+                                    I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">terms and conditions</a>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="order-bags-success" class="d-none text-center py-4">
+                        <div class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4>Order Submitted!</h4>
+                        <p class="mb-0">Your trash bags will be delivered to your address within 2-3 business days.</p>
+                        <p class="mt-3"><span id="order-bags-tracking-id" class="badge bg-secondary"></span></p>
+                    </div>
+                    
+                    <div id="order-bags-processing" class="d-none text-center py-4">
+                        <div class="spinner-border text-success mb-3" role="status">
+                            <span class="visually-hidden">Processing...</span>
+                        </div>
+                        <h4>Processing Your Order</h4>
+                        <p>Please wait while we process your request...</p>
+                    </div>
+                </div>
+                <div class="modal-footer" id="order-bags-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="submit-order-bags" disabled>Submit Order</button>
+                </div>
+                <div class="modal-footer d-none" id="order-bags-success-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Done</button>
                 </div>
             </div>
         </div>
@@ -555,15 +751,20 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Theme Switcher (must be early) -->
+    <script src="/js/theme-switcher.js"></script>
+    <!-- Direct Modal Fix (must be before other scripts) -->
+    <script src="/js/direct-modal-fix.js"></script>
+    <script src="/js/modal-cleanup.js"></script>
     <script src="/js/auth.js"></script>
-    <script src="/js/offline-sync.js"></script>
-    <script src="/js/distanceCalculator.js"></script>
-    <script src="/js/active-pickup.js"></script>
+    <script src="/js/register-sw.js"></script>
+    <script src="/js/emergency-logout.js"></script>
+    <script src="/js/active-pickup-persistence.js"></script>
+    <script src="/js/pwa-install-prompt.js"></script>
     <script src="/js/pickup-sync.js"></script>
     <script src="/js/offline-bag-sync.js"></script>
     <script src="/js/offline-points-sync.js"></script>
     <script src="/js/map-offline.js"></script>
-    <script src="/js/register-sw.js"></script>
     <script src="/js/dashboard.js"></script>
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css">
@@ -882,6 +1083,67 @@
     <script src="/js/active-pickup-persistence.js"></script>
     <!-- Initialize persistence immediately during page load -->
     <script>
+        // Sync mobile and desktop UI elements
+        function syncMobileDesktopElements() {
+            // Sync user information
+            const userData = JSON.parse(localStorage.getItem('userData')) || {};
+            const userName = userData.name || 'User';
+            const userPoints = userData.points || '0';
+            
+            // Update desktop elements
+            document.getElementById('user-name').textContent = userName;
+            document.getElementById('user-points').textContent = userPoints;
+            
+            // Update mobile elements
+            document.getElementById('user-points-mobile').textContent = userPoints;
+            
+            // Sync connection status
+            const isOnline = navigator.onLine;
+            const connectionStatus = document.getElementById('connection-status');
+            const connectionStatusMobile = document.getElementById('connection-status-mobile');
+            
+            if (isOnline) {
+                connectionStatus.textContent = 'Online';
+                connectionStatus.classList.remove('text-bg-danger');
+                connectionStatus.classList.add('text-bg-success');
+                
+                connectionStatusMobile.textContent = 'Online';
+                connectionStatusMobile.classList.remove('text-bg-danger');
+                connectionStatusMobile.classList.add('text-bg-success');
+            } else {
+                connectionStatus.textContent = 'Offline';
+                connectionStatus.classList.remove('text-bg-success');
+                connectionStatus.classList.add('text-bg-danger');
+                
+                connectionStatusMobile.textContent = 'Offline';
+                connectionStatusMobile.classList.remove('text-bg-success');
+                connectionStatusMobile.classList.add('text-bg-danger');
+            }
+        }
+        
+        // Sync mobile/desktop event handlers
+        function setupMobileDesktopSync() {
+            // Dark mode toggle
+            document.getElementById('toggle-theme-mobile').addEventListener('click', function(e) {
+                document.getElementById('toggle-theme').click();
+            });
+            
+            // Logout
+            document.getElementById('logout-mobile').addEventListener('click', function(e) {
+                document.getElementById('logout').click();
+            });
+        }
+        
+        // Setup responsive behaviors when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            syncMobileDesktopElements();
+            setupMobileDesktopSync();
+            
+            // Update on network status change
+            window.addEventListener('online', syncMobileDesktopElements);
+            window.addEventListener('offline', syncMobileDesktopElements);
+        });
+        
         // Run persistence check as early as possible during page load
         if (window.ActivePickupPersistence && ActivePickupPersistence.hasActivePickup()) {
             console.log('Early persistence check: Active pickup found, will preserve visibility');
@@ -889,11 +1151,33 @@
             window.hasPersistedActivePickup = true;
         }
     </script>
-    <script src="/js/active-pickup.js"></script>
+    <script src="/js/theme-switcher.js"></script>
     <script src="/js/dashboard.js"></script>
+    <script src="/js/mobile-nav.js"></script>
     <script src="/js/emergency-logout.js"></script>
+    <!-- Initialize Bootstrap components -->
+    <script>
+        // Ensure Bootstrap is fully loaded before initializing modals
+        document.addEventListener('DOMContentLoaded', function() {
+            // Pre-initialize all modals on the page
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modalEl => {
+                new bootstrap.Modal(modalEl);
+            });
+        });
+    </script>
+    <!-- Base URL script to handle navigation URLs correctly -->
+    <script src="/js/base-url.js"></script>
+    <!-- PWA fullscreen handler -->
+    <script src="/js/pwa-fullscreen.js"></script>
+    <!-- Immersive mode for fullscreen PWA -->
+    <script src="/js/immersive-mode.js"></script>
     <!-- Accessibility Script -->
     <script src="/js/accessibility.js"></script>
+    <!-- Responsive Handler Script -->
+    <script src="/js/responsive-handler.js"></script>
+    <!-- Page Refresh Handler Script -->
+    <script src="/js/page-refresh-handler.js"></script>
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {

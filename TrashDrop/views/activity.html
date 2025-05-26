@@ -9,7 +9,13 @@
     <title>Activity History - TrashDrop</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Navbar font consistency fix -->
+    <link rel="stylesheet" href="/css/navbar-fix.css" />
+    <!-- Custom styles -->
     <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/responsive-enhancements.css">
+    <link rel="stylesheet" href="/css/device-optimizations.css">
+    <link rel="stylesheet" href="/css/navbar-content-fix.css">
     <link rel="stylesheet" href="/css/accessibility.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
@@ -51,44 +57,77 @@
             color: white;
         }
     </style>
+    <link rel="stylesheet" href="/css/dark-theme.css">
+    <link rel="stylesheet" href="/css/mobile-nav-fix.css">
 </head>
-<body class="d-flex flex-column min-vh-100">
-    <!-- Skip to content link for keyboard users -->
-    <a href="#main-content" class="skip-to-content">Skip to main content</a>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+<body class="d-flex flex-column min-vh-100" data-page="activity">
+
+    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
         <div class="container">
-            <a class="navbar-brand" href="/dashboard">
-                <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                TrashDrop
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <!-- Navbar items -->
-                </ul>
+            <!-- Mobile view (simplified) -->
+            <div class="d-flex d-lg-none justify-content-between align-items-center w-100">
+                <a class="navbar-brand" href="/dashboard">
+                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                    TrashDrop
+                </a>
                 <div class="d-flex align-items-center">
-                    <div class="d-flex align-items-center me-3">
-                        <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                        <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
-                    </div>
+                    <span id="connection-status-mobile" class="badge text-bg-success me-2">Online</span>
+                    <span id="pickup-offline-indicator-mobile" class="badge rounded-pill text-bg-warning d-none">0</span>
                     <a href="/rewards" class="text-white me-3 text-decoration-none">
-                        <i class="bi bi-award-fill me-1"></i>
-                        <span id="user-points">0</span> points
+                        <i class="bi bi-award-fill"></i>
+                        <span id="user-points-mobile">0</span>
                     </a>
                     <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-1"></i>
-                            <span id="user-name">User</span>
+                        <button class="btn btn-sm btn-outline-light rounded-circle p-1" type="button" id="userDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle"></i>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownMobile">
                             <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                            <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
+                            <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                         </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Desktop view (full) -->
+            <div class="d-none d-lg-flex justify-content-between align-items-center w-100">
+                <a class="navbar-brand" href="/dashboard">
+                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                    TrashDrop
+                </a>
+                <button class="navbar-toggler d-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse show" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <!-- Navbar items removed as requested -->
+                    </ul>
+                    <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center me-3">
+                            <span id="connection-status" class="badge text-bg-success me-2">Online</span>
+                            <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+                        </div>
+                        <a href="/rewards" class="text-white me-3 text-decoration-none">
+                            <i class="bi bi-award-fill me-1"></i>
+                            <span id="user-points">0</span> points
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-1"></i>
+                                <span id="user-name">User</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                                <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                                <li><a class="dropdown-item" href="/views/db-performance.html"><i class="bi bi-speedometer2 me-2"></i>DB Performance</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
+                                <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -96,11 +135,8 @@
     </nav>
 
     <main id="main-content" class="container py-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="mb-3">
             <h1 class="fs-4 fw-bold mb-0">Activity History</h1>
-            <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
-            </a>
         </div>
         
         <!-- Offline Alert -->
@@ -431,6 +467,9 @@
     <script src="/js/emergency-logout.js"></script>
     <script src="/js/theme-switcher.js"></script>
     <script src="/js/activity.js"></script>
+    <script src="/js/mobile-nav.js"></script>
+    <script src="/js/navbar.js"></script>
+    <script src="/js/back-button.js"></script>
     <script>
         // Initialize the user information
         document.addEventListener('DOMContentLoaded', function() {
@@ -525,5 +564,6 @@
             });
         });
     </script>
+    <script src="/js/pwa-fullscreen.js"></script>
 </body>
 </html>

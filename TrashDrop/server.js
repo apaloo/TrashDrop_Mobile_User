@@ -18,6 +18,17 @@ console.log(`Starting server in ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} 
 // Middleware
 app.use(cors());
 
+// Special route for Digital Asset Links (TWA support)
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.sendFile(path.join(__dirname, 'public', '.well-known', 'assetlinks.json'));
+});
+
+// Health check endpoint for container monitoring
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Redirect middleware for handling requests without port specified and protocol issues
 app.use((req, res, next) => {
   const host = req.get('host');
@@ -143,7 +154,18 @@ app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'reset-password.html'));
 });
 
+// PWA launch route - this is the PWA entry point
+app.get('/pwa-launch', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'pwa-launch.html'));
+});
+
 app.get('/dashboard', (req, res) => {
+  // Check if this is a PWA request (from our launch page or direct install)
+  const isPwa = req.query.pwa === 'true' || req.query.mode === 'pwa';
+  const isFullscreen = req.query.fullscreen === '1';
+  
+  // For now, always send the dashboard.html file
+  // The JS in this file will handle fullscreen mode based on URL params
   res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
 });
 
@@ -183,8 +205,18 @@ app.get('/reports', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'reports.html'));
 });
 
+// Handle Order Bags route to redirect to dashboard with modal trigger
+app.get('/order-bags', (req, res) => {
+  res.redirect('/dashboard?openModal=orderBags');
+});
+
 app.get('/scanner-test', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'scanner-test.html'));
+});
+
+// Health check endpoint for Docker/container orchestration
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Error handler
@@ -194,6 +226,21 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
+// Start server with optional HTTPS support
+if (process.env.HTTPS_ENABLED === 'true' && process.env.SSL_KEY && process.env.SSL_CERT) {
+  const fs = require('fs');
+  const https = require('https');
+  const options = {
+    key: fs.readFileSync(process.env.SSL_KEY),
+    cert: fs.readFileSync(process.env.SSL_CERT)
+  };
+  
+  https.createServer(options, app).listen(process.env.HTTPS_PORT || 443, () => {
+    console.log(`HTTPS Server running on port ${process.env.HTTPS_PORT || 443}`);
+  });
+}
+
+// Always start HTTP server for local development and as fallback
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`HTTP Server running on port ${PORT}`);
 });

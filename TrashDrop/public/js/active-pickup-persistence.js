@@ -3,6 +3,12 @@
  * Ensures active pickup requests remain visible after page refresh
  */
 
+// Check if ActivePickupPersistence already exists to prevent redeclaration
+if (!window.ActivePickupPersistence) {
+
+// Use an IIFE to avoid global namespace pollution
+(function() {
+
 const ActivePickupPersistence = {
     // Key used for localStorage
     STORAGE_KEY: 'active_pickup_data',
@@ -102,3 +108,7 @@ window.addEventListener('pageshow', function(event) {
 
 // Make it globally available
 window.ActivePickupPersistence = ActivePickupPersistence;
+
+})(); // End of IIFE
+
+} // End of if (!window.ActivePickupPersistence) check

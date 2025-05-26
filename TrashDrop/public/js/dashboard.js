@@ -42,7 +42,41 @@ document.addEventListener('DOMContentLoaded', async function() {
     return;
   }
   
-  // Check for active pickup data in localStorage to prevent disappearing on refresh
+  // Flag to check if we're opening a modal, which should take precedence
+  let isOpeningModal = false;
+  
+  // Check URL parameters for modal triggers
+  const urlParams = new URLSearchParams(window.location.search);
+  const openModalParam = urlParams.get('openModal');
+  
+  // Handle modal triggers from URL parameters
+  if (openModalParam === 'orderBags') {
+    isOpeningModal = true;
+    
+    // Remove the parameter from URL without refreshing the page
+    const newUrl = window.location.pathname;
+    window.history.replaceState({}, document.title, newUrl);
+    
+    // Load the page essentials first and open the modal immediately
+    setTimeout(() => {
+      if (typeof window.openOrderBagsModal === 'function') {
+        window.openOrderBagsModal();
+      } else {
+        console.error('Order bags modal function not available');
+        const modalElement = document.getElementById('order-bags-modal');
+        if (modalElement) {
+          const modal = new bootstrap.Modal(modalElement);
+          modal.show();
+        }
+      }
+    }, 100); // Reduced timeout for faster response
+  }
+  
+  // Create a global variable to track if we've been in the order bags flow
+  window.hasAccessedOrderBags = isOpeningModal || window.hasAccessedOrderBags;
+
+  // Check for active pickup data in localStorage
+  // We'll load it in the background but won't display it immediately if we're in the order bags flow
   const hasActivePickup = localStorage.getItem('active_pickup_data');
   const forceShowActivePickup = localStorage.getItem('force_show_active_pickup') === 'true';
   
@@ -52,23 +86,32 @@ document.addEventListener('DOMContentLoaded', async function() {
     localStorage.removeItem('force_show_active_pickup');
   }
   
+  // Load the pickup data but conditionally display it
   if (hasActivePickup) {
     try {
       const pickupData = JSON.parse(hasActivePickup);
       if (pickupData && pickupData.status !== 'cancelled') {
-        console.log('Dashboard: Found active pickup data, ensuring container visibility');
+        // Always load the data into the container, but don't show it if we're in the order bags flow
+        console.log('Dashboard: Found active pickup data');
         const container = document.getElementById('active-pickup-container');
         if (container) {
-          // Make sure the container is visible - use !important if force flag was set
-          if (forceShowActivePickup) {
-            container.setAttribute('style', 'display: block !important');
-          } else {
-            container.style.display = 'block';
-          }
-          container.setAttribute('aria-hidden', 'false');
-          
-          // Also update the content with the pickup details
+          // Update the content with the pickup details
           updateActivePickupCardContent(pickupData);
+          
+          // Only show the container if we're not in the order bags flow
+          if (!window.hasAccessedOrderBags) {
+            console.log('Dashboard: Showing active pickup container');
+            if (forceShowActivePickup) {
+              container.setAttribute('style', 'display: block !important');
+            } else {
+              container.style.display = 'block';
+            }
+            container.setAttribute('aria-hidden', 'false');
+          } else {
+            console.log('Dashboard: Not showing active pickup container due to order bags flow');
+            container.style.display = 'none';
+            container.setAttribute('aria-hidden', 'true');
+          }
         }
       }
     } catch (e) {
@@ -414,6 +457,9 @@ async function loadDashboardStats() {
 // Load active pickup request
 async function loadActivePickup() {
   try {
+    // Note: We've removed the early exit for Order Bags flow to allow the pickup card
+    // to remain visible if it was already open when the Order button is clicked
+
     // Get user data
     const user = await AuthManager.getCurrentUser();
     
@@ -463,6 +509,9 @@ async function loadActivePickup() {
       */
     }
     
+    // We've removed the secondary check for Order Bags flow to preserve
+    // the original state of the Active Pickup container
+    
     // Show or hide active pickup container
     const activePickupContainer = document.getElementById('active-pickup-container');
     
@@ -474,19 +523,22 @@ async function loadActivePickup() {
       return;
     }
     
-    // Show active pickup
+    // Show active pickup regardless of Order Bags flow
     if (activePickupContainer) {
-      activePickupContainer.style.display = 'block';
+      // Only change the display if it's not already set by the modal
+      if (!window.isOrderBagsModalOpen) {
+        activePickupContainer.style.display = 'block';
+        activePickupContainer.setAttribute('aria-hidden', 'false');
+      }
+      
+      // Always update the content, even if it's not visible during modal display
+      updateActivePickupUI(activePickup);
+      
+      // Start tracking updates if the pickup is in progress
+      if (activePickup.status === 'accepted' || activePickup.status === 'arrived') {
+        startCollectorUpdates(activePickup.id);
+      }
     }
-    
-    // Update active pickup details
-    updateActivePickupUI(activePickup);
-    
-    // Start tracking updates if the pickup is in progress
-    if (activePickup.status === 'accepted' || activePickup.status === 'arrived') {
-      startCollectorUpdates(activePickup.id);
-    }
-    
   } catch (error) {
     console.error('Error loading active pickup:', error);
     showToast('Error', 'Failed to load active pickup request.', 'danger');

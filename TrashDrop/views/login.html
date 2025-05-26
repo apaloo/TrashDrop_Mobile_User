@@ -11,10 +11,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/accessibility.css">
+    <link rel="stylesheet" href="/css/navbar-fix.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
     <!-- Base URL script to handle navigation URLs correctly -->
     <script src="/js/base-url.js"></script>
+    <link rel="stylesheet" href="/css/dark-theme.css">
+    <link rel="stylesheet" href="/css/mobile-nav-fix.css">
 </head>
 <body class="d-flex flex-column min-vh-100">
     <!-- Skip to content link for accessibility -->
@@ -125,6 +128,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Theme Switcher (must be early) -->
+    <script src="/js/theme-switcher.js"></script>
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
     <!-- Custom JS -->
@@ -155,5 +160,6 @@
             }
         });
     </script>
+    <script src="/js/pwa-fullscreen.js"></script>
 </body>
 </html>

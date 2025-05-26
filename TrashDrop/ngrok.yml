@@ -1,0 +1,10 @@
+version: "2"
+# authtoken should be set via NGROK_AUTHTOKEN env var or ngrok config add-authtoken command
+web_addr: 0.0.0.0:4040  # Make the web interface accessible from all network interfaces
+log: stdout
+tunnels:
+  trashdrop:
+    proto: http
+    addr: host.docker.internal:3001
+    inspect: true
+    # domain: your-custom-domain  # Uncomment and set for paid plans with custom domains

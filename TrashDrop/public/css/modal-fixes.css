@@ -1,0 +1,58 @@
+/**
+ * TrashDrop Modal Fixes
+ * Prevents backdrop issues and ensures proper modal behavior
+ */
+
+/* Prevent backdrop from sticking */
+.modal-backdrop {
+  /* Use !important to override Bootstrap's own !important rules */
+  transition: opacity 0.25s ease-out !important;
+}
+
+/* Force backdrop to be removed from the DOM */
+.modal-backdrop.removing {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Additional helper to ensure the backdrop doesn't prevent interactions */
+body.backdrop-issue {
+  overflow: auto !important;
+}
+body.backdrop-issue .modal-backdrop {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* Ensure proper stacking order for modals */
+.modal {
+  z-index: 1050 !important;
+}
+
+/* Make sure body remains scrollable once modal is closed */
+body[data-modal-closed="true"] {
+  overflow: auto !important;
+  padding-right: 0 !important;
+}
+
+/* Fix for modals in PWA fullscreen mode */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.7) !important; /* Darker backdrop for better visibility */
+  }
+  
+  .modal-dialog {
+    margin-top: 2rem !important; /* Add some top margin to avoid status bar */
+  }
+}
+
+/* Prevent modal from hiding behind navbar */
+.modal-open .modal {
+  padding-top: 55px !important;
+}
+
+/* Fix for Android WebView focusing issues */
+.modal input, .modal select, .modal textarea, .modal button {
+  font-size: 16px !important; /* Prevent zoom on focus */
+}

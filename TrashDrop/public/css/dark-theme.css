@@ -1,0 +1,278 @@
+/**
+ * TrashDrop Dark Theme
+ * Provides comprehensive dark mode styling for the entire application
+ */
+
+/* Theme transition class for smooth theme switching */
+.theme-transition,
+.theme-transition *,
+.theme-transition *:before,
+.theme-transition *:after {
+  transition: all 0.3s ease-in-out !important;
+  transition-property: background-color, background, color, border-color, box-shadow !important;
+}
+
+/* Dark theme variables */
+:root[data-theme="dark"] {
+  --body-bg: #121212;
+  --card-bg: #1e1e1e;
+  --text-color: #e0e0e0;
+  --text-muted: #a0a0a0;
+  --border-color: #333;
+  --primary: #76c893;
+  --primary-dark: #52b69a;
+  --primary-light: #99d98c;
+  --success: #52b788;
+  --info: #4cc9f0;
+  --warning: #ffca3a;
+  --danger: #ef476f;
+  --secondary: #495057;
+  --input-bg: #2a2a2a;
+  --input-color: #e0e0e0;
+  --input-border: #444;
+  --dropdown-bg: #252525;
+  --dropdown-link-hover: #333;
+  --modal-bg: #252525;
+  --header-bg: #1a1a1a;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --nav-bg: #1a1a1a;
+  --nav-link: #e0e0e0;
+  --nav-link-hover: #ffffff;
+  --footer-bg: #1a1a1a;
+  --footer-text: #e0e0e0;
+}
+
+/* Apply dark theme to elements */
+.dark-theme,
+[data-theme="dark"] {
+  color-scheme: dark;
+  background-color: var(--body-bg);
+  color: var(--text-color);
+}
+
+/* Basic elements */
+[data-theme="dark"] body {
+  background-color: var(--body-bg);
+  color: var(--text-color);
+}
+
+/* Cards */
+[data-theme="dark"] .card {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .card-header {
+  background-color: var(--header-bg);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .card-footer {
+  background-color: var(--header-bg);
+  border-color: var(--border-color);
+}
+
+/* Navbar */
+[data-theme="dark"] .navbar {
+  background-color: var(--nav-bg) !important;
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .navbar-brand {
+  color: var(--primary);
+}
+
+[data-theme="dark"] .navbar-nav .nav-link {
+  color: var(--nav-link);
+}
+
+[data-theme="dark"] .navbar-nav .nav-link:hover {
+  color: var(--nav-link-hover);
+}
+
+/* Dropdown */
+[data-theme="dark"] .dropdown-menu {
+  background-color: var(--dropdown-bg);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .dropdown-item {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .dropdown-item:hover, 
+[data-theme="dark"] .dropdown-item:focus {
+  background-color: var(--dropdown-link-hover);
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .dropdown-divider {
+  border-color: var(--border-color);
+}
+
+/* Tables */
+[data-theme="dark"] .table {
+  color: var(--text-color);
+}
+
+[data-theme="dark"] .table th,
+[data-theme="dark"] .table td {
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+}
+
+/* Forms */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--input-color);
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.25rem rgba(76, 175, 80, 0.25);
+}
+
+[data-theme="dark"] .form-control::placeholder {
+  color: var(--text-muted);
+}
+
+/* Buttons */
+[data-theme="dark"] .btn-outline-secondary {
+  color: var(--text-color);
+  border-color: var(--secondary);
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: var(--secondary);
+  color: var(--text-color);
+}
+
+/* Alerts */
+[data-theme="dark"] .alert {
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .alert-warning {
+  background-color: rgba(255, 202, 58, 0.2);
+  color: #ffca3a;
+}
+
+[data-theme="dark"] .alert-danger {
+  background-color: rgba(239, 71, 111, 0.2);
+  color: #ef476f;
+}
+
+[data-theme="dark"] .alert-success {
+  background-color: rgba(82, 183, 136, 0.2);
+  color: #52b788;
+}
+
+[data-theme="dark"] .alert-info {
+  background-color: rgba(76, 201, 240, 0.2);
+  color: #4cc9f0;
+}
+
+/* Modals */
+[data-theme="dark"] .modal-content {
+  background-color: var(--modal-bg);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-header {
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-footer {
+  border-color: var(--border-color);
+}
+
+/* Lists */
+[data-theme="dark"] .list-group-item {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+/* Footer */
+[data-theme="dark"] footer {
+  background-color: var(--footer-bg);
+  color: var(--footer-text);
+}
+
+[data-theme="dark"] footer a {
+  color: var(--primary);
+}
+
+/* Badges */
+[data-theme="dark"] .badge.bg-light {
+  background-color: var(--secondary) !important;
+  color: var(--text-color) !important;
+}
+
+/* Text color utilities */
+[data-theme="dark"] .text-dark {
+  color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .text-muted {
+  color: var(--text-muted) !important;
+}
+
+/* Borders */
+[data-theme="dark"] .border,
+[data-theme="dark"] .border-top,
+[data-theme="dark"] .border-bottom,
+[data-theme="dark"] .border-start,
+[data-theme="dark"] .border-end {
+  border-color: var(--border-color) !important;
+}
+
+/* Maps */
+[data-theme="dark"] .leaflet-container {
+  background: #333 !important;
+}
+
+/* Mobile bottom navbar */
+[data-theme="dark"] .mobile-nav-bar {
+  background-color: var(--nav-bg) !important;
+  border-top-color: var(--border-color);
+}
+
+/* Specific app components */
+[data-theme="dark"] .activity-icon {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .dashboard-stats {
+  background-color: var(--card-bg);
+}
+
+/* Custom scrollbar for WebKit browsers */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #222;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background-color: #444;
+  border-radius: 6px;
+  border: 3px solid #222;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}

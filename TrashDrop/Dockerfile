@@ -1,33 +1,34 @@
-FROM node:16-alpine
+FROM node:18-alpine
 
-# Create app directory
+# Set working directory
 WORKDIR /app
+
+# Create a non-root user to run the application
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Install app dependencies
 COPY package*.json ./
-RUN npm install --production
+RUN npm ci --only=production && npm cache clean --force
+
+# Create log directory and set permissions
+RUN mkdir -p /app/logs && chown -R appuser:appgroup /app
 
 # Bundle app source
-COPY . .
+COPY --chown=appuser:appgroup . .
 
-# Set environment variables to production
+# Set environment variables
 ENV NODE_ENV=production
+ENV PORT=3000
 
 # Expose the port the app runs on
 EXPOSE 3000
 
+# Switch to non-root user
+USER appuser
+
+# Healthcheck to verify the application is running
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
 # Command to run the application
 CMD ["node", "server.js"]
-
-cd /Users/otisa.apaloo/CascadeProjects/TrashDrop_Mobile_User/TrashDrop
-docker build -t trashdrop .
-
-docker run -p 3000:3000 \
-  -e NODE_ENV=production \
-  -e SESSION_SECRET=your-session-secret \
-  -e JWT_SECRET=your-jwt-secret \
-  -e SUPABASE_URL=your-supabase-url \
-  -e SUPABASE_KEY=your-supabase-key \
-  -e SUPABASE_ANON_KEY=your-supabase-anon-key \
-  -e SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key \
-  trashdrop

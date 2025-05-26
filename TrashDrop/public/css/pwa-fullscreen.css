@@ -1,0 +1,47 @@
+/**
+ * PWA Fullscreen Styles
+ * Enhances fullscreen experience for installed PWAs
+ */
+
+/* Base fullscreen styles for PWA mode */
+html.pwa-mode,
+body.pwa-mode {
+  /* Ensure full viewport coverage */
+  height: 100vh !important;
+  height: 100dvh !important; /* Use dynamic viewport height when available */
+  width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Special handling for iOS devices */
+@supports (-webkit-touch-callout: none) {
+  html.pwa-mode,
+  body.pwa-mode {
+    /* iOS-specific full height handling */
+    height: -webkit-fill-available !important;
+  }
+}
+
+/* Ensure content doesn't get hidden under notches or rounded corners */
+.pwa-mode .container,
+.pwa-mode main,
+.pwa-mode .content-area {
+  padding-left: env(safe-area-inset-left, 0px) !important;
+  padding-right: env(safe-area-inset-right, 0px) !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+/* Hide any browser UI elements that might appear in PWA mode */
+.pwa-mode .browser-ui,
+.pwa-mode .header-browser-bar {
+  display: none !important;
+}
+
+/* Ensure bottom nav has proper spacing on notched devices */
+.pwa-mode .mobile-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  margin-bottom: 0 !important;
+}
