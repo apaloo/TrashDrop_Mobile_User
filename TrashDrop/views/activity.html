@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Protocol interceptor must be the first script to run, before even meta tags are processed -->
+    <script src="/js/protocol-interceptor.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="TrashDrop Activity History - View all your past activities and transactions">
+    <title>Activity History - TrashDrop</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Base URL handling for consistent navigation -->
+    <script src="/js/base-url.js"></script>
+    
+    <style>
+        .activity-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            font-size: 1.1rem;
+        }
+        
+        .activity-item {
+            transition: background-color 0.2s;
+        }
+        
+        .activity-item:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+        
+        .activity-date-header {
+            background-color: rgba(var(--bs-info-rgb), 0.1);
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .activity-filter-btn.active {
+            background-color: var(--bs-primary);
+            color: white;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Skip to content link for keyboard users -->
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                TrashDrop
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <!-- Navbar items -->
+                </ul>
+                <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center me-3">
+                        <span id="connection-status" class="badge text-bg-success me-2">Online</span>
+                        <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+                    </div>
+                    <a href="/rewards" class="text-white me-3 text-decoration-none">
+                        <i class="bi bi-award-fill me-1"></i>
+                        <span id="user-points">0</span> points
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span id="user-name">User</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
+                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main id="main-content" class="container py-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="fs-4 fw-bold mb-0">Activity History</h1>
+            <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+        
+        <!-- Offline Alert -->
+        <div id="offline-alert" class="alert alert-warning d-none mb-3" role="alert" aria-live="assertive">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-wifi-off me-2 fs-4"></i>
+                <div>
+                    <strong>You're offline</strong>
+                    <p class="mb-0">Your activity history may not be fully up to date until you're back online.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activity Filters -->
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+            <div class="card-body p-3">
+                <h5 class="card-title mb-3">Filter Activities</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm activity-filter-btn active" data-filter="all">All Activities</button>
+                    <button class="btn btn-sm activity-filter-btn" data-filter="pickup">Pickups</button>
+                    <button class="btn btn-sm activity-filter-btn" data-filter="delivery">Bag Deliveries</button>
+                    <button class="btn btn-sm activity-filter-btn" data-filter="points">Points Earned</button>
+                    <button class="btn btn-sm activity-filter-btn" data-filter="report">Reports</button>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="date-range" class="form-label">Date Range</label>
+                            <select class="form-select" id="date-range">
+                                <option value="all" selected>All Time</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="activity-search" class="form-label">Search Activities</label>
+                            <input type="text" class="form-control" id="activity-search" placeholder="Search by keyword...">
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="custom-date-range" class="row mt-2 d-none">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="start-date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start-date">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="end-date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end-date">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activity List -->
+        <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-body p-0">
+                <div id="activity-container">
+                    <!-- Today -->
+                    <div class="activity-date-header">Today</div>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item px-3 py-3 activity-item" data-type="pickup">
+                            <div class="d-flex align-items-start">
+                                <div class="activity-icon bg-success bg-opacity-10 text-success rounded-circle me-3">
+                                    <i class="bi bi-check-circle"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 fs-6">Pickup Completed</h5>
+                                    <p class="mb-1">3 bags from Home</p>
+                                    <p class="mb-0 text-muted">Today, 2:30 PM</p>
+                                </div>
+                                <div class="ms-auto text-end">
+                                    <span class="badge bg-success mb-2">+45 points</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="collapse" data-bs-target="#details-1" aria-expanded="false" aria-controls="details-1">
+                                            View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="collapse mt-3" id="details-1">
+                                <div class="card card-body bg-light">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Pickup ID:</strong> PK-202505251430</p>
+                                            <p class="mb-1"><strong>Location:</strong> Home - 123 Main St</p>
+                                            <p class="mb-1"><strong>Collector:</strong> John D.</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Waste Type:</strong> Recyclables</p>
+                                            <p class="mb-1"><strong>Weight:</strong> 4.5 kg</p>
+                                            <p class="mb-1"><strong>Carbon Offset:</strong> 2.3 kg CO₂</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="list-group-item px-3 py-3 activity-item" data-type="points">
+                            <div class="d-flex align-items-start">
+                                <div class="activity-icon bg-warning bg-opacity-10 text-warning rounded-circle me-3">
+                                    <i class="bi bi-award"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 fs-6">Level Up Achievement</h5>
+                                    <p class="mb-1">Reached "Eco Warrior" level</p>
+                                    <p class="mb-0 text-muted">Today, 2:31 PM</p>
+                                </div>
+                                <div class="ms-auto text-end">
+                                    <span class="badge bg-warning text-dark mb-2">+100 points</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="collapse" data-bs-target="#details-2" aria-expanded="false" aria-controls="details-2">
+                                            View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="collapse mt-3" id="details-2">
+                                <div class="card card-body bg-light">
+                                    <p class="mb-1">Congratulations on reaching the "Eco Warrior" level! You've consistently participated in our recycling program.</p>
+                                    <p class="mb-0">New perks unlocked: Premium bag designs, priority pickups, and 10% discount at partner stores.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Yesterday -->
+                    <div class="activity-date-header">Yesterday</div>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item px-3 py-3 activity-item" data-type="delivery">
+                            <div class="d-flex align-items-start">
+                                <div class="activity-icon bg-info bg-opacity-10 text-info rounded-circle me-3">
+                                    <i class="bi bi-bag-check"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 fs-6">Bags Delivered</h5>
+                                    <p class="mb-1">5 recycling bags</p>
+                                    <p class="mb-0 text-muted">Yesterday, 10:15 AM</p>
+                                </div>
+                                <div class="ms-auto text-end">
+                                    <span class="badge bg-info mb-2">Delivered</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="collapse" data-bs-target="#details-3" aria-expanded="false" aria-controls="details-3">
+                                            View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="collapse mt-3" id="details-3">
+                                <div class="card card-body bg-light">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Delivery ID:</strong> DL-202505241015</p>
+                                            <p class="mb-1"><strong>Location:</strong> Home - 123 Main St</p>
+                                            <p class="mb-1"><strong>Delivered by:</strong> Maria S.</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Bag Type:</strong> Standard Recycling</p>
+                                            <p class="mb-1"><strong>Quantity:</strong> 5</p>
+                                            <p class="mb-1"><strong>Status:</strong> Delivered</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- May 20, 2025 -->
+                    <div class="activity-date-header">May 20, 2025</div>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item px-3 py-3 activity-item" data-type="pickup">
+                            <div class="d-flex align-items-start">
+                                <div class="activity-icon bg-warning bg-opacity-10 text-warning rounded-circle me-3">
+                                    <i class="bi bi-qr-code"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 fs-6">Bags Scanned</h5>
+                                    <p class="mb-1">Added 10 bags to your account</p>
+                                    <p class="mb-0 text-muted">May 20, 2025, 9:45 AM</p>
+                                </div>
+                                <div class="ms-auto text-end">
+                                    <span class="badge bg-warning text-dark mb-2">Added</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="collapse" data-bs-target="#details-4" aria-expanded="false" aria-controls="details-4">
+                                            View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="collapse mt-3" id="details-4">
+                                <div class="card card-body bg-light">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Transaction ID:</strong> SC-202505200945</p>
+                                            <p class="mb-1"><strong>Location:</strong> Distribution Center</p>
+                                            <p class="mb-1"><strong>Added by:</strong> Self-Service</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Bag Type:</strong> Mixed Recycling</p>
+                                            <p class="mb-1"><strong>Quantity:</strong> 10</p>
+                                            <p class="mb-1"><strong>Status:</strong> Available for Use</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="list-group-item px-3 py-3 activity-item" data-type="report">
+                            <div class="d-flex align-items-start">
+                                <div class="activity-icon bg-danger bg-opacity-10 text-danger rounded-circle me-3">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1 fs-6">Illegal Dumping Reported</h5>
+                                    <p class="mb-1">River Park - North Entrance</p>
+                                    <p class="mb-0 text-muted">May 20, 2025, 4:15 PM</p>
+                                </div>
+                                <div class="ms-auto text-end">
+                                    <span class="badge bg-success mb-2">Resolved</span>
+                                    <div>
+                                        <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="collapse" data-bs-target="#details-5" aria-expanded="false" aria-controls="details-5">
+                                            View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="collapse mt-3" id="details-5">
+                                <div class="card card-body bg-light">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Report ID:</strong> RP-202505201615</p>
+                                            <p class="mb-1"><strong>Location:</strong> River Park - North Entrance</p>
+                                            <p class="mb-1"><strong>Status:</strong> Resolved</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-1"><strong>Waste Type:</strong> Construction Debris</p>
+                                            <p class="mb-1"><strong>Cleaned on:</strong> May 21, 2025</p>
+                                            <p class="mb-1"><strong>Points Earned:</strong> +30</p>
+                                        </div>
+                                    </div>
+                                    <p class="mt-2 mb-0">Thank you for your report! The area has been cleaned and monitored for further violations.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <nav aria-label="Activity pagination" class="p-3">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                        </li>
+                        <li class="page-item active" aria-current="page">
+                            <a class="page-link" href="#">1</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">2</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">3</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-3 bg-light">
+        <div class="container">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+                <div class="mb-2 mb-md-0">
+                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="24" height="24" class="d-inline-block align-top me-2">
+                    <span>© 2025 TrashDrop</span>
+                </div>
+                <div>
+                    <a href="/terms" class="text-decoration-none text-muted me-3">Terms</a>
+                    <a href="/privacy" class="text-decoration-none text-muted me-3">Privacy</a>
+                    <a href="/help" class="text-decoration-none text-muted">Help</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Emergency Logout Modal -->
+    <div class="modal fade" id="emergencyLogoutModal" tabindex="-1" aria-labelledby="emergencyLogoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="emergencyLogoutModalLabel">Emergency Logout</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-exclamation-triangle-fill text-danger fs-1 me-3"></i>
+                        <p class="mb-0">This will immediately terminate your session and clear all local data. Use this only in emergency situations.</p>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="confirmEmergencyLogout">
+                        <label class="form-check-label" for="confirmEmergencyLogout">
+                            I understand this will clear all local data
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-emergency-logout" disabled>Emergency Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/emergency-logout.js"></script>
+    <script src="/js/theme-switcher.js"></script>
+    <script src="/js/activity.js"></script>
+    <script>
+        // Initialize the user information
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update user information from localStorage
+            const userData = JSON.parse(localStorage.getItem('userData')) || {};
+            document.getElementById('user-name').textContent = userData.name || 'User';
+            document.getElementById('user-points').textContent = userData.points || '0';
+            
+            // Check for offline status
+            if (!navigator.onLine) {
+                document.getElementById('connection-status').textContent = 'Offline';
+                document.getElementById('connection-status').classList.remove('text-bg-success');
+                document.getElementById('connection-status').classList.add('text-bg-danger');
+                document.getElementById('offline-alert').classList.remove('d-none');
+            }
+            
+            // Handle offline/online events
+            window.addEventListener('online', function() {
+                document.getElementById('connection-status').textContent = 'Online';
+                document.getElementById('connection-status').classList.remove('text-bg-danger');
+                document.getElementById('connection-status').classList.add('text-bg-success');
+                document.getElementById('offline-alert').classList.add('d-none');
+            });
+            
+            window.addEventListener('offline', function() {
+                document.getElementById('connection-status').textContent = 'Offline';
+                document.getElementById('connection-status').classList.remove('text-bg-success');
+                document.getElementById('connection-status').classList.add('text-bg-danger');
+                document.getElementById('offline-alert').classList.remove('d-none');
+            });
+            
+            // Set up logout functionality
+            document.getElementById('logout').addEventListener('click', function(e) {
+                e.preventDefault();
+                // Simple logout - just redirect to login page
+                window.location.href = '/login?logout=true';
+            });
+            
+            // Emergency logout checkbox
+            document.getElementById('confirmEmergencyLogout').addEventListener('change', function() {
+                document.getElementById('confirm-emergency-logout').disabled = !this.checked;
+            });
+            
+            // Handle activity filtering
+            const filterButtons = document.querySelectorAll('.activity-filter-btn');
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    const filter = this.dataset.filter;
+                    const activityItems = document.querySelectorAll('.activity-item');
+                    
+                    activityItems.forEach(item => {
+                        if (filter === 'all' || item.dataset.type === filter) {
+                            item.style.display = 'block';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            });
+            
+            // Handle date range selection
+            const dateRangeSelect = document.getElementById('date-range');
+            const customDateRange = document.getElementById('custom-date-range');
+            
+            dateRangeSelect.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customDateRange.classList.remove('d-none');
+                } else {
+                    customDateRange.classList.add('d-none');
+                }
+            });
+            
+            // Search functionality
+            const searchInput = document.getElementById('activity-search');
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const activityItems = document.querySelectorAll('.activity-item');
+                
+                activityItems.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

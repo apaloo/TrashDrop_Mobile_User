@@ -175,6 +175,14 @@ app.get('/rewards', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'rewards.html'));
 });
 
+app.get('/activity', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'activity.html'));
+});
+
+app.get('/reports', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'reports.html'));
+});
+
 app.get('/scanner-test', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'scanner-test.html'));
 });
