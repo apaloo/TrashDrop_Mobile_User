@@ -184,14 +184,17 @@
             </div>
             
             <div class="mb-3">
-                <label for="notes" class="form-label">Additional Notes</label>
+                <label for="notes" class="form-label">Additional Notes (Optional)</label>
                 <textarea class="form-control" id="notes" rows="2" placeholder="Any special instructions?"></textarea>
             </div>
         </div>
         
         <div class="form-section">
             <h2 class="h5 mb-3">Pricing</h2>
-            <div class="price-tag">$<span id="fee-amount">5</span>.00 per pickup</div>
+            <!-- Dynamic pricing info -->
+            <div class="text-center text-muted mb-3">
+                Price will be calculated based on waste type, size, and number of bags
+            </div>
             <div class="text-center text-muted small mb-3">
                 Based on your selected frequency: <span id="frequency-summary">Weekly</span>
             </div>
@@ -218,7 +221,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
     <!-- Custom scripts -->
     <script src="/js/auth.js"></script>
+    <script src="/js/form-validation.js"></script>
     <script src="/js/pickup-schedule.js"></script>
+    <script src="/js/schedule-pickup-validation.js"></script>
     <script src="/js/register-sw.js"></script>
     <script src="/js/emergency-logout.js"></script>
     <script src="/js/mobile-nav.js"></script>

@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="/css/device-optimizations.css">
     <link rel="stylesheet" href="/css/navbar-content-fix.css">
     <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/form-selection.css">
     <style>
         /* Standardized form section styling */
         .form-section {
@@ -279,7 +280,7 @@
 
         <!-- Photos Section -->
         <div class="form-section">
-            <h2 class="h5 mb-3"><i class="bi bi-images me-2 text-success"></i>Photos</h2>
+            <h2 class="h5 mb-3"><i class="bi bi-images me-2 text-success"></i>Photos <span class="text-danger">*</span></h2>
             <p class="text-muted mb-3">Add up to 6 photos to document the illegal dumping.</p>
             
             <div class="photo-grid" id="photo-grid">
@@ -295,7 +296,7 @@
                         
         <!-- Location Section -->
         <div class="form-section">
-            <h2 class="h5 mb-3"><i class="bi fa-map-marker-alt me-2 text-success"></i>Location</h2>
+            <h2 class="h5 mb-3"><i class="bi fa-map-marker-alt me-2 text-success"></i>Location <span class="text-danger">*</span></h2>
             <p class="text-muted mb-3">We've automatically detected your location. You can adjust it if needed.</p>
             
             <div class="mb-3">
@@ -315,7 +316,7 @@
         
         <!-- Waste Classification Section -->
         <div class="form-section">
-            <h2 class="h5 mb-3"><i class="bi fa-trash-alt me-2 text-success"></i>Waste Classification</h2>
+            <h2 class="h5 mb-3"><i class="bi fa-trash-alt me-2 text-success"></i>Waste Classification <span class="text-danger">*</span></h2>
             <p class="text-muted mb-3">Select the main type of waste you observed.</p>
             
             <div class="waste-types mb-3">
@@ -360,7 +361,7 @@
                                 </button>
             </div>
             
-            <h3 class="h6 mb-3 mt-4">Approximate Size</h3>
+            <h3 class="h6 mb-3 mt-4">Approximate Size <span class="text-danger">*</span></h3>
             <div class="d-flex justify-content-between mb-3">
                 <button type="button" class="btn size-option" data-size="small">
                     <i class="bi fa-box"></i>
@@ -466,8 +467,11 @@
     <script src="/js/auth.js"></script>
     <!-- Offline Sync JS -->
     <script src="/js/offline-sync.js"></script>
+    <!-- Form Validation JS -->
+    <script src="/js/form-validation.js"></script>
     <!-- App JS -->
     <script src="/js/report-dumping.js"></script>
+    <script src="/js/report-dumping-validation.js"></script>
     <script src="/js/pwa-fullscreen.js"></script>
 </body>
 </html>

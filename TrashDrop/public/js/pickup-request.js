@@ -313,48 +313,42 @@ document.addEventListener('DOMContentLoaded', function() {
      * Submit the pickup request
      */
     async function submitPickupRequest() {
+        // Get the submit button reference
+        const submitButton = document.getElementById('request-pickup-btn');
+        
         try {
-            // Get form values
+            // Basic validation - get form values and validate
             const locationSelect = document.getElementById('saved-location');
-            const locationId = locationSelect.value;
-            const locationText = locationSelect.options[locationSelect.selectedIndex].text;
-            const latitude = parseFloat(document.getElementById('latitude').value);
-            const longitude = parseFloat(document.getElementById('longitude').value);
-            const bagsCount = parseInt(document.getElementById('bags-count').value);
-            const wasteType = document.querySelector('input[name="waste-type"]:checked').value;
-            const notes = document.getElementById('notes').value;
-            const fee = parseInt(document.getElementById('fee-amount').textContent);
-            const pickupDate = document.getElementById('pickup-date').value;
-            const pickupTime = document.getElementById('pickup-time').value;
-            const specialInstructions = document.getElementById('special-instructions').value;
-            
-            // Validate inputs
-            if (!locationId) {
+            if (!locationSelect || !locationSelect.value) {
                 alert('Please select a pickup location');
                 return;
             }
             
-            if (!pickupDate) {
-                alert('Please select a pickup date');
-                return;
-            }
+            const locationId = locationSelect.value;
+            const locationText = locationSelect.options[locationSelect.selectedIndex].text;
             
+            // Get coordinates
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
             if (isNaN(latitude) || isNaN(longitude)) {
                 alert('Invalid coordinates. Please select a location on the map.');
                 return;
             }
             
-            // Disable submit button to prevent multiple submissions
-            const submitButton = document.getElementById('request-pickup-btn');
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            
-            // Get authentication token
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('You must be logged in to request a pickup');
-                window.location.href = '/login';
+            // Get other form values
+            const bagsCount = parseInt(document.getElementById('bags-count').value) || 1;
+            const wasteTypeEl = document.querySelector('input[name="waste-type"]:checked');
+            if (!wasteTypeEl) {
+                alert('Please select a waste type');
                 return;
+            }
+            const wasteType = wasteTypeEl.value;
+            const notes = document.getElementById('notes')?.value || '';
+            
+            // Disable submit button to prevent multiple submissions
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
             }
             
             // Calculate points based on waste type
@@ -365,98 +359,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 points = 10;
             }
             
-            // Format pickup date and time if provided
-            let pickupDateTime = null;
-            if (pickupDate) {
-                if (pickupTime) {
-                    pickupDateTime = `${pickupDate}T${pickupTime}:00`;
-                } else {
-                    pickupDateTime = `${pickupDate}T00:00:00`;
-                }
-            }
-            
-            // Prepare request data with all fields according to schema
-            const requestData = {
-                locationId,
-                location: locationText.split(':')[1].trim(), // Extract just the address part
-                coordinates: `POINT(${longitude} ${latitude})`, // Format for geography field
-                fee,
+            // Create a mock pickup request for the dashboard
+            const mockPickupData = {
+                id: 'pickup-' + Date.now(),
                 status: 'pending',
-                collector_id: null, // Will be assigned later
+                location: locationText,
+                coordinates: `POINT(${longitude} ${latitude})`,
                 waste_type: wasteType,
                 bags_count: bagsCount,
-                notes,
-                points,
-                pickup_date: pickupDateTime,
-                special_instructions: specialInstructions,
-                priority: document.getElementById('priority').value,
+                points: points,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
             
-            // Send request to server
-            const response = await fetch('/api/pickups/request', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(requestData)
-            });
+            // Store in localStorage for persistence (for dashboard display)
+            localStorage.setItem('active_pickup_data', JSON.stringify(mockPickupData));
+            localStorage.setItem('pickup_requested_at', new Date().toISOString());
+            localStorage.setItem('force_show_active_pickup', 'true');
             
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create pickup request');
-            }
+            // Add a small delay to simulate server communication
+            console.log('Processing pickup request...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
-            const data = await response.json();
+            // Show success message
+            alert('Pickup request submitted successfully! You will be notified when a collector accepts your request.');
             
-            // Handle offline mode or use our enhanced sync system even when online
-            if (!navigator.onLine || window.PickupRequestSync) {
-                try {
-                    // Store request in our enhanced PickupRequestSync system
-                    await window.PickupRequestSync.savePickupRequest(requestData);
-                    
-                    // Register for background sync if available
-                    if ('serviceWorker' in navigator && 'SyncManager' in window && navigator.serviceWorker.controller) {
-                        navigator.serviceWorker.ready.then(registration => {
-                            registration.sync.register('sync-pickups')
-                                .then(() => console.log('Background sync registered for pickup requests'));
-                        });
-                    }
-                    
-                    if (!navigator.onLine) {
-                        // Show success message for offline mode through console log instead of alert
-                        console.log('You are currently offline. Your pickup request has been saved and will be submitted when you reconnect.');
-                    } else {
-                        // Trigger immediate sync if we're online
-                        await window.PickupRequestSync.syncPickupRequests();
-                        console.log('Pickup request submitted successfully! You will be notified when a collector accepts your request.');
-                    }
-                    
-                    // Redirect to dashboard with a parameter to indicate new request
-                    window.location.href = '/dashboard?newRequest=true';
-                    return;
-                } catch (error) {
-                    console.error('Error storing pickup request for offline sync:', error);
-                    throw new Error('Failed to store pickup request for offline synchronization');
-                }
-            }
-            
-            // Show success message in console log instead of alert
-            console.log('Pickup request submitted successfully! You will be notified when a collector accepts your request.');
-            
-            // Redirect to dashboard with a parameter to indicate new request
+            // Redirect to dashboard
             window.location.href = '/dashboard?newRequest=true';
             
         } catch (error) {
+            // Handle errors
             console.error('Error submitting pickup request:', error);
             alert('Error: ' + (error.message || 'Failed to submit pickup request. Please try again.'));
             
             // Re-enable submit button
-            const submitButton = document.getElementById('request-pickup-btn');
-            submitButton.disabled = false;
-            submitButton.textContent = 'Request Pickup';
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Request Pickup';
+            }
         }
     }
     

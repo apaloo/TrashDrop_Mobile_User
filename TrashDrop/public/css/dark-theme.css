@@ -1,6 +1,6 @@
 /**
- * TrashDrop Dark Theme
- * Provides comprehensive dark mode styling for the entire application
+ * TrashDrop Theme System
+ * Provides comprehensive styling for both light and dark modes
  */
 
 /* Theme transition class for smooth theme switching */
@@ -10,6 +10,36 @@
 .theme-transition *:after {
   transition: all 0.3s ease-in-out !important;
   transition-property: background-color, background, color, border-color, box-shadow !important;
+}
+
+/* Light theme variables (default) */
+:root {
+  --body-bg: #f8f9fa;
+  --card-bg: #ffffff;
+  --text-color: #212529;
+  --text-muted: #6c757d;
+  --border-color: #dee2e6;
+  --primary: #4CAF50;
+  --primary-dark: #388E3C;
+  --primary-light: #81C784;
+  --success: #28a745;
+  --info: #17a2b8;
+  --warning: #ffc107;
+  --danger: #dc3545;
+  --secondary: #6c757d;
+  --input-bg: #ffffff;
+  --input-color: #212529;
+  --input-border: #ced4da;
+  --dropdown-bg: #ffffff;
+  --dropdown-link-hover: #f8f9fa;
+  --modal-bg: #ffffff;
+  --header-bg: #f8f9fa;
+  --shadow-color: rgba(0, 0, 0, 0.15);
+  --nav-bg: #4CAF50;
+  --nav-link: #ffffff;
+  --nav-link-hover: #f8f9fa;
+  --footer-bg: #f8f9fa;
+  --footer-text: #212529;
 }
 
 /* Dark theme variables */
@@ -42,12 +72,22 @@
   --footer-text: #e0e0e0;
 }
 
-/* Apply dark theme to elements */
-.dark-theme,
-[data-theme="dark"] {
-  color-scheme: dark;
+/* Base styling for all themes */
+body {
   background-color: var(--body-bg);
   color: var(--text-color);
+}
+
+/* Ensure light theme has the correct background */
+:root:not([data-theme="dark"]) body,
+:root[data-theme="light"] body {
+  background-color: var(--body-bg);
+  color: var(--text-color);
+}
+
+/* Apply dark theme styling */
+[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 /* Basic elements */

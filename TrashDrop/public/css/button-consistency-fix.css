@@ -1,0 +1,71 @@
+/**
+ * TrashDrop Button Consistency Fix
+ * Ensures buttons have consistent dimensions regardless of tag type (<a> vs <button>)
+ */
+
+/* Ensure consistent button dimensions in flex layouts */
+.d-flex > .btn,
+.d-flex > a.btn {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  min-width: 80px !important;
+  box-sizing: border-box !important;
+}
+
+/* Specific fix for Edit/Cancel buttons in scheduled pickup card */
+#has-scheduled-pickup .d-flex.gap-2 > .btn,
+#has-scheduled-pickup .d-flex.gap-2 > a.btn {
+  flex: 1 1 50% !important;
+  width: 50% !important;
+  max-width: calc(50% - 0.25rem) !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: center !important;
+  height: 38px !important;
+  line-height: 24px !important;
+  font-size: 14px !important;
+}
+
+/* Make button content consistent in all buttons */
+.btn {
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* Additional mobile-specific fixes */
+@media (max-width: 767.98px) {
+  /* Force equal dimensions for action buttons on mobile */
+  .d-flex.gap-2 > .btn,
+  .d-flex.gap-2 > a.btn {
+    flex-basis: 0 !important;
+    flex-grow: 1 !important;
+    flex-shrink: 0 !important;
+    text-align: center !important;
+    height: 38px !important;
+    line-height: 24px !important;
+    font-size: 14px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  
+  /* Specific fix for Edit/Cancel buttons in scheduled pickup card on mobile */
+  #has-scheduled-pickup .d-flex.gap-2 > .btn,
+  #has-scheduled-pickup .d-flex.gap-2 > a.btn {
+    height: 38px !important;
+    line-height: 24px !important;
+    font-size: 14px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  
+  /* Fix for button groups on mobile */
+  .btn-group > .btn,
+  .btn-group > a.btn {
+    flex: 1 1 auto !important;
+    height: 38px !important;
+  }
+}

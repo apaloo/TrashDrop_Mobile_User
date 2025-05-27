@@ -37,40 +37,35 @@ async function initializeRewardsPage() {
     if (userProfile) {
       // Update user info in the UI
       updateUserInfo(userProfile);
-    } else {
-      console.log('Using mock user profile for development');
-      // Use a mock profile for development
-      updateUserInfo({
-        first_name: 'Test',
-        last_name: 'User',
-        points: 250,
-        level: 'Eco Guardian'
-      });
     }
     
-    // TEMPORARY SOLUTION: Directly use mock data since APIs are returning 500 errors
-    console.log('Using mock data directly due to API errors');
-    
-    // Load user points from mock data
-    loadMockPointsData();
-    
-    // Load rewards from mock data
-    loadMockRewards();
-    
-    // Load points history from mock data
-    loadMockPointsHistory();
-    
+    // Load data from Supabase
+    try {
+      const pointsData = await getUserPoints();
+      updatePointsUI(pointsData);
+    } catch (e) {
+      console.error('Supabase getUserPoints failed, fallback to mock', e);
+      loadMockPointsData();
+    }
+
+    try {
+      const rewards = await getAvailableRewards();
+      updateRewardsUI(rewards, pointsData?.totalPoints || 0);
+    } catch (e) {
+      console.error('Supabase getAvailableRewards failed, fallback to mock', e);
+      loadMockRewards();
+    }
+
+    try {
+      const history = await getPointsHistory();
+      updatePointsHistoryUI(history);
+    } catch (e) {
+      console.error('Supabase getPointsHistory failed, fallback to mock', e);
+      loadMockPointsHistory();
+    }
+
   } catch (error) {
     console.error('Unhandled error initializing rewards page:', error);
-    // Use mock data for development as a last resort
-    updateUserInfo({
-      first_name: 'Test',
-      last_name: 'User',
-      points: 250,
-      level: 'Eco Guardian'
-    });
-    
-    // Load mock data
     loadMockPointsData();
     loadMockRewards();
     loadMockPointsHistory();
@@ -448,6 +443,9 @@ function openRedeemModal(reward) {
   // Show the modal
   modal.show();
 }
+
+import { getUserPoints, getAvailableRewards, getPointsHistory, redeemReward as redeemRewardAPI } from './pointsService.js';
+
 async function redeemReward(reward) {
   // Hide redeem modal if it exists
   const redeemModal = bootstrap.Modal.getInstance(document.getElementById('redeemModal'));
@@ -456,148 +454,19 @@ async function redeemReward(reward) {
   }
   
   // Show loading spinner
-  showSpinner('Redeeming reward...');
+  showSpinner('Redeeming...');
   
   try {
-    // Check if we're offline
-    if (!navigator.onLine) {
-      // Try to use offline sync if available
-      if (typeof redeemRewardWithOfflineSupport === 'function') {
-        try {
-          const result = await redeemRewardWithOfflineSupport(reward.id);
-          
-          // Show offline success modal
-          document.getElementById('successModalLabel').textContent = 'Reward Queued for Redemption';
-          document.getElementById('redeemed-reward-name').textContent = reward.name;
-          document.getElementById('new-points-balance').textContent = '(will update when online)';
-          
-          // Add offline notice to success modal
-          const successBody = document.querySelector('#successModal .modal-body');
-          const offlineNotice = document.createElement('div');
-          offlineNotice.className = 'alert alert-warning mt-3';
-          offlineNotice.innerHTML = '<i class="bi bi-wifi-off me-2"></i>You are currently offline. This redemption will be processed when you are back online.';
-          successBody.appendChild(offlineNotice);
-          
-          const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-          successModal.show();
-          
-          // When the modal is hidden, remove the offline notice
-          document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
-            if (offlineNotice.parentNode) {
-              offlineNotice.parentNode.removeChild(offlineNotice);
-            }
-            document.getElementById('successModalLabel').textContent = 'Reward Redeemed!';
-          }, { once: true });
-          
-          hideSpinner();
-          return;
-        } catch (offlineError) {
-          console.error('Error using offline sync:', offlineError);
-        }
-      }
-    }
-    
-    // If we're online, proceed with real API redemption
-    
-    // We're online and no mock API, proceed with actual redemption
-    const response = await fetch('/api/points/redeem', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${jwtHelpers.getToken()}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        rewardId: reward.id
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Failed to redeem reward: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    // Hide spinner
-    hideSpinner();
-    
-    // Show success modal
-    document.getElementById('successModalLabel').textContent = 'Reward Redeemed!';
-    document.getElementById('redeemed-reward-name').textContent = reward.name;
-    document.getElementById('new-points-balance').textContent = data.pointsRemaining;
-    
-    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-    successModal.show();
-    
-    // Update points display
-    document.getElementById('total-points').textContent = data.pointsRemaining;
-    document.getElementById('user-points').textContent = data.pointsRemaining;
-    
-    // Reload rewards to update availability
-    setTimeout(() => {
-      loadRewards();
-      loadPointsData();
-    }, 1000);
+    await redeemRewardAPI(reward.id);
+    showToast('Success', 'Reward redeemed successfully');
+    // Refresh points
+    const pointsData = await getUserPoints();
+    updatePointsUI(pointsData);
   } catch (error) {
-    console.error('Error redeeming reward:', error);
+    console.error('Redeem error', error);
+    showToast('Error', 'Could not redeem reward', 'danger');
+  } finally {
     hideSpinner();
-    
-    // Check if we're offline
-    if (!navigator.onLine) {
-      // Try to use offline sync if available
-      if (typeof redeemRewardWithOfflineSupport === 'function') {
-        try {
-          const data = await redeemRewardWithOfflineSupport(reward.id);
-          
-          // Show offline success modal
-          document.getElementById('successModalLabel').textContent = 'Reward Queued for Redemption';
-          document.getElementById('redeemed-reward-name').textContent = reward.name;
-          document.getElementById('new-points-balance').textContent = '(will update when online)';
-          
-          // Add offline notice to success modal
-          const successBody = document.querySelector('#successModal .modal-body');
-          const offlineNotice = document.createElement('div');
-          offlineNotice.className = 'alert alert-warning mt-3';
-          offlineNotice.innerHTML = '<i class="bi bi-wifi-off me-2"></i>You are currently offline. This redemption will be processed when you are back online.';
-          successBody.appendChild(offlineNotice);
-          
-          const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-          successModal.show();
-          
-          // When the modal is hidden, remove the offline notice
-          document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
-            if (offlineNotice.parentNode) {
-              offlineNotice.parentNode.removeChild(offlineNotice);
-            }
-            document.getElementById('successModalLabel').textContent = 'Reward Redeemed!';
-          }, { once: true });
-          
-          return;
-        } catch (offlineError) {
-          console.error('Error using offline sync:', offlineError);
-        }
-      }
-    }
-    
-    // For development or when offline sync fails, simulate a successful redemption
-    const mockPointsRemaining = parseInt(document.getElementById('total-points').textContent) - reward.pointsCost;
-    
-    // Show success modal with mock data
-    document.getElementById('redeemed-reward-name').textContent = reward.name;
-    document.getElementById('new-points-balance').textContent = mockPointsRemaining;
-    
-    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-    successModal.show();
-    
-    // Update points display with mock data
-    document.getElementById('total-points').textContent = mockPointsRemaining;
-    document.getElementById('user-points').textContent = mockPointsRemaining;
-    
-    // Reload rewards to update availability
-    setTimeout(() => {
-      loadMockRewards();
-      loadMockPointsData();
-    }, 1000);
   }
 }
 
