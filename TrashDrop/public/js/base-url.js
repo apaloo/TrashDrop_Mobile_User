@@ -104,7 +104,53 @@ initializeBaseUrl();
 // Set up Safari-specific workarounds after DOM is loaded
 document.addEventListener('DOMContentLoaded', setupSafariWorkarounds);
 
-// Expose functions globally
+// Create a global BaseUrlHandler object for consistent access patterns
+window.BaseUrlHandler = {
+    // Get the base URL with appropriate protocol and port
+    getBaseUrl: function() {
+        return window.baseUrl || '';
+    },
+    
+    // Get the preferred protocol
+    getProtocol: function() {
+        return window.preferredProtocol || 'http:';
+    },
+    
+    // Format a URL with the correct base
+    formatUrl: function(path) {
+        if (!path) return this.getBaseUrl();
+        // Handle absolute URLs
+        if (path.startsWith('http://') || path.startsWith('https://')) {
+            return path;
+        }
+        // Make sure the path starts with a slash
+        const formattedPath = path.startsWith('/') ? path : '/' + path;
+        return this.getBaseUrl() + formattedPath;
+    },
+    
+    // Check if we're on a mobile device
+    isMobileDevice: function() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    },
+    
+    // Check if we're running on ngrok
+    isNgrokDomain: function() {
+        return window.location.hostname.includes('ngrok-free.app');
+    },
+    
+    // Fix a specific URL element like a link or form
+    fixUrlElement: function(element, attributeName = 'href') {
+        if (!element) return;
+        const originalUrl = element.getAttribute(attributeName);
+        if (originalUrl && originalUrl.startsWith('/') && 
+            !originalUrl.startsWith('/#') && 
+            !originalUrl.startsWith('javascript:')) {
+            element.setAttribute(attributeName, this.formatUrl(originalUrl));
+        }
+    }
+};
+
+// Expose individual functions globally for backward compatibility
 window.initializeBaseUrl = initializeBaseUrl;
 window.fixNavigationLinks = fixNavigationLinks;
 window.fixFormActions = fixFormActions;

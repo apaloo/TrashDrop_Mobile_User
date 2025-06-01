@@ -9,8 +9,25 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
  */
 exports.authenticateUser = async (req, res, next) => {
   try {
-    // Get token from Authorization header
-    const token = req.headers.authorization?.split(' ')[1];
+    // Get token from multiple sources (header, cookie, query param)
+    let token = req.headers.authorization?.split(' ')[1];
+    
+    // Check if request is coming from ngrok domain
+    const isNgrok = req.headers.host && req.headers.host.includes('ngrok-free.app');
+    
+    // For ngrok requests, also check query params and cookies as fallbacks
+    if (isNgrok && !token) {
+      // Try to get token from query parameter (useful for ngrok debugging)
+      token = req.query.token;
+      
+      // If still no token, try cookies
+      if (!token && req.cookies && req.cookies.auth_token) {
+        token = req.cookies.auth_token;
+      }
+      
+      // Log that we're handling an ngrok request
+      console.log(`Handling ngrok domain request from ${req.headers.host}`); 
+    }
     
     // Check if token exists
     if (!token) {

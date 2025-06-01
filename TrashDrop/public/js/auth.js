@@ -708,12 +708,12 @@
     
     // Check authentication on protected pages
     checkAuth: async function() {
-      // If we're on a login or registration page, no need to check auth
-      const publicPages = ['login.html', 'register.html', 'index.html', 'verify-otp.html'];
-      const currentPage = window.location.pathname.split('/').pop();
-      
-      if (publicPages.includes(currentPage)) {
-        console.log('On public page, skipping auth check');
+      // Normalize current path (exclude trailing slash)
+      const path = window.location.pathname.replace(/\/$/, '');
+      // If we're on a public page, no need to check auth
+      const publicPathPattern = /\/(login|signup|register|index|verify-otp|reset-password)$/i;
+      if (publicPathPattern.test(path)) {
+        console.log('On public auth page, skipping auth check');
         return;
       }
       

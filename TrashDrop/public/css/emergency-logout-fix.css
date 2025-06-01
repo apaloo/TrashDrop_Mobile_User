@@ -1,0 +1,16 @@
+/* Hide all emergency logout buttons */
+#emergency-logout-fixed,
+#emergency-logout,
+#emergency-logout-mobile,
+#confirm-emergency-logout,
+#confirmEmergencyLogout,
+[data-action="emergency-logout"],
+button:has(i.bi-power),
+.btn:has(i.bi-shield-exclamation) {
+    display: none !important;
+}
+
+/* Hide emergency logout modals */
+#emergencyLogoutModal {
+    display: none !important;
+}

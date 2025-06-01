@@ -9,6 +9,18 @@ const API_CACHE = 'trashdrop-api-v2';
 const OFFLINE_PAGE = '/offline.html';
 const SPLASH_PAGE = '/splash.html';
 
+// Version tracking for cache updates
+const SW_VERSION = '1.0.1';
+
+// Message handling for control and lifecycle management
+self.addEventListener('message', (event) => {
+  // Handle skip waiting message to activate immediately
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[Service Worker] Skip waiting and activate immediately');
+    self.skipWaiting();
+  }
+});
+
 // Static assets to cache on install
 const ASSETS_TO_CACHE = [
   '/',
@@ -246,46 +258,218 @@ self.addEventListener('message', event => {
 
 // Background sync for offline operations
 self.addEventListener('sync', event => {
+  console.log(`[Service Worker] Background sync triggered for: ${event.tag}`);
+  
   if (event.tag === 'sync-pickups') {
-    event.waitUntil(syncPickupRequests());
+    event.waitUntil(
+      syncPickupRequests()
+        .then(() => notifyClients('SYNC_COMPLETE', event.tag))
+        .catch(error => {
+          console.error(`[Service Worker] Sync failed for ${event.tag}:`, error);
+          notifyClients('SYNC_FAILED', event.tag, { error: error.message });
+          // Re-throw to indicate sync failed and should be retried
+          throw error;
+        })
+    );
   } else if (event.tag === 'sync-bags') {
-    event.waitUntil(syncBags());
+    event.waitUntil(
+      syncBags()
+        .then(() => notifyClients('SYNC_COMPLETE', event.tag))
+        .catch(error => {
+          console.error(`[Service Worker] Sync failed for ${event.tag}:`, error);
+          notifyClients('SYNC_FAILED', event.tag, { error: error.message });
+          // Re-throw to indicate sync failed and should be retried
+          throw error;
+        })
+    );
   }
 });
 
-// Placeholder function for syncing pickup requests
-// The actual implementation will use IndexedDB data
-async function syncPickupRequests() {
-  console.log('Background syncing pickup requests...');
-  
-  // This will be implemented by the client-side code
-  // using the indexed DB data
-  
-  // We'll notify all clients that sync has been attempted
+// Helper function to notify all clients
+async function notifyClients(type, tag, data = {}) {
   const clients = await self.clients.matchAll();
-  clients.forEach(client => {
-    client.postMessage({
-      type: 'SYNC_ATTEMPTED',
-      tag: 'sync-pickups',
-      timestamp: Date.now()
-    });
+  const message = {
+    type: type,
+    tag: tag,
+    timestamp: Date.now(),
+    ...data
+  };
+  
+  console.log(`[Service Worker] Notifying clients: ${type} for ${tag}`);
+  clients.forEach(client => client.postMessage(message));
+}
+
+// Function for syncing pickup requests using IndexedDB
+async function syncPickupRequests() {
+  console.log('[Service Worker] Background syncing pickup requests...');
+  
+  try {
+    // Open the IndexedDB database
+    const db = await openDatabase('trashdrop-offline', 1);
+    
+    // Get unsynchronized pickup requests
+    const unsyncedPickups = await getUnsyncedItems(db, 'pickupRequests');
+    
+    if (unsyncedPickups.length === 0) {
+      console.log('[Service Worker] No unsynced pickup requests found');
+      return;
+    }
+    
+    console.log(`[Service Worker] Found ${unsyncedPickups.length} unsynced pickup requests`);
+    
+    // Process each unsynced pickup request
+    for (const pickup of unsyncedPickups) {
+      try {
+        // Attempt to sync with the server
+        const response = await fetch('/api/pickup_requests', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Get token from IndexedDB auth store if available
+            ...(pickup.token ? { 'Authorization': `Bearer ${pickup.token}` } : {})
+          },
+          body: JSON.stringify(pickup.data)
+        });
+        
+        if (response.ok) {
+          // Mark as synced in IndexedDB
+          await markAsSynced(db, 'pickupRequests', pickup.id);
+          console.log(`[Service Worker] Successfully synced pickup request ID: ${pickup.id}`);
+        } else {
+          throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+        }
+      } catch (itemError) {
+        console.error(`[Service Worker] Failed to sync pickup request ID: ${pickup.id}`, itemError);
+        // We'll continue with other items even if one fails
+      }
+    }
+    
+    // Close the database connection
+    db.close();
+    return true;
+  } catch (error) {
+    console.error('[Service Worker] Error syncing pickup requests:', error);
+    throw error; // Rethrow for sync event handler
+  }
+}
+
+// Function for syncing bags using IndexedDB
+async function syncBags() {
+  console.log('[Service Worker] Background syncing bags...');
+  
+  try {
+    // Open the IndexedDB database
+    const db = await openDatabase('trashdrop-offline', 1);
+    
+    // Get unsynchronized bags
+    const unsyncedBags = await getUnsyncedItems(db, 'bags');
+    
+    if (unsyncedBags.length === 0) {
+      console.log('[Service Worker] No unsynced bags found');
+      return;
+    }
+    
+    console.log(`[Service Worker] Found ${unsyncedBags.length} unsynced bags`);
+    
+    // Process each unsynced bag
+    for (const bag of unsyncedBags) {
+      try {
+        // Attempt to sync with the server
+        const response = await fetch('/api/bags', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(bag.token ? { 'Authorization': `Bearer ${bag.token}` } : {})
+          },
+          body: JSON.stringify(bag.data)
+        });
+        
+        if (response.ok) {
+          // Mark as synced in IndexedDB
+          await markAsSynced(db, 'bags', bag.id);
+          console.log(`[Service Worker] Successfully synced bag ID: ${bag.id}`);
+        } else {
+          throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+        }
+      } catch (itemError) {
+        console.error(`[Service Worker] Failed to sync bag ID: ${bag.id}`, itemError);
+        // We'll continue with other items even if one fails
+      }
+    }
+    
+    // Close the database connection
+    db.close();
+    return true;
+  } catch (error) {
+    console.error('[Service Worker] Error syncing bags:', error);
+    throw error; // Rethrow for sync event handler
+  }
+}
+
+// Helper function to open IndexedDB
+function openDatabase(name, version) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(name, version);
+    
+    request.onerror = event => reject(new Error('Failed to open database'));
+    request.onsuccess = event => resolve(event.target.result);
+    
+    // If this is the first time, create object stores
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      
+      // Create stores if they don't exist
+      if (!db.objectStoreNames.contains('pickupRequests')) {
+        db.createObjectStore('pickupRequests', { keyPath: 'id' });
+      }
+      
+      if (!db.objectStoreNames.contains('bags')) {
+        db.createObjectStore('bags', { keyPath: 'id' });
+      }
+      
+      if (!db.objectStoreNames.contains('auth')) {
+        db.createObjectStore('auth', { keyPath: 'id' });
+      }
+    };
   });
 }
 
-// Placeholder function for syncing bags
-async function syncBags() {
-  console.log('Background syncing bags...');
-  
-  // This will be implemented by the client-side code
-  // using the indexed DB data
-  
-  // We'll notify all clients that sync has been attempted
-  const clients = await self.clients.matchAll();
-  clients.forEach(client => {
-    client.postMessage({
-      type: 'SYNC_ATTEMPTED',
-      tag: 'sync-bags',
-      timestamp: Date.now()
-    });
+// Helper function to get unsynced items from IndexedDB
+function getUnsyncedItems(db, storeName) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, 'readonly');
+    const store = transaction.objectStore(storeName);
+    const request = store.getAll();
+    
+    request.onerror = event => reject(new Error(`Failed to get items from ${storeName}`));
+    request.onsuccess = event => {
+      // Filter to only get unsynced items
+      const items = event.target.result.filter(item => !item.synced);
+      resolve(items);
+    };
+  });
+}
+
+// Helper function to mark an item as synced
+function markAsSynced(db, storeName, itemId) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, 'readwrite');
+    const store = transaction.objectStore(storeName);
+    const request = store.get(itemId);
+    
+    request.onerror = event => reject(new Error(`Failed to get item ${itemId} from ${storeName}`));
+    request.onsuccess = event => {
+      const item = event.target.result;
+      if (item) {
+        item.synced = true;
+        item.syncedAt = Date.now();
+        
+        const updateRequest = store.put(item);
+        updateRequest.onerror = event => reject(new Error(`Failed to update item ${itemId}`));
+        updateRequest.onsuccess = event => resolve(true);
+      } else {
+        reject(new Error(`Item ${itemId} not found in ${storeName}`));
+      }
+    };
   });
 }

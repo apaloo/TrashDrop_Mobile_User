@@ -1,0 +1,40 @@
+/* 
+ * Complete solution to hide all emergency logout buttons
+ * Targeting all possible selectors and variations
+ */
+
+/* Hide fixed position emergency logout button */
+#emergency-logout-fixed,
+button[id^="emergency-logout"],
+button[id*="emergency-logout"],
+a[id^="emergency-logout"],
+a[id*="emergency-logout"],
+button:has(i.bi-power),
+.btn:has(i.bi-shield-exclamation),
+.btn:has(i.bi-exclamation-triangle) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Hide emergency logout modals */
+#emergencyLogoutModal,
+.modal[id*="emergency"],
+div[id*="emergency-logout"] {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Hide any emergency-related buttons at the bottom of the screen */
+body > .btn-danger,
+body > button.btn:last-child,
+body > .btn-danger:last-child {
+    display: none !important;
+    visibility: hidden !important;
+}

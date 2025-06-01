@@ -4,6 +4,11 @@
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Login page initialized');
   
+  // Check if we were in a redirect loop and show appropriate message
+  if (sessionStorage.getItem('_authStabilizer_loopHandled')) {
+    console.log('Login page loaded after handling a refresh loop');
+  }
+  
   // Initialize base URL if available
   if (typeof window.initializeBaseUrl === 'function') {
     window.initializeBaseUrl();
@@ -16,10 +21,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (loginForm) {
     console.log('Login form found, attaching event listeners');
     
-    // Add submit event listener
+    // Add submit event listener with duplicate submission prevention
     loginForm.addEventListener('submit', function(e) {
       e.preventDefault();
+      
+      // Prevent multiple submissions
+      if (this.dataset.submitted === 'true') {
+        console.log('Preventing duplicate form submission');
+        return false;
+      }
+      
+      // Mark as submitted
+      this.dataset.submitted = 'true';
+      
+      // Handle login
       handleLogin(e);
+      
+      // Reset submission state after 5 seconds (in case of error)
+      setTimeout(() => {
+        this.dataset.submitted = 'false';
+      }, 5000);
     });
     
     // Initialize password toggle functionality
@@ -30,6 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     console.log('Login form not found on this page');
   }
+  
+  // Attempt to automatically process any pending login details stored during Safari workaround
+  processPendingLogin();
 });
 
 // Track whether a login request is currently in progress to prevent multiple submissions
@@ -119,20 +143,41 @@ async function handleLogin(e) {
     // Use the isSafari function from base-url.js if available, otherwise fallback to UA detection
     let isSafari = window.isSafari ? window.isSafari() : /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     
-    if (isSafari && isLocalhost) {
-      // For Safari and localhost, use a special handling approach
-      showToast('Redirecting', 'Processing login request...', 'info');
+    // Check if Safari special handling is disabled (persisted in sessionStorage)
+    const disableSafariSpecialHandling = sessionStorage.getItem('disableSafariSpecialHandling') === 'true' || window.disableSafariSpecialHandling;
+    
+    // Only use the special Safari handling if not disabled and we're not already on /account-access
+    if (isSafari && isLocalhost && !disableSafariSpecialHandling && !window.location.pathname.includes('/account-access')) {
+      console.log('Using Safari-specific login approach');
       
-      // Store login details temporarily in sessionStorage
-      sessionStorage.setItem('trashdrop.pendingLogin', JSON.stringify({
-        phone: phoneInput.value,
-        password: passwordInput.value,
-        rememberMe: rememberMeCheckbox && rememberMeCheckbox.checked
-      }));
-      
-      // Use account-access route which is configured to bypass Safari security restrictions
-      window.location.href = `${baseUrl}/account-access`;
-      return;
+      // Check if we've already attempted this special handling
+      if (sessionStorage.getItem('safari_login_attempts')) {
+        // We've already tried this approach, don't try again to avoid loops
+        console.log('Skipping Safari special handling to prevent loops');
+      } else {
+        // Track this attempt
+        let attempts = parseInt(sessionStorage.getItem('safari_login_attempts') || '0');
+        sessionStorage.setItem('safari_login_attempts', (attempts + 1).toString());
+        
+        // Only try the special handling if we haven't exceeded attempts
+        if (attempts < 2) {
+          showToast('Redirecting', 'Processing login request...', 'info');
+          
+          // Store login details temporarily in sessionStorage
+          sessionStorage.setItem('trashdrop.pendingLogin', JSON.stringify({
+            phone: phoneInput.value,
+            password: passwordInput.value,
+            rememberMe: rememberMeCheckbox && rememberMeCheckbox.checked
+          }));
+          
+          // Disable further Safari special handling for subsequent loads
+          sessionStorage.setItem('disableSafariSpecialHandling', 'true');
+          
+          // Use account-access route which is configured to bypass Safari security restrictions
+          window.location.href = `${baseUrl}/account-access`;
+          return;
+        }
+      }
     }
     
     // For other browsers, make a direct fetch call to the login API
@@ -196,6 +241,9 @@ async function handleLogin(e) {
     hideSpinner();
     
     console.error('Login error:', error);
+    
+    // Reset Safari login attempts on error
+    sessionStorage.removeItem('safari_login_attempts');
     
     // Create an error message element with red background
     const loginForm = document.getElementById('login-form');
@@ -392,10 +440,34 @@ function simulateSuccessfulLogin(identifier, rememberMeCheckbox) {
   return true;
 }
 
-// Initialize the event listener for remembered login (add this back since it was removed)
-document.addEventListener('DOMContentLoaded', function() {
-  // Check if we're on the login page before trying to populate the form
-  if (document.getElementById('login-form')) {
-    checkRememberedLogin();
+// Process any pending login details stored during Safari workaround and attempt automatic login
+function processPendingLogin() {
+  const pendingData = sessionStorage.getItem('trashdrop.pendingLogin');
+  if (!pendingData) return;
+  try {
+    const { phone, password, rememberMe } = JSON.parse(pendingData);
+    const phoneInput = document.getElementById('phoneNumber');
+    const passwordInput = document.getElementById('password');
+    const rememberMeCheckbox = document.getElementById('rememberMe');
+
+    if (phoneInput) phoneInput.value = phone || '';
+    if (passwordInput) passwordInput.value = password || '';
+    if (rememberMeCheckbox) rememberMeCheckbox.checked = !!rememberMe;
+
+    // Clear pending data to avoid reprocessing
+    sessionStorage.removeItem('trashdrop.pendingLogin');
+
+    console.log('Automatically submitting pending login after Safari redirect');
+    // Trigger login programmatically
+    handleLogin();
+  } catch (err) {
+    console.error('Failed to process pending login data:', err);
+    // Ensure we don't retry endlessly
+    sessionStorage.removeItem('trashdrop.pendingLogin');
   }
-});
+}
+
+// Ensure disableSafariSpecialHandling flag persists on window for ease of access
+if (sessionStorage.getItem('disableSafariSpecialHandling') === 'true') {
+  window.disableSafariSpecialHandling = true;
+}

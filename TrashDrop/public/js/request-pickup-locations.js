@@ -12,11 +12,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize map
     let pickupMap = null;
     let pickupMarker = null;
+    let mapInitialized = false; // Flag to track initialization state
     const defaultLocation = [40.7128, -74.0060]; // Default location (NYC)
     
     // Load saved locations on page load
     loadSavedLocations();
-    initializeMap();
+    
+    // Only initialize the map if we're on the right page with the map container
+    const mapContainer = document.getElementById('pickup-map');
+    if (mapContainer) {
+        // Small delay to ensure DOM is fully ready
+        setTimeout(() => {
+            initializeMap();
+        }, 100);
+    }
     
     // Listen for location selection change
     if (savedLocationSelect) {
@@ -29,75 +38,120 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Initialize the map
+     * Initialize the map - with comprehensive safeguards against re-initialization
      */
     function initializeMap() {
-        // Create map
-        pickupMap = L.map('pickup-map').setView(defaultLocation, 13);
+        // Check if map container exists
+        const mapContainer = document.getElementById('pickup-map');
+        if (!mapContainer) {
+            console.log('Map container not found, skipping map initialization');
+            return;
+        }
+
+        // If map is already initialized, just refresh the view
+        if (mapInitialized || pickupMap) {
+            console.log('Map already initialized, refreshing view');
+            if (pickupMap) {
+                try {
+                    pickupMap.invalidateSize();
+                } catch (e) {
+                    console.log('Error refreshing map size:', e);
+                }
+            }
+            return;
+        }
         
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(pickupMap);
+        // Check if container already has a map instance attached
+        // This happens if Leaflet created a map but our pickupMap variable is null
+        if (mapContainer._leaflet_id) {
+            console.log('Container already has a Leaflet map instance attached');
+            try {
+                // Try to find and use the existing map
+                if (L && L.DomUtil && L.DomUtil.get) {
+                    const existingMap = L.DomUtil.get('pickup-map');
+                    if (existingMap && existingMap._leaflet_id) {
+                        // Remove the existing map completely
+                        if (existingMap._leaflet) {
+                            existingMap._leaflet.remove();
+                        }
+                        // Also try direct removal of the id
+                        delete mapContainer._leaflet_id;
+                    }
+                }
+            } catch (e) {
+                console.error('Error cleaning up existing map:', e);
+            }
+        }
         
-        // Add marker
-        pickupMarker = L.marker(defaultLocation).addTo(pickupMap);
+        // Set flag to prevent multiple initializations
+        mapInitialized = true;
         
-        // Ensure map is correctly sized
-        setTimeout(() => {
-            pickupMap.invalidateSize();
-        }, 300);
+        try {
+            // Create a clean container if needed
+            while (mapContainer.firstChild) {
+                mapContainer.removeChild(mapContainer.firstChild);
+            }
+            
+            // Wait a tiny bit to ensure DOM updates
+            setTimeout(() => {
+                try {
+                    // Create map with options to prevent zoom animation issues
+                    pickupMap = L.map('pickup-map', {
+                        fadeAnimation: false,
+                        zoomAnimation: false,
+                        markerZoomAnimation: false
+                    }).setView(defaultLocation, 13);
+                    
+                    // Add tile layer
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(pickupMap);
+                    
+                    // Add marker
+                    pickupMarker = L.marker(defaultLocation).addTo(pickupMap);
+                    
+                    // Ensure map is correctly sized after a short delay
+                    setTimeout(() => {
+                        if (pickupMap) {
+                            pickupMap.invalidateSize();
+                        }
+                    }, 300);
+                    
+                    console.log('Map initialized successfully');
+                } catch (innerError) {
+                    console.error('Error during map creation:', innerError);
+                    // Reset initialization flag on error
+                    mapInitialized = false;
+                }
+            }, 50);
+        } catch (error) {
+            console.error('Error initializing map:', error);
+            // Reset initialization flag on error
+            mapInitialized = false;
+        }
     }
     
     /**
-     * Load saved locations from localStorage
+     * Load saved locations into select dropdown
      */
     function loadSavedLocations() {
         if (!savedLocationSelect) return;
         
-        // Clear existing options except the placeholder
+        // Clear existing options except the default one
         while (savedLocationSelect.options.length > 1) {
             savedLocationSelect.remove(1);
         }
         
-        // Get locations from localStorage
-        const savedLocations = getSavedLocations();
+        // Get saved locations
+        const locations = getSavedLocations();
         
-        if (savedLocations.length === 0) {
-            // Add a message if no locations are saved
-            const noLocationsOption = document.createElement('option');
-            noLocationsOption.value = "";
-            noLocationsOption.disabled = true;
-            noLocationsOption.textContent = "No saved locations - add in Profile";
-            savedLocationSelect.appendChild(noLocationsOption);
-        } else {
-            // Sort locations: default first, then alphabetically
-            savedLocations.sort((a, b) => {
-                if (a.isDefault && !b.isDefault) return -1;
-                if (!a.isDefault && b.isDefault) return 1;
-                return a.name.localeCompare(b.name);
-            });
-            
-            // Add options for each location
-            savedLocations.forEach(location => {
-                const option = document.createElement('option');
-                option.value = location.id;
-                option.textContent = location.name + (location.isDefault ? ' (Default)' : '');
-                savedLocationSelect.appendChild(option);
-                
-                // Select default location if available
-                if (location.isDefault) {
-                    savedLocationSelect.value = location.id;
-                    setLocationOnMap(location.id);
-                }
-            });
-            
-            // If no default location, select the first one
-            if (!savedLocations.some(loc => loc.isDefault) && savedLocations.length > 0) {
-                savedLocationSelect.value = savedLocations[0].id;
-                setLocationOnMap(savedLocations[0].id);
-            }
-        }
+        // Add locations to select
+        locations.forEach(location => {
+            const option = document.createElement('option');
+            option.value = location.id;
+            option.textContent = location.name;
+            savedLocationSelect.appendChild(option);
+        });
     }
     
     /**
@@ -105,22 +159,28 @@ document.addEventListener('DOMContentLoaded', function() {
      * @param {string} locationId - The ID of the location to display
      */
     function setLocationOnMap(locationId) {
-        if (!pickupMap || !pickupMarker) return;
+        const locations = getSavedLocations();
+        const location = locations.find(loc => loc.id === locationId);
         
-        const savedLocations = getSavedLocations();
-        const location = savedLocations.find(loc => loc.id === locationId);
-        
-        if (location && location.lat && location.lng) {
-            const lat = parseFloat(location.lat);
-            const lng = parseFloat(location.lng);
+        if (location && pickupMap) {
+            const { latitude, longitude } = location;
+            const coordinates = [parseFloat(latitude), parseFloat(longitude)];
             
-            // Update map view
-            pickupMap.setView([lat, lng], 15);
-            pickupMarker.setLatLng([lat, lng]);
+            // Update marker position
+            if (pickupMarker) {
+                pickupMarker.setLatLng(coordinates);
+            } else {
+                pickupMarker = L.marker(coordinates).addTo(pickupMap);
+            }
             
-            // Update hidden inputs
-            if (latitudeInput) latitudeInput.value = lat;
-            if (longitudeInput) longitudeInput.value = lng;
+            // Center map on marker
+            pickupMap.setView(coordinates, 15);
+            
+            // Update form inputs
+            if (latitudeInput) latitudeInput.value = latitude;
+            if (longitudeInput) longitudeInput.value = longitude;
+            
+            console.log(`Location set to: ${location.name} (${latitude}, ${longitude})`);
         }
     }
     
@@ -130,11 +190,33 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function getSavedLocations() {
         try {
-            const locationsData = localStorage.getItem('trash_drop_locations');
-            return locationsData ? JSON.parse(locationsData) : [];
+            const locationsJSON = localStorage.getItem('savedLocations');
+            return locationsJSON ? JSON.parse(locationsJSON) : [];
         } catch (error) {
-            console.error('Error getting saved locations:', error);
+            console.error('Error retrieving saved locations:', error);
             return [];
         }
     }
+    
+    // Handle browser resize events to ensure map renders correctly
+    window.addEventListener('resize', function() {
+        if (pickupMap) {
+            setTimeout(() => pickupMap.invalidateSize(), 100);
+        }
+    });
+    
+    // Reinitialize map if any tab is shown that contains the map
+    document.addEventListener('shown.bs.tab', function(e) {
+        if (e.target && 
+            e.target.getAttribute('href') && 
+            document.querySelector(e.target.getAttribute('href') + ' #pickup-map')) {
+            setTimeout(() => {
+                if (pickupMap) {
+                    pickupMap.invalidateSize();
+                } else {
+                    initializeMap();
+                }
+            }, 100);
+        }
+    });
 });

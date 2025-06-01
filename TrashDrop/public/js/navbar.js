@@ -49,62 +49,58 @@
         }
         
         /* Target any duplicate green headers */
-        .container > .row:first-child + .row {
+        .bg-success:not(.navbar) {
             display: none !important;
         }
     `;
     document.head.appendChild(style);
-    console.log('Added CSS to ensure navbars display correctly');
     
     // Remove duplicate navbars and header elements
     function removeDuplicateNavbars() {
-        // Don't remove navbars on pages where we've manually added them
-        const currentPath = window.location.pathname;
-        const hardcodedNavbarPages = ['/scan', '/request-pickup', '/report-dumping'];
-        
-        if (hardcodedNavbarPages.includes(currentPath)) {
-            console.log('Page has hardcoded navbar, skipping duplicate removal');
-            return;
+        // Wait for DOM to be loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', performRemoval);
+        } else {
+            performRemoval();
         }
         
-        // Remove duplicate navbars
-        const allNavbars = document.querySelectorAll('nav.navbar.navbar-dark.bg-success');
-        console.log(`Found ${allNavbars.length} navbars on the page`);
-        
-        if (allNavbars.length > 1) {
-            for (let i = 1; i < allNavbars.length; i++) {
-                console.log(`Removing duplicate navbar #${i}`);
-                if (allNavbars[i] && allNavbars[i].parentNode) {
-                    allNavbars[i].parentNode.removeChild(allNavbars[i]);
-                }
+        function performRemoval() {
+            // Skip this on pages that handle their own navbars
+            const currentPath = window.location.pathname;
+            if (currentPath === '/scan' || 
+                currentPath === '/pickup' || 
+                currentPath === '/report') {
+                console.log('On specialized page, skipping navbar cleanup');
+                return;
             }
-        }
-        
-        // Remove duplicate logos/brand links
-        const allBrands = document.querySelectorAll('.navbar-brand');
-        if (allBrands.length > 1) {
-            for (let i = 1; i < allBrands.length; i++) {
-                console.log(`Removing duplicate brand #${i}`);
-                if (allBrands[i] && allBrands[i].parentNode) {
-                    allBrands[i].parentNode.removeChild(allBrands[i]);
+            
+            try {
+                // Find all navbars
+                const navbars = document.querySelectorAll('nav.navbar.navbar-dark.bg-success');
+                
+                // Keep only the first navbar
+                if (navbars.length > 1) {
+                    console.log(`Found ${navbars.length} navbars, removing duplicates`);
+                    for (let i = 1; i < navbars.length; i++) {
+                        if (navbars[i] && navbars[i].parentNode) {
+                            navbars[i].parentNode.removeChild(navbars[i]);
+                        }
+                    }
                 }
-            }
-        }
-        
-        // Target duplicate TrashDrop text
-        const trashDropElements = Array.from(document.querySelectorAll('*')).filter(el => 
-            el.childNodes && 
-            Array.from(el.childNodes).some(node => 
-                node.nodeType === 3 && node.textContent.trim() === 'TrashDrop'
-            )
-        );
-        
-        if (trashDropElements.length > 1) {
-            for (let i = 1; i < trashDropElements.length; i++) {
-                console.log(`Removing duplicate TrashDrop text element #${i}`);
-                if (trashDropElements[i] && trashDropElements[i].parentNode) {
-                    trashDropElements[i].parentNode.removeChild(trashDropElements[i]);
+                
+                // Also look for and remove duplicate green headers
+                const greenHeaders = document.querySelectorAll('.bg-success:not(.navbar)');
+                if (greenHeaders.length > 1) {
+                    console.log(`Found ${greenHeaders.length} green headers, removing duplicates`);
+                    for (let i = 1; i < greenHeaders.length; i++) {
+                        if (greenHeaders[i] && greenHeaders[i].parentNode) {
+                            greenHeaders[i].parentNode.removeChild(greenHeaders[i]);
+                            greenHeaders[i].id = 'green-header-duplicate'; // Mark for future removal
+                        }
+                    }
                 }
+            } catch (error) {
+                console.error('Error removing duplicate navbars:', error);
             }
         }
     }
@@ -113,40 +109,42 @@
     removeDuplicateNavbars();
     
     // Also set up a MutationObserver to catch dynamically added navbars
-    const observer = new MutationObserver((mutations) => {
-        let needsCleanup = false;
-        
-        // Check if any mutations added a navbar
-        for (const mutation of mutations) {
-            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType === 1) { // Element node
-                        if (node.matches && node.matches('nav.navbar.navbar-dark.bg-success')) {
-                            needsCleanup = true;
-                        } else if (node.querySelectorAll) {
-                            const navbars = node.querySelectorAll('nav.navbar.navbar-dark.bg-success');
-                            if (navbars.length > 0) {
-                                needsCleanup = true;
+    let observer;
+    try {
+        observer = new MutationObserver(function(mutations) {
+            for (const mutation of mutations) {
+                if (mutation.addedNodes.length) {
+                    // Only check if we've added elements that might contain navbars
+                    let hasNav = false;
+                    for (const node of mutation.addedNodes) {
+                        if (node.nodeType === 1) { // Element node
+                            if (node.tagName === 'NAV' || node.querySelector('nav')) {
+                                hasNav = true;
+                                break;
                             }
                         }
                     }
+                    
+                    if (hasNav) {
+                        removeDuplicateNavbars();
+                    }
                 }
             }
-        }
-        
-        // If a navbar was added, clean up duplicates
-        if (needsCleanup) {
-            removeDuplicateNavbars();
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error creating MutationObserver:', error);
+    }
     
     // Start observing the entire document
-    observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true
-    });
+    if (observer) {
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+        });
+    }
 })();
 
+// TrashDrop Navbar Class
 class TrashDropNavbar {
     constructor() {
         this.currentPath = window.location.pathname;
@@ -191,7 +189,6 @@ class TrashDropNavbar {
                                 <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
                                 <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
                                 <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                             </ul>
                         </div>
@@ -204,82 +201,110 @@ class TrashDropNavbar {
                         <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
                         TrashDrop
                     </a>
-                    <button class="navbar-toggler d-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse show" id="navbarNav">
-                        <ul class="navbar-nav me-auto">
-                            <!-- Navbar items removed as requested -->
-                        </ul>
-                        <div class="d-flex align-items-center">
-                            <div class="d-flex align-items-center me-3">
-                                <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                                <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
-                            </div>
-                            <a href="/rewards" class="text-white me-3 text-decoration-none">
-                                <i class="bi bi-award-fill me-1"></i>
-                                <span id="user-points">0</span> points
-                            </a>
-                            <div class="dropdown">
-                                <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-person-circle me-1"></i>
-                                    <span id="user-name">User</span>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                                    <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                                    <li><a class="dropdown-item" href="/views/db-performance.html"><i class="bi bi-speedometer2 me-2"></i>DB Performance</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                                    <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                                </ul>
-                            </div>
+                    <div class="d-flex align-items-center">
+                        <a href="/dashboard" class="nav-link text-white ${this.currentPath === '/dashboard' ? 'active' : ''} me-3">
+                            <i class="bi bi-house-door-fill me-1"></i> Dashboard
+                        </a>
+                        <a href="/request-pickup" class="nav-link text-white ${this.currentPath === '/request-pickup' ? 'active' : ''} me-3">
+                            <i class="bi bi-truck me-1"></i> Request Pickup
+                        </a>
+                        <a href="/report" class="nav-link text-white ${this.currentPath === '/report' ? 'active' : ''} me-3">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Report Dumping
+                        </a>
+                        <a href="/scan" class="nav-link text-white ${this.currentPath === '/scan' ? 'active' : ''} me-3">
+                            <i class="bi bi-qr-code-scan me-1"></i> Scan Code
+                        </a>
+                        <div class="dropdown me-3">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="moreDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                More
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="moreDropdown">
+                                <li><a class="dropdown-item" href="/all-activities"><i class="bi bi-activity me-2"></i>View All Activities</a></li>
+                                <li><a class="dropdown-item" href="/all-reports"><i class="bi bi-list-ul me-2"></i>View All Reports</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/order-bags"><i class="bi bi-bag-fill me-2"></i>Order Bags</a></li>
+                                <li><a class="dropdown-item" href="/rewards"><i class="bi bi-trophy-fill me-2"></i>Rewards</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span id="connection-status" class="badge text-bg-success me-2">Online</span>
+                        <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+                        <a href="/rewards" class="text-white me-3 text-decoration-none">
+                            <i class="bi bi-award-fill me-1"></i>
+                            <span id="user-points">0</span> points
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-1"></i>
+                                <span id="user-name">User</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                                <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                                <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
-        </nav>`;
+        </nav>
+        `;
     }
 
     /**
      * Inject the navbar into the page
      */
     injectNavbar() {
-        // Only inject if not already present and if we're not on login or signup pages
-        if (document.querySelector('.navbar') || 
-            this.currentPath.includes('/login') || 
-            this.currentPath.includes('/signup')) {
-            console.log('Navbar already exists or on login/signup page, not injecting');
+        // Skip on specialized pages that have their own navbar
+        if (this.currentPath === '/scan' || 
+            this.currentPath === '/pickup' || 
+            this.currentPath === '/report') {
+            console.log('On specialized page, skipping navbar injection');
             return;
         }
-        console.log('Injecting navbar into page');
         
-        // Create navbar element
-        const navElement = document.createElement('div');
-        navElement.innerHTML = this.getNavbarHTML();
+        // Create a new navbar element
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = this.getNavbarHTML().trim();
+        const newNavbar = tempDiv.firstChild;
         
-        // Insert the navbar at the beginning of the body
-        document.body.insertBefore(navElement.firstElementChild, document.body.firstChild);
+        // Find existing navbar
+        const existingNavbar = document.querySelector('nav.navbar.navbar-dark.bg-success');
+        
+        if (existingNavbar) {
+            // Replace existing navbar
+            existingNavbar.parentNode.replaceChild(newNavbar, existingNavbar);
+        } else {
+            // Insert at the beginning of the body
+            document.body.insertBefore(newNavbar, document.body.firstChild);
+        }
+        
+        // Add padding to body to prevent content from being hidden under fixed navbar
+        const navbarHeight = newNavbar.offsetHeight;
+        document.body.style.paddingTop = navbarHeight + 'px';
     }
 
     /**
      * Update user information in the navbar
      */
     updateUserInfo() {
-        const userNameElement = document.getElementById('user-name');
         const userPointsElement = document.getElementById('user-points');
         const userPointsMobileElement = document.getElementById('user-points-mobile');
-        
-        if (userNameElement) {
-            userNameElement.textContent = this.userData.name || 'User';
-        }
+        const userNameElement = document.getElementById('user-name');
         
         if (userPointsElement) {
-            userPointsElement.textContent = this.userData.points || '0';
+            userPointsElement.textContent = this.userData.points || 0;
         }
         
         if (userPointsMobileElement) {
-            userPointsMobileElement.textContent = this.userData.points || '0';
+            userPointsMobileElement.textContent = this.userData.points || 0;
+        }
+        
+        if (userNameElement) {
+            userNameElement.textContent = this.userData.name || 'User';
         }
     }
 
@@ -287,19 +312,19 @@ class TrashDropNavbar {
      * Update connection status in the navbar
      */
     updateConnectionStatus() {
+        const isOnline = navigator.onLine;
         const connectionStatus = document.getElementById('connection-status');
         const connectionStatusMobile = document.getElementById('connection-status-mobile');
-        const isOnline = navigator.onLine;
         
         if (connectionStatus) {
             connectionStatus.textContent = isOnline ? 'Online' : 'Offline';
-            connectionStatus.classList.remove(isOnline ? 'text-bg-danger' : 'text-bg-success');
+            connectionStatus.classList.remove('text-bg-success', 'text-bg-danger');
             connectionStatus.classList.add(isOnline ? 'text-bg-success' : 'text-bg-danger');
         }
         
         if (connectionStatusMobile) {
             connectionStatusMobile.textContent = isOnline ? 'Online' : 'Offline';
-            connectionStatusMobile.classList.remove(isOnline ? 'text-bg-danger' : 'text-bg-success');
+            connectionStatusMobile.classList.remove('text-bg-success', 'text-bg-danger');
             connectionStatusMobile.classList.add(isOnline ? 'text-bg-success' : 'text-bg-danger');
         }
     }
@@ -312,33 +337,148 @@ class TrashDropNavbar {
         const logoutBtn = document.getElementById('logout');
         const logoutBtnMobile = document.getElementById('logout-mobile');
         
+        const handleLogout = (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent event bubbling
+            console.log('Logout button clicked');
+            
+            // Prevent multiple clicks
+            const clickedButton = e.currentTarget;
+            if (clickedButton) {
+                clickedButton.disabled = true;
+                if (clickedButton.querySelector('.spinner-border')) {
+                    // Already processing, don't duplicate
+                    return;
+                }
+                
+                // Show spinner inside the button for better UX
+                const buttonText = clickedButton.innerHTML;
+                clickedButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Logging out...';
+            }
+            
+            // Show a loading spinner or feedback
+            const spinner = document.createElement('div');
+            spinner.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50';
+            spinner.style.zIndex = '9999';
+            spinner.innerHTML = '<div class="spinner-border text-light" role="status"><span class="visually-hidden">Logging out...</span></div>';
+            document.body.appendChild(spinner);
+            
+            // Detect if we're on mobile
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            // Try server-side logout first (most reliable method)
+            if (isMobile) {
+                try {
+                    // Use the dedicated server endpoint for logout which handles mobile devices specially
+                    window.location.href = '/api/logout?t=' + Date.now();
+                    return; // This will navigate away, no need to continue
+                } catch (err) {
+                    console.error('Server logout failed, falling back to client-side logout', err);
+                    // Continue with client-side logout as fallback
+                }
+            }
+            
+            // Client-side logout as fallback or for desktop
+            try {
+                if (window.AuthManager && typeof window.AuthManager.signOut === 'function') {
+                    console.log('Using AuthManager to sign out');
+                    window.AuthManager.signOut()
+                        .then(() => performRedirect())
+                        .catch(err => {
+                            console.error('Error during AuthManager signOut:', err);
+                            performRedirect();
+                        });
+                } else {
+                    console.log('AuthManager not available, performing manual cleanup');
+                    // Manual cleanup
+                    localStorage.removeItem('jwt_token');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('dev_user');
+                    localStorage.removeItem('userData');
+                    localStorage.removeItem('supabase.auth.token');
+                    sessionStorage.clear();
+                    performRedirect();
+                }
+            } catch (error) {
+                console.error('Error during logout:', error);
+                performRedirect();
+            }
+            
+            function performRedirect() {
+                console.log('Redirecting to login page');
+                
+                // Special handling for mobile devices
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const isNgrok = window.location.hostname.includes('ngrok-free.app');
+                
+                // For all devices, use a simplified direct approach to avoid refresh loops
+                console.log('Using direct, simplified approach to logout');
+                
+                // 1. Clear ALL storage to prevent token persistence
+                try {
+                    const keysToRemove = ['jwt_token', 'token', 'dev_user', 'userData', 'supabase.auth.token'];
+                    keysToRemove.forEach(key => {
+                        try { localStorage.removeItem(key); } catch (e) {}
+                    });
+                    sessionStorage.clear();
+                    
+                    // Clear all cookies
+                    document.cookie.split(';').forEach(cookie => {
+                        const name = cookie.split('=')[0].trim();
+                        if (name) {
+                            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error clearing storage:', e);
+                }
+                
+                // 2. Generate clean login URL with timestamp to prevent caching
+                const timestamp = Date.now();
+                let loginUrl = '/login?clean=true&t=' + timestamp;
+                
+                // 3. Use the appropriate base URL if available
+                if (window.BaseUrlHandler && typeof window.BaseUrlHandler.getBaseUrl === 'function') {
+                    const baseUrl = window.BaseUrlHandler.getBaseUrl();
+                    if (baseUrl && !loginUrl.startsWith(baseUrl)) {
+                        loginUrl = baseUrl + loginUrl;
+                    }
+                }
+                
+                // 4. Direct navigation - most reliable approach
+                setTimeout(() => {
+                    try {
+                        // Replace is better than assign as it doesn't add to browser history
+                        window.location.replace(loginUrl);
+                    } catch (e) {
+                        console.error('Location replace failed, trying direct assignment', e);
+                        window.location.href = loginUrl;
+                    }
+                }, 50); // Short delay to ensure storage clearing is complete
+            }
+        };
+        
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                window.location.href = '/login?logout=true';
-            });
+            logoutBtn.addEventListener('click', handleLogout);
         }
         
         if (logoutBtnMobile) {
-            logoutBtnMobile.addEventListener('click', (e) => {
-                e.preventDefault();
-                window.location.href = '/login?logout=true';
-            });
+            logoutBtnMobile.addEventListener('click', handleLogout);
         }
         
-        // Dark mode toggle
-        const toggleThemeBtn = document.getElementById('toggle-theme');
-        const toggleThemeBtnMobile = document.getElementById('toggle-theme-mobile');
+        // Dark mode toggle - using unique variable names to avoid conflicts
+        const desktopThemeBtn = document.getElementById('toggle-theme');
+        const mobileThemeBtn = document.getElementById('toggle-theme-mobile');
         
-        if (toggleThemeBtn && window.ThemeSwitcher) {
-            toggleThemeBtn.addEventListener('click', (e) => {
+        if (desktopThemeBtn && window.ThemeSwitcher) {
+            desktopThemeBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 window.ThemeSwitcher.toggleTheme();
             });
         }
         
-        if (toggleThemeBtnMobile && window.ThemeSwitcher) {
-            toggleThemeBtnMobile.addEventListener('click', (e) => {
+        if (mobileThemeBtn && window.ThemeSwitcher) {
+            mobileThemeBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 window.ThemeSwitcher.toggleTheme();
             });

@@ -1,190 +1,122 @@
 /**
- * TrashDrop Emergency Logout System
- * This standalone script provides a reliable emergency logout functionality
- * that works independently of the main application code.
+ * TrashDrop Logout System - Simplified Version
+ * The emergency logout functionality has been removed as it was redundant with the regular logout.
+ * This empty implementation maintains compatibility with existing code references.
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize emergency logout functionality
-    initEmergencyLogout();
-    
-    // Setup keyboard shortcut (Ctrl+Alt+L)
-    setupKeyboardShortcut();
-});
-
-/**
- * Initialize the emergency logout functionality
- */
+// Create empty implementations of all functions to maintain compatibility
 function initEmergencyLogout() {
-    // Get all emergency logout buttons
-    const emergencyLogoutButtons = document.querySelectorAll('#emergency-logout, #emergency-logout-fixed, [data-action="emergency-logout"]');
+    // Do nothing - emergency logout button disabled
+    console.log('Emergency logout disabled - using regular logout instead');
     
-    // Add click event listener to each button
-    emergencyLogoutButtons.forEach(button => {
-        button.addEventListener('click', performEmergencyLogout);
+    // Find and remove any existing emergency logout buttons
+    const elementsToRemove = document.querySelectorAll('#emergency-logout-fixed, #emergency-logout, #emergency-logout-mobile, [data-action="emergency-logout"]');
+    elementsToRemove.forEach(element => {
+        if (element && element.parentNode) {
+            element.parentNode.removeChild(element);
+        }
     });
-    
-    // Create fixed emergency logout button if it doesn't exist
-    if (!document.getElementById('emergency-logout-fixed')) {
-        createFixedEmergencyLogoutButton();
-    }
 }
 
-/**
- * Create a fixed position emergency logout button
- */
 function createFixedEmergencyLogoutButton() {
-    const button = document.createElement('button');
-    button.id = 'emergency-logout-fixed';
-    button.className = 'btn btn-danger btn-sm';
-    button.innerHTML = '<i class="bi bi-power"></i> Emergency Logout';
-    button.addEventListener('click', performEmergencyLogout);
-    
-    document.body.appendChild(button);
+    // Do nothing - we don't want to create the button
+    console.log('Emergency logout button creation prevented');
+    return null;
 }
 
-/**
- * Perform the emergency logout
- */
+function setupKeyboardShortcut() {
+    // Do nothing - emergency logout button disabled
+}
+
 function performEmergencyLogout() {
-    console.log('Emergency logout initiated');
-    
-    // Show loading spinner
-    showLoadingSpinner('Logging out...');
-    
-    // Set a flag to prevent redirect loops
-    sessionStorage.setItem('logging_out', 'true');
-    sessionStorage.setItem('emergency_logout', 'true');
-    
-    // Clear all session data
-    clearAllSessionData()
-        .then(() => {
-            // Add a visual feedback that logout is in progress
-            document.body.classList.add('emergency-logout-in-progress');
-            
-            console.log('Emergency logout: All data cleared, redirecting to login');
-            
-            // Use replace instead of href to prevent history issues
-            try {
-                // Primary approach - replace current history entry
-                window.location.replace('/login?emergency=true');
-                
-                // Fallback approaches with delays
-                setTimeout(() => {
-                    if (window.location.pathname !== '/login') {
-                        console.log('Emergency fallback: still not on login page, trying alternate method');
-                        document.location.href = '/login?emergency=true';
-                    }
-                }, 300);
-                
-                // Final fallback
-                setTimeout(() => {
-                    if (window.location.pathname !== '/login') {
-                        console.log('Emergency final fallback: forced redirect');
-                        window.location = '/login?emergency=true&forced=true';
-                    }
-                }, 500);
-            } catch (e) {
-                console.error('Emergency logout navigation error:', e);
-                // If all else fails, try a simple assignment
-                window.location = '/login?emergency=true&error=true';
-            }
-        });
-}
-
-/**
- * Clear all session data
- */
-async function clearAllSessionData() {
-    try {
-        console.log('Emergency logout: Clearing all session data');
-        
-        // Explicitly remove auth tokens
-        localStorage.removeItem('token');
-        localStorage.removeItem('dev_user');
-        localStorage.removeItem('supabase.auth.token');
-        
-        // Keep the logging_out flag in sessionStorage
-        const loggingOutFlag = sessionStorage.getItem('logging_out');
-        const emergencyFlag = sessionStorage.getItem('emergency_logout');
-        
-        // Clear localStorage
-        localStorage.clear();
-        
-        // Clear sessionStorage but preserve our logout flags
-        sessionStorage.clear();
-        sessionStorage.setItem('logging_out', loggingOutFlag);
-        sessionStorage.setItem('emergency_logout', emergencyFlag);
-        
-        // Expire all cookies
-        document.cookie.split(';').forEach(cookie => {
-            document.cookie = cookie.replace(/^ +/, '').replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
-        });
-        
-        // Call server-side logout - add timeout
-        try {
-            const logoutPromiseTimeout = new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const serverLogoutPromise = fetch('/api/auth/logout', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json'
+    // Use regular logout instead
+    if (window.AuthManager && typeof window.AuthManager.signOut === 'function') {
+        console.log('Using AuthManager for emergency logout');
+        window.AuthManager.signOut()
+            .then(() => {
+                console.log('Logout successful, redirecting to login page');
+                // Use the base URL if available
+                if (window.BaseUrlHandler && typeof window.BaseUrlHandler.getBaseUrl === 'function') {
+                    const baseUrl = window.BaseUrlHandler.getBaseUrl();
+                    window.location.href = baseUrl + '/login?logout=true';
+                } else {
+                    // Use absolute path from root to avoid /views/ path issues
+                    window.location.href = '/login?logout=true';
                 }
             })
-            .then(response => {
-                console.log('Server logout response status:', response.status);
-                return true;
-            })
-            .catch(error => {
-                console.warn('Server logout failed, continuing anyway:', error);
-                return true;
+            .catch(err => {
+                console.error('Error during emergency logout:', err);
+                // Still redirect to login page even if there's an error
+                window.location.href = '/login?logout=true';
             });
-            
-            // Race between server response and timeout
-            await Promise.race([serverLogoutPromise, logoutPromiseTimeout]);
-            console.log('Logout request completed or timed out');
-        } catch (logoutError) {
-            console.error('Error during server logout:', logoutError);
-        }
-            
-    } catch (e) {
-        console.error('Error during emergency logout:', e);
+    } else {
+        console.log('AuthManager not available, using direct navigation for logout');
+        // Use absolute path from root to avoid /views/ path issues
+        window.location.href = '/login?logout=true';
     }
+}
+
+function clearAllSessionData() {
+    // Return a resolved promise for compatibility
+    return Promise.resolve();
+}
+
+function showLoadingSpinner() {
+    // Do nothing
+}
+
+// Add CSS to hide any emergency logout buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Create a style element
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Hide fixed position emergency logout button */
+        #emergency-logout-fixed,
+        button[id^="emergency-logout"],
+        button[id*="emergency-logout"],
+        a[id^="emergency-logout"],
+        a[id*="emergency-logout"],
+        button:has(i.bi-power),
+        .btn:has(i.bi-shield-exclamation),
+        .btn:has(i.bi-exclamation-triangle),
+        body > .btn-danger {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
+            height: 0 !important;
+            width: 0 !important;
+            overflow: hidden !important;
+        }
+
+        /* Hide emergency logout modals */
+        #emergencyLogoutModal,
+        .modal[id*="emergency"],
+        div[id*="emergency-logout"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* Hide any emergency-related buttons at the bottom of the screen */
+        body > .btn-danger,
+        body > button.btn:last-child,
+        body > .btn-danger:last-child {
+            display: none !important;
+            visibility: hidden !important;
+        }
+    `;
+    document.head.appendChild(style);
     
-    // Return true to indicate completion regardless of errors
-    return true;
-}
-
-/**
- * Show loading spinner
- */
-function showLoadingSpinner(message) {
-    // Create spinner overlay if it doesn't exist
-    if (!document.querySelector('.spinner-overlay')) {
-        const overlay = document.createElement('div');
-        overlay.className = 'spinner-overlay';
-        overlay.innerHTML = `
-            <div class="spinner-container">
-                <div class="spinner-border text-light" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="text-white mt-2">${message || 'Loading...'}</p>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-    }
-}
-
-/**
- * Setup keyboard shortcut for emergency logout (Ctrl+Alt+L)
- */
-function setupKeyboardShortcut() {
-    document.addEventListener('keydown', function(event) {
-        // Check for Ctrl+Alt+L
-        if (event.ctrlKey && event.altKey && event.key === 'l') {
-            event.preventDefault();
-            performEmergencyLogout();
+    // Run the cleanup once immediately
+    initEmergencyLogout();
+    
+    // Set an interval to repeatedly check and remove any emergency logout buttons
+    setInterval(function() {
+        const fixedButton = document.getElementById('emergency-logout-fixed');
+        if (fixedButton && fixedButton.parentNode) {
+            fixedButton.parentNode.removeChild(fixedButton);
         }
-    });
-}
+    }, 500);
+});
