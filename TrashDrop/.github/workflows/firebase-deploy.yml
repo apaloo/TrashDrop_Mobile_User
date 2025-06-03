@@ -1,4 +1,4 @@
-name: Deploy to Firebase Hosting
+name: Firebase Deploy
 
 on:
   push:
@@ -6,36 +6,75 @@ on:
       - main
       - master
   pull_request:
+    types: [opened, synchronize, reopened]
     branches:
-      - main
-      - master
+      - '**'
+
+env:
+  FIREBASE_CLI_PREVIEWS: "hostingchannels"
+
+defaults:
+  run:
+    working-directory: ./
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
-
+    environment: production
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Build
-      run: npm run build
+      - name: Build
+        run: npm run build
 
-    - name: Set up service account
-      run: |
-        mkdir -p $HOME/.config/gcloud
-        echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > $HOME/.config/gcloud/application_default_credentials.json
+      - name: Set up service account
+        run: |
+          mkdir -p $HOME/.config/gcloud
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > $HOME/.config/gcloud/application_default_credentials.json
 
-    - name: Deploy to Firebase
-      uses: w9jds/firebase-action@master
-      with:
-        args: deploy --only hosting
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: $HOME/.config/gcloud/application_default_credentials.json
+      - name: Deploy to Production
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting:production
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.config/gcloud/application_default_credentials.json
+
+  preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Set up service account
+        run: |
+          mkdir -p $HOME/.config/gcloud
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > $HOME/.config/gcloud/application_default_credentials.json
+
+      - name: Deploy Preview
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting:preview-${{ github.event.pull_request.number }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: $HOME/.config/gcloud/application_default_credentials.json
