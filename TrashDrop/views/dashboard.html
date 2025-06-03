@@ -62,6 +62,17 @@
     
     <!-- Additional styles for Active Pickup tracking and Mobile Navigation -->
     <style>
+        /* Card header styles */
+        /* Next Scheduled Pickup card header */
+        #scheduled-pickup-container .card-header {
+            background-color: #E8F5E9 !important;  /* Light green background */
+            color: #2E7D32 !important;           /* Dark green text for better contrast */
+            border-bottom: 2px solid #81C784;    /* Medium green border */
+        }
+        
+        /* Recent Reports card header - using inline styles for highest priority */
+        /* Styles are now directly on the element */
+        
         .user-marker i, .collector-marker i {
             filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));
         }
@@ -266,7 +277,7 @@
         <!-- Active Pickup Request Card -->
         <div class="col-12 mb-3" id="active-pickup-container" style="display: none;" aria-hidden="true">
             <div class="card border-0 shadow-sm rounded-3">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                <div class="card-header d-flex justify-content-between align-items-center py-2" style="background-color: #e3f2fd !important; color: #0d47a1 !important; border-bottom: 2px solid #bbdefb !important;">
                     <h5 class="mb-0 fs-6 fw-bold">Active Pickup Request</h5>
                     <span id="tracking-status" class="badge bg-warning text-dark">Waiting for collector</span>
                 </div>
@@ -416,9 +427,9 @@
             <!-- Scheduled Pickup Card -->
             <div class="col-12 mb-3" id="scheduled-pickup-container">
                 <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-2">
-                        <h5 class="mb-0 fs-6 fw-bold">Next Scheduled Pickup</h5>
-                        <a href="/schedule-pickup" class="btn btn-sm btn-light py-0 px-2">View All</a>
+                    <div class="card-header d-flex justify-content-between align-items-center py-2" style="background-color: #E8F5E9 !important; color: #2E7D32 !important; border-bottom: 2px solid #81C784 !important;">
+                        <h5 class="mb-0 fs-6 fw-bold ms-3">Next Scheduled Pickup</h5>
+                        <a href="/schedule-pickup" class="btn btn-sm py-0 px-2 me-2" style="background-color: #2E7D32; color: white; font-size: 0.75rem; height: 24px; line-height: 1; display: flex; align-items: center;">View All</a>
                     </div>
                     <div class="card-body p-3" id="scheduled-pickup-content">
                         <div id="no-scheduled-pickup" style="display: none;">
@@ -463,7 +474,7 @@
             <!-- Recent Reports -->
             <div class="col-12 mb-3">
                 <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-2">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2" style="background-color: #f5c4c9 !important; color: #333333 !important;">
                         <h5 class="mb-0 fs-6 fw-bold">Recent Reports</h5>
                         <span class="badge bg-light text-danger">2 New</span>
                     </div>
@@ -518,7 +529,7 @@
             <!-- Recent Activity -->
             <div class="col-12 mb-3">
                 <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-header bg-info text-white py-2">
+                    <div class="card-header py-2" style="background-color: #a9e8f5 !important; color: #0d3c4a !important; border-bottom: 2px solid #7fd5e8 !important;">
                         <h5 class="mb-0 fs-6 fw-bold">Recent Activity</h5>
                     </div>
                     <div class="card-body p-0">
@@ -1326,10 +1337,8 @@
                 document.getElementById('toggle-theme').click();
             });
             
-            // Logout
-            document.getElementById('logout-mobile').addEventListener('click', function(e) {
-                document.getElementById('logout').click();
-            });
+            // Logout is now handled by mobile-logout-fix.js
+            // No need for duplicate event listeners here
         }
         
         // Setup responsive behaviors when DOM is loaded

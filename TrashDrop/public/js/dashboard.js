@@ -206,82 +206,45 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 // Initialize dashboard with user data
 async function initializeDashboard() {
-  // Show loading spinner
-  showSpinner('Loading dashboard...');
-  
-  // Get user profile
   try {
-    const userProfile = await AuthManager.getUserProfile();
+    // Show loading state
+    showSpinner('Loading dashboard...');
     
-    if (userProfile) {
-      // Update user info in the UI
-      updateUserInfo(userProfile);
-    } else {
-      console.log('Using mock user profile for development');
-      // Use a mock profile for development
-      updateUserInfo({
-        first_name: 'Test',
-        last_name: 'User',
-        points: 50,
-        level: 'Eco Starter'
-      });
+    // Check authentication
+    const isAuthenticated = await AuthManager.isAuthenticated();
+    if (!isAuthenticated) {
+      window.location.href = '/login';
+      return;
     }
-  } catch (profileError) {
-    console.log('Could not load user profile:', profileError);
-    // Use a mock profile for development
-    updateUserInfo({
-      first_name: 'Test',
-      last_name: 'User',
-      points: 50,
-      level: 'Eco Starter'
-    });
+    
+    // Setup event listeners early to ensure they're available
+    setupEventListeners();
+    
+    // Load user data
+    const user = await AuthManager.getCurrentUser();
+    if (!user) {
+      throw new Error('Failed to load user data');
+    }
+    
+    // Update UI with user data
+    updateUserInfo(user);
+    
+    // Load dashboard data
+    await Promise.all([
+      loadDashboardStats(),
+      loadActivePickup(),
+      loadScheduledPickups()
+    ]);
+    
+    // Initialize dark mode
+    initializeDarkMode();
+    
+  } catch (error) {
+    console.error('Error initializing dashboard:', error);
+    showToast('Error', 'Failed to load dashboard. Please try again.', 'danger');
+  } finally {
+    hideSpinner();
   }
-  
-  // Load each section independently with try/catch for each
-  // This ensures one failing section doesn't break the entire dashboard
-  
-  // Load dashboard stats
-  try {
-    await loadDashboardStats();
-  } catch (statsError) {
-    console.log('Error loading dashboard stats:', statsError);
-    // Stats already have fallbacks in the loadDashboardStats function
-  }
-  
-  // Load active pickup request (if any)
-  try {
-    await loadActivePickup();
-  } catch (pickupError) {
-    console.log('Error loading active pickup:', pickupError);
-    // Show empty state or fallback for active pickup
-  }
-  
-  // Load scheduled pickups
-  try {
-    await loadScheduledPickups();
-  } catch (scheduleError) {
-    console.log('Error loading scheduled pickups:', scheduleError);
-    // Show empty state or fallback for scheduled pickups
-  }
-  
-  // Load recent reports
-  try {
-    await loadRecentReports();
-  } catch (reportsError) {
-    console.log('Error loading recent reports:', reportsError);
-    // Show empty state or fallback for reports
-  }
-  
-  // Load recent activity
-  try {
-    await loadRecentActivity();
-  } catch (activityError) {
-    console.log('Error loading recent activity:', activityError);
-    // Show empty state or fallback for activity
-  }
-  
-  // Hide spinner when all attempts are complete (successful or not)
-  hideSpinner();
 }
 
 // Update user information in the UI
@@ -1010,103 +973,123 @@ function updateScheduledPickupUI(pickup) {
   
   // Update waste type and bags count
   const wasteTypeElement = document.getElementById('scheduled-waste-type');
-  const bagsCountElement = document.getElementById('scheduled-bags-count');
-  
   if (wasteTypeElement) {
-    wasteTypeElement.textContent = pickup.waste_type || 'Mixed Waste';
+    wasteTypeElement.textContent = pickup.waste_type || 'Not specified';
   }
   
+  // Update bags count if element exists
+  const bagsCountElement = document.getElementById('scheduled-bags-count');
   if (bagsCountElement) {
-    bagsCountElement.textContent = pickup.bag_count || 0;
-  }
-  
-  // Update location and frequency
-  const locationElement = document.getElementById('scheduled-location');
-  const frequencyElement = document.getElementById('scheduled-frequency');
-  
-  if (locationElement && pickup.locations) {
-    locationElement.textContent = pickup.locations.location_name || 'Unknown';
-  }
-  
-  if (frequencyElement) {
-    frequencyElement.textContent = pickup.schedule_type || 'One-time';
-  }
-  
-  // Set up cancel button
-  const cancelButton = document.getElementById('cancel-scheduled-pickup');
-  if (cancelButton) {
-    cancelButton.onclick = () => cancelScheduledPickup(pickup.id);
-  }
-}
-
-// Cancel scheduled pickup
-async function cancelScheduledPickup(pickupId) {
-  // Ask for confirmation
-  if (!confirm('Are you sure you want to cancel this scheduled pickup?')) {
-    return;
-  }
-  
-  try {
-    // Show loading spinner
-    showSpinner('Cancelling scheduled pickup...');
-    
-    // Update pickup status in Supabase
-    const { error } = await supabase
-      .from('scheduled_pickups')
-      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-      .eq('id', pickupId);
-      
-    if (error) throw error;
-    
-    // Hide spinner
-    hideSpinner();
-    
-    // Show success message
-    showToast('Pickup Cancelled', 'Your scheduled pickup has been cancelled successfully.', 'success');
-    
-    // Reload dashboard
-    initializeDashboard();
-    
-  } catch (error) {
-    console.error('Error cancelling scheduled pickup:', error);
-    hideSpinner();
-    showToast('Error', 'Failed to cancel scheduled pickup.', 'danger');
+    bagsCountElement.textContent = pickup.bags_count || '1';
   }
 }
 
 // Setup event listeners
 function setupEventListeners() {
-  // Logout button
-  const logoutButton = document.getElementById('logout');
-  if (logoutButton) {
-    logoutButton.addEventListener('click', handleLogout);
-  }
+  console.log('Setting up event listeners...');
   
-  // Dark mode toggle
-  const darkModeToggle = document.getElementById('toggle-theme');
-  if (darkModeToggle) {
-    darkModeToggle.addEventListener('click', toggleDarkMode);
+  // Ensure AuthManager is available
+  if (typeof AuthManager === 'undefined') {
+    console.warn('AuthManager not found. Logout functionality may be limited.');
   }
+
+  // Add logout event listeners with proper error handling
+  const addLogoutListener = (elementId, isEmergency = false) => {
+    try {
+      const element = document.getElementById(elementId);
+      if (!element) {
+        console.warn(`Element not found: ${elementId}`);
+        return;
+      }
+      
+      // Remove any existing listeners to prevent duplicates
+      const newElement = element.cloneNode(true);
+      element.parentNode.replaceChild(newElement, element);
+      
+      // Add new listener
+      newElement.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log(`Logout button clicked: ${elementId}`);
+        if (isEmergency) {
+          handleEmergencyLogout(e);
+        } else {
+          handleLogout(e);
+        }
+      });
+      
+      console.log(`Added ${isEmergency ? 'emergency ' : ''}logout listener to:`, elementId);
+    } catch (error) {
+      console.error(`Error setting up listener for ${elementId}:`, error);
+    }
+  };
+  
+  // Add logout listeners for both desktop and mobile
+  addLogoutListener('logout');
+  addLogoutListener('logout-mobile');
+  addLogoutListener('emergency-logout', true);
+  addLogoutListener('emergency-logout-mobile', true);
+  
+  // Other event listeners
+  document.getElementById('toggle-theme')?.addEventListener('click', toggleDarkMode);
+  document.getElementById('toggle-theme-mobile')?.addEventListener('click', toggleDarkMode);
+  document.getElementById('cancel-pickup-btn')?.addEventListener('click', () => cancelPickupRequest(currentPickupId));
+  document.getElementById('cancel-scheduled-pickup-btn')?.addEventListener('click', () => cancelScheduledPickup(selectedScheduledPickupId));
+  
+  console.log('Event listeners setup complete');
 }
 
 // Handle logout
 async function handleLogout(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
+  
+  // Show confirmation dialog
+  if (!confirm('Are you sure you want to log out?')) {
+    return;
+  }
   
   try {
-    // Show loading spinner
-    showSpinner('Logging out...');
+    // Show loading state
+    const logoutButton = e?.target.closest('a') || document.querySelector('#logout, #logout-mobile');
+    const originalHtml = logoutButton?.innerHTML;
+    if (logoutButton) {
+      logoutButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Logging out...';
+      logoutButton.disabled = true;
+    }
     
-    // Call logout API
-    await AuthManager.signOut();
+    // Use AuthManager if available, otherwise do manual cleanup
+    if (typeof AuthManager !== 'undefined' && typeof AuthManager.signOut === 'function') {
+      await AuthManager.signOut();
+    } else {
+      // Fallback manual cleanup
+      const storageKeys = ['jwt_token', 'token', 'dev_user', 'userData', 'supabase.auth.token'];
+      storageKeys.forEach(key => localStorage.removeItem(key));
+      sessionStorage.clear();
+      
+      // Clear cookies
+      document.cookie.split(';').forEach(cookie => {
+        const name = cookie.split('=')[0].trim();
+        if (name) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+      });
+    }
     
-    // Redirect to login page
-    window.location.href = '/login';
+    // Force a hard redirect to prevent any caching issues
+    const timestamp = new Date().getTime();
+    window.location.replace(`/login?logged_out=true&t=${timestamp}`);
     
   } catch (error) {
-    console.error('Logout error:', error);
-    hideSpinner();
-    showToast('Error', 'Failed to logout. Please try again.', 'danger');
+    console.error('Error during logout:', error);
+    // Even if there's an error, still try to redirect to login
+    window.location.href = '/login?error=logout_failed';
+  } finally {
+    // Restore button state if still on the same page
+    const logoutButton = document.querySelector('#logout, #logout-mobile');
+    if (logoutButton) {
+      logoutButton.disabled = false;
+      logoutButton.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Logout';
+    }
   }
 }
 

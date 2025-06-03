@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
+const admin = require('./config/firebase-admin');
 require('dotenv').config();
 
 const app = express();

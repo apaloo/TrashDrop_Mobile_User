@@ -4,6 +4,20 @@
  * This script must be included as the FIRST script on login-related pages
  */
 
+// Prevent multiple initializations
+if (window.authStabilizerInitialized) {
+  console.log('Auth stabilizer already initialized, skipping...');
+  // If authStabilized is already set, don't run the script again
+  if (window.authStabilized) {
+    console.log('Auth already stabilized, exiting...');
+    // Exit the script without executing the rest
+    throw new Error('Auth stabilizer already initialized and stabilized');
+  }
+} else {
+  window.authStabilizerInitialized = true;
+}
+
+// Use IIFE to avoid polluting global scope
 (function() {
   // Only initialize once per page load
   if (window._authStabilizerInitialized) return;
@@ -18,10 +32,10 @@
     'loginRedirectUrl', 'redirectCount', 'lastRedirectTime'
   ];
   
-  const REDIRECT_LIMIT = 3; // Maximum allowed redirects within timeframe
-  const REDIRECT_TIMEFRAME_MS = 10000; // 10 seconds
-  const LOOP_DETECTION_TIMEFRAME_MS = 5000; // 5 seconds
-  const RAPID_PAGE_LOADS_THRESHOLD = 3; // Number of loads within timeframe to trigger loop detection
+  const REDIRECT_LIMIT = 5; // Increased from 3 to 5
+  const REDIRECT_TIMEFRAME_MS = 15000; // Increased from 10 to 15 seconds
+  const LOOP_DETECTION_TIMEFRAME_MS = 10000; // Increased from 5 to 10 seconds
+  const RAPID_PAGE_LOADS_THRESHOLD = 5; // Increased from 3 to 5
   
   // ===== UTILITIES =====
   
@@ -43,6 +57,12 @@
   
   // Track page loads to detect refresh loops
   function detectRefreshLoop() {
+    // Skip loop detection in development mode
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      console.log('🔧 Development mode: Loop detection is less strict');
+      return false;
+    }
+    
     const now = Date.now();
     let pageLoads = [];
     
@@ -62,8 +82,11 @@
       // Check for rapid page loads
       const rapidLoads = pageLoads.length;
       
-      // If we have multiple rapid loads, this is likely a refresh loop
-      if (rapidLoads >= RAPID_PAGE_LOADS_THRESHOLD) {
+      // Log the current state for debugging
+      console.log(`📊 Page load tracking: ${rapidLoads} loads in last ${LOOP_DETECTION_TIMEFRAME_MS/1000}s (threshold: ${RAPID_PAGE_LOADS_THRESHOLD})`);
+      
+      // Only trigger if significantly above threshold to reduce false positives
+      if (rapidLoads > RAPID_PAGE_LOADS_THRESHOLD + 2) {
         console.error(`⚠️ Refresh loop detected! ${rapidLoads} page loads in ${LOOP_DETECTION_TIMEFRAME_MS/1000}s`);
         return true;
       }
@@ -215,25 +238,36 @@
     
     // Override location.href
     if (originalHref && originalHref.set) {
-      Object.defineProperty(window.location, 'href', {
-        get: originalHref.get,
-        set: function(url) {
-          if (shouldBlockUrl(url)) {
-            console.log('🛑 Blocked href setting to:', url);
-            return;
-          }
-          
-          // Track this redirect
-          if (trackRedirect()) {
-            console.error('⚠️ Redirect limit exceeded, blocking further redirects');
-            sessionStorage.setItem('_authStabilizer_redirectLimitExceeded', 'true');
-            return;
-          }
-          
-          return originalHref.set.apply(this, arguments);
-        },
-        configurable: true
-      });
+      // Only redefine if not already defined by us
+      const hrefDescriptor = Object.getOwnPropertyDescriptor(window.location, 'href');
+      if (!hrefDescriptor || hrefDescriptor.configurable) {
+        try {
+          Object.defineProperty(window.location, 'href', {
+            get: originalHref.get,
+            set: function(url) {
+              if (shouldBlockUrl(url)) {
+                console.log('🛑 Blocked href setting to:', url);
+                return;
+              }
+              
+              // Track this redirect
+              if (trackRedirect()) {
+                console.error('⚠️ Redirect limit exceeded, blocking further redirects');
+                sessionStorage.setItem('_authStabilizer_redirectLimitExceeded', 'true');
+                return;
+              }
+              
+              return originalHref.set.apply(this, arguments);
+            },
+            configurable: false, // Make it non-configurable to prevent further changes
+            enumerable: true
+          });
+        } catch (error) {
+          console.warn('Could not redefine location.href, it may be non-configurable:', error);
+        }
+      } else {
+        console.log('location.href is already non-configurable, skipping redefinition');
+      }
     }
     
     // Override history.pushState

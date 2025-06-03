@@ -5,6 +5,7 @@
 
 /* Make navbar fixed at the top */
 nav.navbar.navbar-dark.bg-success {
+    background-color: #07b587 !important;
     position: fixed !important;
     top: 0 !important;
     right: 0 !important;

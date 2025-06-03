@@ -1,5 +1,41 @@
 // TrashDrop Login Page
 
+// Centralized login state management
+const loginState = {
+  inProgress: false,
+  form: null,
+  
+  start: function(form) {
+    if (this.inProgress) return false;
+    this.inProgress = true;
+    this.form = form;
+    if (form) {
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+    }
+    return true;
+  },
+  
+  end: function() {
+    this.inProgress = false;
+    if (this.form) {
+      const submitBtn = this.form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = false;
+      this.form = null;
+    }
+  },
+  
+  reset: function() {
+    this.inProgress = false;
+    this.form = null;
+  }
+};
+
+// Reset login state on page load to prevent stuck states
+window.addEventListener('load', () => {
+  loginState.reset();
+});
+
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Login page initialized');
@@ -22,25 +58,26 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Login form found, attaching event listeners');
     
     // Add submit event listener with duplicate submission prevention
-    loginForm.addEventListener('submit', function(e) {
+    loginForm.addEventListener('submit', async function(e) {
       e.preventDefault();
       
       // Prevent multiple submissions
-      if (this.dataset.submitted === 'true') {
-        console.log('Preventing duplicate form submission');
+      if (!loginState.start(this)) {
+        console.log('Login already in progress, ignoring additional request');
         return false;
       }
       
-      // Mark as submitted
-      this.dataset.submitted = 'true';
-      
-      // Handle login
-      handleLogin(e);
-      
-      // Reset submission state after 5 seconds (in case of error)
-      setTimeout(() => {
-        this.dataset.submitted = 'false';
-      }, 5000);
+      try {
+        // Handle login using the event directly
+        await handleLogin(e);
+      } catch (error) {
+        console.error('Login error:', error);
+        // Show error to user
+        showToast('Login Failed', 'An error occurred during login. Please try again.', 'error');
+      } finally {
+        // Always ensure we clean up the login state
+        loginState.end();
+      }
     });
     
     // Initialize password toggle functionality
@@ -56,21 +93,19 @@ document.addEventListener('DOMContentLoaded', () => {
   processPendingLogin();
 });
 
-// Track whether a login request is currently in progress to prevent multiple submissions
-let loginInProgress = false;
-
 // Function to handle login form submission
 async function handleLogin(e) {
   if (e) e.preventDefault();
   
-  // Prevent multiple simultaneous login attempts
-  if (loginInProgress) {
-    console.log('Login already in progress, ignoring additional request');
-    return;
-  }
-  
-  loginInProgress = true;
   console.log('Starting login process');
+  const form = loginState.form;
+  
+  // Show loading state
+  const submitBtn = form?.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn?.innerHTML || '';
+  if (submitBtn) {
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Logging in...';
+  }
   
   // Get form elements
   const phoneInput = document.getElementById('phoneNumber');
@@ -79,7 +114,7 @@ async function handleLogin(e) {
   
   if (!phoneInput || !passwordInput) {
     console.error('Required form elements not found');
-    loginInProgress = false;
+    loginState.end();
     return;
   }
   
@@ -133,7 +168,7 @@ async function handleLogin(e) {
     
     // Use the baseUrl from base-url.js if available, otherwise fallback to current origin
     const baseUrl = window.baseUrl || window.location.origin;
-    const apiUrl = `${baseUrl}/api/auth/login`;
+    const apiUrl = `${baseUrl}/auth/login`;
     
     console.log(`Sending login request to: ${apiUrl}`);
     
@@ -471,3 +506,13 @@ function processPendingLogin() {
 if (sessionStorage.getItem('disableSafariSpecialHandling') === 'true') {
   window.disableSafariSpecialHandling = true;
 }
+
+// Add global error handler to ensure login state is reset on unhandled errors
+window.addEventListener('error', () => {
+  loginState.reset();
+});
+
+// Reset login state if user navigates away
+window.addEventListener('beforeunload', () => {
+  loginState.reset();
+});

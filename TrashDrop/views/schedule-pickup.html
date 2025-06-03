@@ -87,9 +87,27 @@
             <h1 class="h3 mb-0">Schedule Pickup</h1>
         </div>
 
-        <div class="alert alert-info text-center mb-4">
-            <i class="bi bi-info-circle"></i> Set up recurring pickups for regular waste collection
-        </div>
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs mb-4" id="scheduleTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="new-schedule-tab" data-bs-toggle="tab" data-bs-target="#new-schedule" type="button" role="tab" aria-controls="new-schedule" aria-selected="true">
+                    <i class="bi bi-plus-circle me-1"></i> New Schedule
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#schedule-history" type="button" role="tab" aria-controls="schedule-history" aria-selected="false">
+                    <i class="bi bi-clock-history me-1"></i> Schedule History
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="scheduleTabsContent">
+            <!-- New Schedule Tab -->
+            <div class="tab-pane fade show active" id="new-schedule" role="tabpanel" aria-labelledby="new-schedule-tab">
+                <div class="alert alert-info text-center mb-4">
+                    <i class="bi bi-info-circle"></i> Set up recurring pickups for regular waste collection
+                </div>
 
         <div class="form-section">
             <h2 class="h5 mb-3">Pickup Location</h2>
@@ -249,6 +267,27 @@
         <div class="mt-3 text-center">
             <a href="/request-pickup" class="btn btn-link">Need a one-time pickup? Request here</a>
         </div>
+            </div> <!-- End of New Schedule Tab -->
+            
+            <!-- Schedule History Tab -->
+            <div class="tab-pane fade" id="schedule-history" role="tabpanel" aria-labelledby="history-tab">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="bi bi-clock-history text-muted" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="text-muted">No past schedules found</h5>
+                            <p class="text-muted mb-0">Your scheduled pickups will appear here</p>
+                        </div>
+                        <!-- Placeholder for dynamic content -->
+                        <div id="schedule-history-content">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End of Schedule History Tab -->
+        </div> <!-- End of Tab Content -->
     </main>
 
     <!-- Bootstrap Bundle with Popper -->
