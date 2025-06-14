@@ -155,3 +155,8 @@ window.initializeBaseUrl = initializeBaseUrl;
 window.fixNavigationLinks = fixNavigationLinks;
 window.fixFormActions = fixFormActions;
 window.isSafari = isSafari;
+
+// Expose getBaseUrl function for backward compatibility
+window.getBaseUrl = function() {
+    return window.baseUrl || '';
+};

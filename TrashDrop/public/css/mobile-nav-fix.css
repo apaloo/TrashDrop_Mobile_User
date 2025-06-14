@@ -1,0 +1,29 @@
+/* Mobile Navigation Fixes */
+
+/* Ensure mobile nav stays at bottom */
+.mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #fff;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+/* Add padding to body to prevent content from being hidden behind the fixed nav */
+body {
+    padding-bottom: 60px; /* Adjust based on your nav height */
+}
+
+/* Fix for iOS viewport issues */
+@supports (-webkit-touch-callout: none) {
+    body {
+        /* The iPhone's safe area */
+        padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    }
+    
+    .mobile-nav {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}

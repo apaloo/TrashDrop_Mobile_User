@@ -5,19 +5,125 @@ const helmet = require('helmet');
 const compression = require('compression');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
-const admin = require('./config/firebase-admin');
-require('dotenv').config();
-
-const app = express();
-const PORT = process.env.PORT || 80;
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const { v4: uuidv4 } = require('uuid');
+const { createClient } = require('@supabase/supabase-js');
 
 // Check environment
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+
+// Set default Firebase environment variables for development
+if (isDevelopment) {
+  process.env.FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || 'dev-api-key';
+  process.env.FIREBASE_AUTH_DOMAIN = process.env.FIREBASE_AUTH_DOMAIN || 'dev-project.firebaseapp.com';
+  process.env.FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'dev-project';
+  process.env.FIREBASE_STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'dev-project.appspot.com';
+  process.env.FIREBASE_MESSAGING_SENDER_ID = process.env.FIREBASE_MESSAGING_SENDER_ID || '123456789';
+  process.env.FIREBASE_APP_ID = process.env.FIREBASE_APP_ID || '1:123456789:web:abcdef';
+  
+  console.log('Set default Firebase environment variables for development');
+}
+
+// Conditionally require Firebase Admin SDK
+let admin;
+try {
+  if (!isDevelopment || (process.env.FIREBASE_API_KEY && process.env.FIREBASE_PROJECT_ID)) {
+    admin = require('firebase-admin');
+    console.log('Firebase Admin SDK loaded successfully');
+  } else {
+    console.log('Running in development mode without Firebase Admin SDK');
+  }
+} catch (error) {
+  console.log('Firebase Admin SDK not initialized:', error.message);
+}
+
+// Initialize Firebase Admin SDK (conditionally)
+try {
+  // Only attempt to initialize Firebase if the admin SDK is available
+  if (admin) {
+    // Check if service account credentials are available
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      // Use service account credentials from environment variable
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      });
+      
+      console.log('Firebase Admin SDK initialized with service account credentials');
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      // Use Application Default Credentials
+      admin.initializeApp();
+      console.log('Firebase Admin SDK initialized with Application Default Credentials');
+    } else {
+      console.warn('Firebase Admin SDK not initialized - missing credentials');
+    }
+  } else {
+    console.log('Skipping Firebase Admin SDK initialization in development mode');
+  }
+} catch (error) {
+  console.error('Error initializing Firebase Admin SDK:', error);
+}
+
+// Import the centralized configuration
+const config = require('./app.config');
+
+// Initialize Supabase client
+const supabase = createClient(
+  config.supabase.url,
+  config.supabase.serviceRoleKey || config.supabase.anonKey
+);
+
+// Initialize Express app
+const app = express();
+const PORT = config.server.port; // Use port from centralized config
+
+// Generate a unique instance ID for this server instance
+const instanceId = uuidv4();
+const startTime = new Date();
+
+// Request ID middleware
+app.use((req, res, next) => {
+  req.id = uuidv4();
+  next();
+});
 
 // Log startup mode
 console.log(`Starting server in ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} mode`);
 
-// Middleware
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https: http:"],
+      connectSrc: ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com"],
+      fontSrc: ["'self'", "https: data:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  hsts: !isDevelopment,
+  noCache: isDevelopment,
+  referrerPolicy: { policy: 'same-origin' },
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+// Apply rate limiting to API routes
+app.use('/api/', limiter);
+
 // Enhanced CORS configuration to handle ngrok domains
 app.use(cors({
   origin: function(origin, callback) {
@@ -40,14 +146,38 @@ app.use(cors({
       return callback(null, true);
     }
     
-    callback(null, true);
+    // In production, only allow specific domains
+    const allowedDomains = [
+      'https://trashdrop-app.web.app',
+      'https://staging.trashdrop-app.web.app',
+      // Add other production domains here
+    ];
+    
+    if (allowedDomains.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true, // Allow cookies to be sent with requests
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-ID']
 }));
 
-app.use(cookieParser()); // Initialize cookie parser for authentication tokens
+// Request logging
+app.use(morgan(isDevelopment ? 'dev' : 'combined', {
+  skip: (req) => req.path === '/healthz' || req.path === '/ready' || req.path === '/live'
+}));
+
+// Parse JSON and urlencoded request bodies
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parser for authentication tokens
+app.use(cookieParser());
+
+// Compression (gzip)
+app.use(compression());
 
 // Special route for Digital Asset Links (TWA support)
 app.get('/.well-known/assetlinks.json', (req, res) => {
@@ -120,13 +250,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: config.security.sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: { 
     // Force secure:false for localhost/development to avoid HTTPS requirements
-    secure: process.env.NODE_ENV === 'production' && !['localhost', '127.0.0.1'].includes(process.env.HOST || ''),
-    maxAge: parseInt(process.env.SESSION_DURATION || 86400000) // Default: 24 hours
+    secure: !config.server.isDevelopment && !['localhost', '127.0.0.1'].includes(process.env.HOST || ''),
+    maxAge: config.security.sessionDuration
   }
 }));
 
@@ -270,8 +400,172 @@ app.get('/api/logout', (req, res) => {
   }
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Redirect all traffic from port 58870 to port 3000
+app.use((req, res, next) => {
+  if (req.headers.host && req.headers.host.includes('58870')) {
+    const newUrl = new URL(req.url, 'http://localhost:3000');
+    return res.redirect(301, newUrl.toString());
+  }
+  next();
+});
+
+// Serve login page at the root path
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Define view routes BEFORE static middleware to ensure they take precedence
+// Scan page route
+app.get('/scan', (req, res) => {
+  console.log('Hit /scan route - serving scan.html');
+  res.sendFile(path.join(__dirname, 'views', 'scan.html'));
+});
+
+// Request pickup page route
+app.get('/request-pickup', (req, res) => {
+  console.log('Hit /request-pickup route - serving request-pickup.html');
+  res.sendFile(path.join(__dirname, 'views', 'request-pickup.html'));
+});
+
+// Report dumping page route
+app.get('/report-dumping', (req, res) => {
+  console.log('Hit /report-dumping route - serving report-dumping.html');
+  res.sendFile(path.join(__dirname, 'views', 'report-dumping.html'));
+});
+
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve JS files with proper MIME type
+app.use('/js', express.static(path.join(__dirname, 'public/js'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve auth utils
+app.use('/js/auth/utils', express.static(path.join(__dirname, 'public/js/auth/utils'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve auth handlers
+app.use('/js/auth/handlers', express.static(path.join(__dirname, 'public/js/auth/handlers'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve handlers
+app.use('/js/handlers', express.static(path.join(__dirname, 'public/js/handlers'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve the new reset password page
+app.get('/reset-password-new.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reset-password-new.html'));
+});
+
+// Legacy redirect for old reset password links
+app.get('/reset-password.html', (req, res) => {
+  res.redirect('/reset-password-new.html');
+});
+
+// Handle password reset redirects from email links
+app.get('/reset-password-redirect', (req, res) => {
+  // Check if this is a password reset redirect with token in hash
+  const isPasswordReset = (
+    // Case 1: Coming from Supabase verify endpoint
+    (req.url === '/' && 
+     req.headers.referer && 
+     req.headers.referer.includes('supabase.co/auth/v1/verify') &&
+     req.headers.referer.includes('type=recovery')) ||
+    // Case 2: Has token in URL hash
+    (req.url.includes('#access_token') && req.url.includes('type=recovery'))
+  );
+
+  if (isPasswordReset) {
+    console.log('Intercepted password reset redirect for URL:', req.url);
+    // Set CSP header to allow inline scripts and styles for the reset password page
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self' https: data:; " +
+      "connect-src 'self' https://*.supabase.co;"
+    );
+    return res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+  }
+  
+  // If not a password reset, redirect to home
+  res.redirect('/');
+});
+
+// Handle root URL
+app.get('/', (req, res) => {
+  // Check if this is a password reset redirect with token in hash or query params
+  const hash = req.url.split('#')[1];
+  const params = new URLSearchParams(hash || '');
+  
+  if (params.get('type') === 'recovery' && params.get('access_token')) {
+    console.log('Handling password reset with token in hash');
+    // Set CSP header to allow inline scripts and styles for the reset password page
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self' https: data:; " +
+      "connect-src 'self' https://*.supabase.co;"
+    );
+    return res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+  }
+  
+  // Check for token in query parameters (legacy support)
+  if (req.query.type === 'recovery' && req.query.access_token) {
+    console.log('Legacy password reset redirect');
+    return res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+  }
+  
+  // Default redirect to auth page
+  res.redirect('/auth-standalone.html');
+});
+
+// Handle direct reset password link with token
+app.get('/reset-password', (req, res) => {
+  if (req.query.token) {
+    return res.redirect(`/reset-password.html#access_token=${req.query.token}&type=recovery`);
+  }
+  res.redirect('/auth-standalone.html');
+});
+
+// These routes already exist earlier in the file (around line 549)
+// We've updated those to serve the correct files
 
 // Import routes and middleware
 const authRoutes = require('./src/routes/authRoutes');
@@ -297,7 +591,7 @@ app.use('/api/user', userRoutes);
 
 // Serve HTML pages
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/signup', (req, res) => {
@@ -305,17 +599,75 @@ app.get('/signup', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'login.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Alternative route to the same login page to bypass Safari security restrictions
 app.get('/account-access', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'login.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Login processing page specifically for Safari browser
 app.get('/login-process', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'login-process.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login-process.html'));
+});
+
+// These routes have been moved before the static middleware
+
+// Health check endpoints
+app.get('/healthz', (req, res) => {
+  const uptime = process.uptime();
+  const memoryUsage = process.memoryUsage();
+  
+  const healthCheck = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0',
+    instanceId,
+    environment: process.env.NODE_ENV || 'development',
+    uptime: Math.floor(uptime),
+    memory: {
+      rss: memoryUsage.rss,
+      heapTotal: memoryUsage.heapTotal,
+      heapUsed: memoryUsage.heapUsed,
+      external: memoryUsage.external,
+      arrayBuffers: memoryUsage.arrayBuffers,
+    },
+    services: {
+      database: 'connected',
+      cache: 'enabled',
+      auth: 'configured',
+    },
+  };
+
+  // Check if any critical service is down
+  const criticalServices = Object.values(healthCheck.services);
+  if (criticalServices.includes('error')) {
+    healthCheck.status = 'error';
+    return res.status(503).json(healthCheck);
+  } else if (criticalServices.includes('warning')) {
+    healthCheck.status = 'warning';
+    return res.status(200).json(healthCheck);
+  }
+
+  res.status(200).json(healthCheck);
+});
+
+// Readiness check
+app.get('/ready', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Liveness check
+app.get('/live', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+  });
 });
 
 // Special Safari entry point to help with Safari's security restrictions
@@ -323,9 +675,7 @@ app.get('/safari', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'safari-entry.html'));
 });
 
-app.get('/scan', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'scan.html'));
-});
+// '/scan' route is already defined earlier
 
 app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'reset-password.html'));
@@ -346,20 +696,10 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
 });
 
-app.get('/scan', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'scan.html'));
-});
-
-app.get('/request-pickup', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'request-pickup.html'));
-});
+// '/scan', '/request-pickup', and '/report-dumping' routes are already defined earlier
 
 app.get('/schedule-pickup', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'schedule-pickup.html'));
-});
-
-app.get('/report-dumping', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'report-dumping.html'));
 });
 
 app.get('/profile', (req, res) => {
@@ -384,40 +724,172 @@ app.get('/reports', (req, res) => {
 
 // Handle Order Bags route to redirect to dashboard with modal trigger
 app.get('/order-bags', (req, res) => {
-  res.redirect('/dashboard?openModal=orderBags');
+res.redirect('/dashboard?openModal=orderBags');
 });
 
 app.get('/scanner-test', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'scanner-test.html'));
+res.sendFile(path.join(__dirname, 'views', 'scanner-test.html'));
+});
+
+// Serve reset-password.html
+app.get('/reset-password.html', (req, res) => {
+res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
 });
 
 // Health check endpoint for Docker/container orchestration
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Error handler
+// Serve static files from public directory with proper caching
+app.use(express.static('public', {
+  maxAge: '1d',
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      // Don't cache HTML files
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+    } else {
+      // Cache other static assets for 1 day
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }
+}));
+
+// Client configuration endpoints
+
+// Comprehensive client configuration endpoint
+app.get('/api/config/client', (req, res) => {
+  try {
+    // Create a safe client configuration subset
+    const clientConfig = {
+      app: {
+        name: config.app.name,
+        env: config.app.env,
+        version: config.app.version,
+        currentUrl: `${req.protocol}://${req.get('host')}`,
+      },
+      supabase: {
+        url: config.supabase.url,
+        anonKey: config.supabase.anonKey,
+      },
+      features: {
+        isDevelopment: config.server.isDevelopment,
+        isProduction: config.server.isProduction,
+      },
+      // Include any other client-side configuration from config.client
+      ...(config.client || {})
+    };
+    
+    // Cache control for development vs production
+    if (config.server.isDevelopment) {
+      res.setHeader('Cache-Control', 'no-cache, no-store');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes for production
+    }
+    
+    res.json(clientConfig);
+  } catch (error) {
+    console.error('Error serving client config:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Secure endpoint to get Supabase configuration
+app.get('/api/config/supabase', (req, res) => {
+  try {
+    // Only expose the necessary public configuration
+    res.json({
+      url: config.supabase.url,
+      anonKey: config.supabase.anonKey,
+      // Add any other public configuration needed by the client
+    });
+  } catch (error) {
+    console.error('Error serving Supabase config:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
-});
-
-// Start server
-// Start server with optional HTTPS support
-if (process.env.HTTPS_ENABLED === 'true' && process.env.SSL_KEY && process.env.SSL_CERT) {
-  const fs = require('fs');
-  const https = require('https');
-  const options = {
-    key: fs.readFileSync(process.env.SSL_KEY),
-    cert: fs.readFileSync(process.env.SSL_CERT)
+  const errorId = req.id || uuidv4();
+  const timestamp = new Date().toISOString();
+  const clientIp = req.ip || req.connection.remoteAddress;
+  const userAgent = req.get('User-Agent') || 'unknown';
+  const requestInfo = {
+    method: req.method,
+    url: req.originalUrl,
+    params: req.params,
+    query: req.query,
+    headers: {
+      'user-agent': userAgent,
+      'x-forwarded-for': req.get('x-forwarded-for'),
+    },
+    body: req.body,
   };
-  
-  https.createServer(options, app).listen(process.env.HTTPS_PORT || 443, () => {
-    console.log(`HTTPS Server running on port ${process.env.HTTPS_PORT || 443}`);
-  });
-}
 
-// Always start HTTP server for local development and as fallback
-app.listen(PORT, () => {
-  console.log(`HTTP Server running on port ${PORT}`);
+  // Log the error with context
+  console.error(`[${timestamp}] [${errorId}] [${clientIp}] Error:`, {
+    message: err.message,
+    stack: err.stack,
+    request: requestInfo,
+  });
+
+  // Determine the status code
+  const statusCode = err.statusCode || 500;
+  
+  // Prepare error response
+  const errorResponse = {
+    error: {
+      id: errorId,
+      code: err.code || 'INTERNAL_SERVER_ERROR',
+      message: statusCode >= 500 && !isDevelopment ? 'Internal Server Error' : err.message,
+      timestamp,
+      ...(isDevelopment && { stack: err.stack }),
+    },
+  };
+
+  // Send the error response
+  res.status(statusCode).json(errorResponse);
 });
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      code: 'NOT_FOUND',
+      message: 'The requested resource was not found',
+    },
+  });
+});
+
+// Export the Express app for Firebase Functions
+module.exports = { app };
+
+// Only start the server if this file is run directly (not required by Firebase Functions)
+if (require.main === module) {
+  // Start server with optional HTTPS support
+  if (process.env.HTTPS_ENABLED === 'true' && process.env.SSL_KEY && process.env.SSL_CERT) {
+    const fs = require('fs');
+    const https = require('https');
+    const options = {
+      key: fs.readFileSync(process.env.SSL_KEY),
+      cert: fs.readFileSync(process.env.SSL_CERT)
+    };
+    
+    https.createServer(options, app).listen(PORT, '0.0.0.0', () => {
+      console.log(`HTTPS Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Server running in ${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'} mode`);
+    });
+  } else {
+    // Start HTTP server
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`HTTP Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Server running in ${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'} mode`);
+    });
+  }
+}

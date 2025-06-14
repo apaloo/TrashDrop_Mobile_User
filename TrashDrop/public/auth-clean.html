@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrashDrop Auth - Clean</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        body {
+            padding: 2rem 0;
+            background-color: #f8f9fa;
+        }
+        
+        .auth-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-control:focus {
+            border-color: #198754;
+            box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+        }
+        
+        .btn-primary {
+            background-color: #198754;
+            border-color: #198754;
+        }
+        
+        .btn-primary:hover {
+            background-color: #157347;
+            border-color: #146c43;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="auth-container">
+            <div class="text-center mb-4">
+                <h2>Welcome to TrashDrop</h2>
+                <p class="text-muted">Sign up or sign in to continue</p>
+            </div>
+            
+            <!-- Sign Up Form -->
+            <div id="signup-form">
+                <form id="signup-form-step1">
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="phone" required 
+                               placeholder="+1234567890" pattern="\+[0-9]{10,15}">
+                        <div class="invalid-feedback">
+                            Please enter a valid phone number with country code (e.g., +1234567890).
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Send Verification Code
+                    </button>
+                </form>
+                
+                <form id="signup-form-step2" class="d-none">
+                    <div class="mb-3">
+                        <label for="otp" class="form-label">Verification Code</label>
+                        <input type="text" class="form-control" id="otp" required 
+                               placeholder="Enter 6-digit code" pattern="[0-9]{6}">
+                        <div class="invalid-feedback">
+                            Please enter the 6-digit verification code.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" required
+                               minlength="6" placeholder="Create a password">
+                        <div class="invalid-feedback">
+                            Password must be at least 6 characters long.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Create Account
+                    </button>
+                    <button type="button" id="back-to-step1" class="btn btn-outline-secondary w-100 mt-2">
+                        Back
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div id="loading" class="text-center d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Processing your request...</p>
+            </div>
+            
+            <!-- Error Message -->
+            <div id="error-message" class="alert alert-danger d-none" role="alert">
+                <strong>Error:</strong> <span id="error-text"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Custom Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM Elements
+        const signupFormStep1 = document.getElementById('signup-form-step1');
+        const signupFormStep2 = document.getElementById('signup-form-step2');
+        const backToStep1Btn = document.getElementById('back-to-step1');
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error-message');
+        const errorTextEl = document.getElementById('error-text');
+        
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://cpeyavpxqcloupolbvyh.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwZXlhdnB4cWNsb3Vwb2xidnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTY4OTYsImV4cCI6MjA2MTA3Mjg5Nn0.5rxsiRuLHCpeJZ5TqoIA5X4UwoAAuxIpNu_reafwwbQ';
+        
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true,
+                storage: {
+                    getItem: (key) => localStorage.getItem(key),
+                    setItem: (key, value) => localStorage.setItem(key, value),
+                    removeItem: (key) => localStorage.removeItem(key)
+                },
+                storageKey: `sb-${SUPABASE_URL.replace(/^https?:\/\//, '').split('/')[0]}-auth-token`,
+                phone: true
+            }
+        });
+        
+        // Make supabase available globally
+        window.supabase = supabase;
+        
+        // Event Listeners
+        signupFormStep1.addEventListener('submit', handleSignupStep1);
+        signupFormStep2.addEventListener('submit', handleSignupStep2);
+        backToStep1Btn.addEventListener('click', showStep1);
+        
+        // Form Handlers
+        async function handleSignupStep1(e) {
+            e.preventDefault();
+            
+            const phone = document.getElementById('phone').value.trim();
+            const submitBtn = signupFormStep1.querySelector('button[type="submit"]');
+            const spinner = submitBtn.querySelector('.spinner-border');
+            
+            try {
+                // Show loading state
+                submitBtn.disabled = true;
+                spinner.classList.remove('d-none');
+                hideError();
+                
+                // Send OTP
+                const { error } = await supabase.auth.signInWithOtp({
+                    phone: phone,
+                    options: {
+                        shouldCreateUser: true
+                    }
+                });
+                
+                if (error) throw error;
+                
+                // Show OTP input
+                showStep2();
+                
+            } catch (error) {
+                console.error('Error sending OTP:', error);
+                showError(error.message || 'Failed to send verification code. Please try again.');
+            } finally {
+                // Reset loading state
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        }
+        
+        async function handleSignupStep2(e) {
+            e.preventDefault();
+            
+            const otp = document.getElementById('otp').value.trim();
+            const password = document.getElementById('password').value;
+            const submitBtn = signupFormStep2.querySelector('button[type="submit"]');
+            const spinner = submitBtn.querySelector('.spinner-border');
+            
+            try {
+                // Show loading state
+                submitBtn.disabled = true;
+                spinner.classList.remove('d-none');
+                hideError();
+                
+                // Verify OTP and sign in
+                const { data, error } = await supabase.auth.verifyOtp({
+                    phone: document.getElementById('phone').value.trim(),
+                    token: otp,
+                    type: 'sms'
+                });
+                
+                if (error) throw error;
+                
+                // If we get here, OTP was verified successfully
+                // Now update the user's password
+                const { error: updateError } = await supabase.auth.updateUser({
+                    password: password
+                });
+                
+                if (updateError) throw updateError;
+                
+                // Redirect to dashboard or home page
+                window.location.href = '/dashboard.html';
+                
+            } catch (error) {
+                console.error('Error verifying OTP:', error);
+                showError(error.message || 'Failed to verify code. Please try again.');
+            } finally {
+                // Reset loading state
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        }
+        
+        // UI Helpers
+        function showStep1() {
+            signupFormStep1.classList.remove('d-none');
+            signupFormStep2.classList.add('d-none');
+        }
+        
+        function showStep2() {
+            signupFormStep1.classList.add('d-none');
+            signupFormStep2.classList.remove('d-none');
+            document.getElementById('otp').focus();
+        }
+        
+        function showLoading(show = true) {
+            loadingEl.classList.toggle('d-none', !show);
+            signupFormStep1.style.display = show ? 'none' : 'block';
+            signupFormStep2.style.display = show ? 'none' : 'block';
+        }
+        
+        function showError(message) {
+            errorTextEl.textContent = message;
+            errorEl.classList.remove('d-none');
+            window.scrollTo(0, 0);
+        }
+        
+        function hideError() {
+            errorEl.classList.add('d-none');
+        }
+        
+        // Bootstrap form validation
+        (function () {
+            'use strict'
+            
+            // Fetch all the forms we want to apply custom Bootstrap validation styles to
+            const forms = document.querySelectorAll('.needs-validation')
+            
+            // Loop over them and prevent submission
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    
+                    form.classList.add('was-validated')
+                }, false)
+            })
+        })()
+    });
+    </script>
+</body>
+</html>

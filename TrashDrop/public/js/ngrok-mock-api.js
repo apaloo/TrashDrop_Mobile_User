@@ -116,137 +116,248 @@
     
     // Mock the signup endpoint
     mockSignup: function(options) {
+      console.log('Mock signup called with options:', options);
+      
       // Parse the request body if available
       let userData = {};
       if (options && options.body) {
         try {
-          userData = JSON.parse(options.body);
+          userData = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+          console.log('Parsed user data:', userData);
+          
           // Store user data in localStorage for the verification step
-          localStorage.setItem('ngrok_pending_user', JSON.stringify(userData));
-          console.log('TrashDrop: Stored pending user data for ngrok mock signup', userData);
+          const mockUser = {
+            id: 'mock-user-' + Date.now(),
+            email: userData.email || '',
+            phone: userData.phone || '',
+            name: userData.name || '',
+            created_at: new Date().toISOString(),
+            email_confirmed: false,
+            phone_confirmed: false
+          };
+          
+          // Store the mock user data
+          localStorage.setItem('ngrok_pending_user', JSON.stringify(mockUser));
+          console.log('Stored mock user data:', mockUser);
+          
+          // Generate a mock verification code (6 digits)
+          const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+          localStorage.setItem('mock_verification_code', verificationCode);
+          console.log('Generated verification code:', verificationCode);
+          
+          // In a real scenario, you would send this code via SMS/email
+          // For testing purposes, we'll log it to the console
+          console.log(`[MOCK] Verification code for ${mockUser.phone || mockUser.email}: ${verificationCode}`);
+          
+          return {
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({
+              success: true,
+              message: 'Verification code sent successfully',
+              phone: mockUser.phone || 'unknown',
+              userId: mockUser.id
+            })
+          };
+          
         } catch (e) {
-          console.error('Error parsing signup request body:', e);
+          console.error('Error in mock signup:', e);
+          return {
+            ok: false,
+            status: 400,
+            json: () => Promise.resolve({
+              success: false,
+              message: 'Failed to process signup: ' + e.message
+            })
+          };
         }
+      } else {
+        return {
+          ok: false,
+          status: 400,
+          json: () => Promise.resolve({
+            success: false,
+            message: 'No data provided for signup'
+          })
+        };
       }
-      
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({
-          success: true,
-          message: 'Verification code sent successfully',
-          phone: userData.phone || 'unknown'
-        })
-      });
     },
     
     // Mock the verify OTP endpoint
     mockVerifyOTP: function(options) {
+      console.log('Mock OTP verification called with options:', options);
+      
       // Parse the request body if available
       let verifyData = {};
       if (options && options.body) {
         try {
-          verifyData = JSON.parse(options.body);
+          verifyData = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+          console.log('Verifying OTP with data:', verifyData);
+          
+          // Get the stored verification code and user data
+          const storedCode = localStorage.getItem('mock_verification_code');
+          const storedUser = JSON.parse(localStorage.getItem('ngrok_pending_user') || 'null');
+          
+          console.log('Stored verification code:', storedCode);
+          console.log('Stored user data:', storedUser);
+          
+          // Check if we have a stored code and user data
+          if (!storedCode || !storedUser) {
+            console.error('No pending verification found');
+            return {
+              ok: false,
+              status: 400,
+              json: () => Promise.resolve({
+                success: false,
+                message: 'No pending verification found. Please try signing up again.'
+              })
+            };
+          }
+          
+          // Check if the provided OTP matches the stored code
+          if (verifyData.otp === storedCode) {
+            console.log('OTP verification successful');
+            
+            // Update user as verified
+            storedUser.email_confirmed = true;
+            if (verifyData.phone) {
+              storedUser.phone_confirmed = true;
+            }
+            
+            // Generate a mock JWT token
+            const mockToken = 'mock-jwt-token-' + Date.now();
+            
+            // Store the verified user and token
+            localStorage.setItem('ngrok_verified_user', JSON.stringify(storedUser));
+            localStorage.setItem('ngrok_mock_token', mockToken);
+            localStorage.setItem('token', mockToken);
+            localStorage.setItem('jwt_token', mockToken);
+            
+            // Clean up the verification code
+            localStorage.removeItem('mock_verification_code');
+            
+            // Also store in dev_user for compatibility
+            localStorage.setItem('dev_user', JSON.stringify(storedUser));
+            
+            return {
+              ok: true,
+              status: 200,
+              json: () => Promise.resolve({
+                success: true,
+                message: 'Account created and verified successfully',
+                user: storedUser,
+                token: mockToken,
+                userId: storedUser.id
+              })
+            };
+          } else {
+            console.log('Invalid OTP provided');
+            return {
+              ok: false,
+              status: 400,
+              json: () => Promise.resolve({
+                success: false,
+                message: 'Invalid verification code. Please try again.'
+              })
+            };
+          }
+          
         } catch (e) {
-          console.error('Error parsing verify OTP request body:', e);
+          console.error('Error in mock OTP verification:', e);
+          return {
+            ok: false,
+            status: 400,
+            json: () => Promise.resolve({
+              success: false,
+              message: 'Error verifying OTP: ' + e.message
+            })
+          };
         }
       }
-      
-      // Get the pending user data
-      let userData = {};
-      try {
-        const storedData = localStorage.getItem('ngrok_pending_user');
-        if (storedData) {
-          userData = JSON.parse(storedData);
-        }
-      } catch (e) {
-        console.error('Error retrieving pending user data:', e);
-      }
-      
-      // Create a mock user
-      const mockUser = {
-        id: 'ngrok-user-' + Date.now(),
-        phone: verifyData.phone || userData.phone || 'unknown',
-        name: userData.name || 'Ngrok Test User',
-        created_at: new Date().toISOString()
-      };
-      
-      // Store the user in localStorage
-      localStorage.setItem('ngrok_user', JSON.stringify(mockUser));
-      localStorage.setItem('dev_user', JSON.stringify(mockUser));
-      
-      // Generate and store mock tokens
-      const mockToken = 'ngrok-jwt-token-' + Date.now();
-      localStorage.setItem('ngrok_mock_token', mockToken);
-      localStorage.setItem('token', mockToken);
-      localStorage.setItem('jwt_token', mockToken);
-      
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({
-          success: true,
-          message: 'Account created successfully',
-          user: mockUser,
-          token: mockToken
-        })
-      });
     },
     
     // Mock the login endpoint
     mockLogin: function(options) {
+      console.log('Mock login called with options:', options);
+      
       // Parse the request body if available
       let loginData = {};
       if (options && options.body) {
         try {
-          loginData = JSON.parse(options.body);
-        } catch (e) {
-          console.error('Error parsing login request body:', e);
-        }
-      }
-      
-      // Get or create a mock user
-      let mockUser;
-      try {
-        const storedUser = localStorage.getItem('ngrok_user');
-        if (storedUser) {
-          mockUser = JSON.parse(storedUser);
-        } else {
-          mockUser = {
-            id: 'ngrok-user-' + Date.now(),
-            phone: loginData.phone || 'unknown',
-            name: 'Ngrok Test User',
-            created_at: new Date().toISOString()
+          loginData = typeof options.body === 'string' ? JSON.parse(options.body) : options.body;
+          console.log('Login attempt with data:', loginData);
+          
+          // Check if we have a verified user in localStorage
+          let storedUser = null;
+          try {
+            const storedUserData = localStorage.getItem('ngrok_verified_user');
+            if (storedUserData) {
+              storedUser = JSON.parse(storedUserData);
+            }
+          } catch (e) {
+            console.error('Error parsing stored user data:', e);
+          }
+          
+          // If no stored user, create a new one (for testing purposes)
+          if (!storedUser) {
+            console.log('No stored user found, creating a new one');
+            storedUser = {
+              id: 'mock-user-' + Date.now(),
+              email: loginData.email || 'test@example.com',
+              name: 'Test User',
+              email_confirmed: true,
+              created_at: new Date().toISOString()
+            };
+            localStorage.setItem('ngrok_verified_user', JSON.stringify(storedUser));
+          }
+          
+          // Generate a new token
+          const mockToken = 'mock-jwt-token-' + Date.now();
+          
+          // Store the token
+          localStorage.setItem('ngrok_mock_token', mockToken);
+          localStorage.setItem('token', mockToken);
+          localStorage.setItem('jwt_token', mockToken);
+          
+          // For compatibility
+          localStorage.setItem('dev_user', JSON.stringify(storedUser));
+          
+          console.log('Login successful for user:', storedUser.email);
+          
+          return {
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({
+              success: true,
+              message: 'Login successful',
+              user: storedUser,
+              token: mockToken,
+              userId: storedUser.id
+            })
           };
-          localStorage.setItem('ngrok_user', JSON.stringify(mockUser));
-          localStorage.setItem('dev_user', JSON.stringify(mockUser));
+          
+        } catch (e) {
+          console.error('Error in mock login:', e);
+          return {
+            ok: false,
+            status: 400,
+            json: () => Promise.resolve({
+              success: false,
+              message: 'Login failed: ' + e.message
+            })
+          };
         }
-      } catch (e) {
-        console.error('Error retrieving/creating mock user:', e);
-        mockUser = {
-          id: 'ngrok-user-' + Date.now(),
-          phone: loginData.phone || 'unknown',
-          name: 'Ngrok Test User',
-          created_at: new Date().toISOString()
-        };
       }
       
-      // Generate and store mock tokens
-      const mockToken = 'ngrok-jwt-token-' + Date.now();
-      localStorage.setItem('ngrok_mock_token', mockToken);
-      localStorage.setItem('token', mockToken);
-      localStorage.setItem('jwt_token', mockToken);
-      
-      return Promise.resolve({
-        ok: true,
-        status: 200,
+      // Default error response if no body provided
+      return {
+        ok: false,
+        status: 400,
         json: () => Promise.resolve({
-          success: true,
-          message: 'Login successful',
-          user: mockUser,
-          token: mockToken
+          success: false,
+          message: 'No login data provided'
         })
-      });
+      };
     }
   };
   

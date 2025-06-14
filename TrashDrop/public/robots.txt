@@ -1,0 +1,20 @@
+# Allow all robots to access all content
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://trashdrop-app.web.app/sitemap.xml
+
+# Crawl-delay for all crawlers
+Crawl-delay: 10
+
+# Disallow admin and API endpoints
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+
+# Allow all other paths
+Allow: /*?*
+
+# Set the preferred host (canonical URL)
+Host: trashdrop-app.web.app

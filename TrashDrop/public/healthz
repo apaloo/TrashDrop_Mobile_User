@@ -1,0 +1,12 @@
+{
+  "status": "ok",
+  "timestamp": "2025-06-03T12:00:00Z",
+  "version": "1.0.0",
+  "services": {
+    "database": "connected",
+    "cache": "enabled",
+    "auth": "configured"
+  },
+  "uptime": 0,
+  "environment": "development"
+}

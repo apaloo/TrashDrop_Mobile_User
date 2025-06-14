@@ -1,6 +1,28 @@
 // TrashDrop QR Code Scanner - Updated Version
 // Combines the working scanner functionality with existing bag management features
 
+// Development mode check
+const isDevelopment = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname === '';
+
+// Development storage utility
+const devUserStorage = {
+    _storage: {},
+    getToken() {
+        return this._storage.token || localStorage.getItem('devAuthToken');
+    },
+    setToken(token) {
+        this._storage.token = token;
+        localStorage.setItem('devAuthToken', token);
+        return token;
+    },
+    clearToken() {
+        delete this._storage.token;
+        localStorage.removeItem('devAuthToken');
+    }
+};
+
 // Create OfflineManager namespace for handling offline operations
 window.OfflineManager = {
     // Database configuration
@@ -224,17 +246,43 @@ let isScanning = false;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Scanner script loaded');
     
-    // Check authentication
-    const isAuthenticated = await AuthManager.isAuthenticated();
+    // Simple check for AuthManager
+    const isAuthManagerAvailable = () => {
+        return window.AuthManager && typeof window.AuthManager.isAuthenticated === 'function';
+    };
     
-    if (!isAuthenticated) {
+    // Development mode check is now at the top of the file
+    
+    // Development mode bypass - allows testing scanner without auth in development
+    if (isDevelopment) {
+        console.warn('Development mode: Auth check bypassed');
+        // Continue with scanner initialization
+    } 
+    // Check authentication in production
+    else if (isAuthManagerAvailable()) {
+        try {
+            const isAuthenticated = await window.AuthManager.isAuthenticated();
+            if (!isAuthenticated) {
+                console.log('User not authenticated, redirecting to login');
+                window.location.href = '/login';
+                return;
+            }
+        } catch (error) {
+            console.error('Authentication check failed:', error);
+            window.location.href = '/login';
+            return;
+        }
+    } 
+    // If AuthManager is not available in production, redirect to login
+    else {
+        console.error('AuthManager not available');
         window.location.href = '/login';
         return;
     }
     
-    // Ensure we always have a development token for testing
-    if (!devUserStorage.getToken()) {
-        console.log('Creating development authentication token');
+    // Ensure we always have a development token for testing in development mode
+    if (isDevelopment && (!devUserStorage.getToken() || !window.AuthManager)) {
+        console.log('Development mode: Using development authentication token');
         devUserStorage.setToken('dev-token-' + Date.now());
     }
     
@@ -690,16 +738,34 @@ function updatePointsDisplay(points) {
 // Load user profile data
 async function loadUserData() {
     try {
-        const user = await AuthManager.getCurrentUser();
-        if (!user) {
-            console.error('User not found');
-            return;
+        let user = null;
+        
+        // Try to get user from AuthManager if available
+        if (window.AuthManager && typeof window.AuthManager.getCurrentUser === 'function') {
+            user = await window.AuthManager.getCurrentUser();
+            if (!user) {
+                console.warn('AuthManager returned no user');
+                // Continue with development user if in development mode
+                if (!isDevelopment) return;
+            }
+        } else {
+            console.warn('AuthManager not available');
+            if (!isDevelopment) return;
+        }
+        
+        // For development or when AuthManager fails
+        if (!user && isDevelopment) {
+            console.log('Using development user data');
+            user = {
+                name: 'Development User',
+                points: 0
+            };
         }
         
         // Update user name display
         const userNameDisplay = document.getElementById('user-name-display');
-        if (userNameDisplay && user.name) {
-            userNameDisplay.textContent = user.name;
+        if (userNameDisplay) {
+            userNameDisplay.textContent = user?.name || 'Guest User';
         }
         
         // Update user points display

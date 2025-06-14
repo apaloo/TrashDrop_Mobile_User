@@ -293,6 +293,9 @@ if (window.authStabilizerInitialized) {
   
   // ===== FORM SUBMISSION HANDLING =====
   
+  // Track active form submissions
+  const activeSubmissions = new Map();
+  
   // Fix form submission to prevent double submits
   function fixFormSubmissions() {
     document.addEventListener('DOMContentLoaded', function() {
@@ -300,27 +303,140 @@ if (window.authStabilizerInitialized) {
       const forms = document.querySelectorAll('form');
       
       forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-          // Check if we've already submitted this form
-          if (this.dataset.submitted === 'true') {
-            console.log('🛑 Preventing duplicate form submission');
-            e.preventDefault();
-            return false;
-          }
+        // Skip if this form already has our enhanced handling
+        if (form.dataset.enhancedSubmit === 'true') {
+          return;
+        }
+        
+        // Add a small delay to ensure other handlers are attached first
+        setTimeout(() => {
+          // Use a named function for proper removal
+          const submitHandler = function(e) {
+            // Check if we have a custom login state handler that's already handling this
+            if (window.loginState && window.loginState.isInProgress()) {
+              const submissionId = form.getAttribute('data-submission-id');
+              console.log(`🔒 Login in progress (ID: ${submissionId || 'none'}) - submission handled by login state manager`);
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return false;
+            }
+            
+            // Check if this form is already being submitted
+            if (this.dataset.submitted === 'true') {
+              console.log('🛑 Preventing duplicate form submission (form already submitted)');
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return false;
+            }
+            
+            // Generate a unique ID for this submission
+            const submissionId = 'sub_' + Math.random().toString(36).substr(2, 9);
+            this.dataset.submitted = 'true';
+            this.setAttribute('data-submission-id', submissionId);
+            
+            // Track this submission
+            activeSubmissions.set(submissionId, {
+              form: this,
+              timestamp: Date.now(),
+              timer: setTimeout(() => {
+                console.log(`🕒 Clearing stale submission (ID: ${submissionId})`);
+                this.dataset.submitted = 'false';
+                this.removeAttribute('data-submission-id');
+                activeSubmissions.delete(submissionId);
+              }, 10000) // Clear after 10 seconds if not completed
+            });
+            
+            console.log(`📝 Form submission started (ID: ${submissionId})`);
+          };
           
-          // Mark as submitted
-          this.dataset.submitted = 'true';
+          // Store the handler reference on the form for later removal
+          form._submitHandler = submitHandler;
           
-          // Reset the submitted state after 5 seconds (in case the submission fails)
-          setTimeout(() => {
-            this.dataset.submitted = 'false';
-          }, 5000);
-        });
+          // Add the event listener with capture to ensure we run first
+          form.addEventListener('submit', submitHandler, { capture: true, passive: false });
+          
+          // Mark this form as enhanced
+          form.dataset.enhancedSubmit = 'true';
+          console.log('✅ Enhanced form submission handler installed');
+        }, 100);
       });
       
-      console.log('📝 Form submission handlers installed');
+      console.log('📝 Form submission handlers initialized');
     });
   }
+  
+  // Add methods to coordinate with login state manager
+  window.authStabilizer = window.authStabilizer || {};
+  
+  /**
+   * Notify the stabilizer about a form submission
+   * @param {HTMLFormElement} form - The form being submitted
+   * @param {string} submissionId - The submission ID from the login state manager
+   */
+  window.authStabilizer.notifyFormSubmission = function(form, submissionId) {
+    console.log(`🔔 Login state manager started submission (ID: ${submissionId})`);
+    
+    // Clear any existing timeout for this form
+    const existingSubmission = activeSubmissions.get(submissionId);
+    if (existingSubmission && existingSubmission.timer) {
+      clearTimeout(existingSubmission.timer);
+    }
+    
+    // Update the submission with the login state manager's ID
+    activeSubmissions.set(submissionId, {
+      form,
+      timestamp: Date.now(),
+      managedByLoginState: true
+    });
+  };
+  
+  /**
+   * Notify the stabilizer that a submission is complete
+   * @param {string} submissionId - The submission ID that completed
+   */
+  window.authStabilizer.notifySubmissionComplete = function(submissionId) {
+    if (!submissionId) {
+      console.log('🔔 Login state manager completed an untracked submission');
+      return;
+    }
+    
+    console.log(`🔔 Login state manager completed submission (ID: ${submissionId})`);
+    
+    const submission = activeSubmissions.get(submissionId);
+    if (submission) {
+      // Clean up the form state
+      if (submission.form) {
+        submission.form.dataset.submitted = 'false';
+        submission.form.removeAttribute('data-submission-id');
+      }
+      
+      // Clear any pending timeout
+      if (submission.timer) {
+        clearTimeout(submission.timer);
+      }
+      
+      // Remove from active submissions
+      activeSubmissions.delete(submissionId);
+    }
+  };
+  
+  // Clean up any lingering submissions after a period of inactivity
+  setInterval(() => {
+    const now = Date.now();
+    const timeout = 30000; // 30 seconds
+    
+    for (const [id, submission] of activeSubmissions.entries()) {
+      if (now - submission.timestamp > timeout) {
+        console.log(`🧹 Cleaning up old submission (ID: ${id})`);
+        if (submission.timer) clearTimeout(submission.timer);
+        if (submission.form) {
+          submission.form.dataset.submitted = 'false';
+          submission.form.removeAttribute('data-submission-id');
+        }
+        activeSubmissions.delete(id);
+      }
+    }
+  }, 60000); // Check every minute
   
   // ===== SAFARI-SPECIFIC FIXES =====
   

@@ -1,3 +1,15 @@
+// Development mode check
+const isDevelopment = window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1' || 
+                   window.location.hostname === '';
+
+// Development user data
+const devUser = {
+    id: 'dev-user-' + Date.now(),
+    email: 'dev@example.com',
+    name: 'Development User'
+};
+
 // Supabase client is already initialized in auth.js
 // We'll use the existing supabase instance
 
@@ -31,20 +43,40 @@ window.addEventListener('error', function(event) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Authentication check
-    user = await AuthManager.getCurrentUser();
-    if (!user) {
-        const isAuthenticated = await AuthManager.isAuthenticated();
-        if (!isAuthenticated) {
+    try {
+        if (window.AuthManager) {
+            user = await window.AuthManager.getCurrentUser();
+            if (!user) {
+                const isAuthenticated = await window.AuthManager.isAuthenticated();
+                if (!isAuthenticated) {
+                    if (!isDevelopment) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                } else {
+                    // Get user profile
+                    user = await window.AuthManager.getUserProfile();
+                }
+            }
+        } else if (!isDevelopment) {
+            console.error('AuthManager not available');
             window.location.href = '/login';
             return;
         }
         
-        // Get user profile
-        user = await AuthManager.getUserProfile();
-        if (!user) {
-            showToast('Error loading user profile');
+        // Use development user if in development mode and no user is authenticated
+        if ((!user || !user.id) && isDevelopment) {
+            console.log('Using development user');
+            user = devUser;
+        }
+    } catch (error) {
+        console.error('Authentication error:', error);
+        if (!isDevelopment) {
+            window.location.href = '/login';
             return;
         }
+        console.log('Continuing with development mode after auth error');
+        user = devUser;
     }
     
     // Initialize offline handling
