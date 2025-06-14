@@ -1,20 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- MINIMAL REFRESH BLOCKER - SINGLE SCRIPT SOLUTION -->    
-    <script src="/js/refresh-blocker.js"></script>
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Protocol interceptor must run early, before meta tags are processed -->
+    <script src="/js/protocol-interceptor.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-    <meta name="description" content="TrashDrop - Your mobile waste management solution for scheduling pickups, tracking collection, and earning rewards">
-    <title>TrashDrop - Waste Management Made Easy</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/accessibility.css">
-    <link rel="stylesheet" href="/css/navbar-fix.css">
-    <link rel="stylesheet" href="/css/hide-emergency-logout.css">
-    <link rel="stylesheet" href="/css/pwa-install-prompt.css">
-    <link rel="stylesheet" href="/css/pwa-fullscreen.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="TrashDrop - A modern waste management solution connecting communities with waste collection services">
+    <title>TrashDrop - Smart Waste Management</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+    <!-- Base URL script to handle navigation URLs correctly -->
+    <script src="/js/base-url.js"></script>
+
+    <!-- Dynamic resource loading -->
+    <script>
+        // Load CSS resources dynamically
+        async function loadStyles() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title and meta
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const pageTitle = window.AppConfig.get('ui.pages.home.title') || 'Smart Waste Management';
+                document.title = `${appName} - ${pageTitle}`;
+                
+                // Update meta description
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) {
+                    metaDesc.setAttribute('content', 
+                        window.AppConfig.get('ui.pages.home.description') || 
+                        `${appName} - A modern waste management solution connecting communities with waste collection services`);
+                }
+                
+                // Update theme color
+                const themeColor = document.querySelector('meta[name="theme-color"]');
+                if (themeColor) {
+                    themeColor.setAttribute('content', 
+                        window.AppConfig.get('theme.primaryColor') || '#4CAF50');
+                }
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css') || 
+                                        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = bootstrapCssUrl;
+                document.head.appendChild(bootstrapCss);
+                
+                // Load Bootstrap Icons
+                const bootstrapIconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons') || 
+                                         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                
+                const bootstrapIcons = document.createElement('link');
+                bootstrapIcons.rel = 'stylesheet';
+                bootstrapIcons.href = bootstrapIconsUrl;
+                document.head.appendChild(bootstrapIcons);
+                
+                // Load application CSS
+                const cssFiles = [
+                    '/css/styles.css',
+                    '/css/accessibility.css',
+                    '/css/dark-theme.css',
+                    '/css/navbar-fix.css',
+                    '/css/mobile-nav-fix.css',
+                    '/css/navbar-content-fix.css'
+                ];
+                
+                cssFiles.forEach(file => {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = file;
+                    document.head.appendChild(link);
+                });
+                
+                console.log('Dynamic styles loaded successfully');
+            } catch (error) {
+                console.error('Error loading dynamic styles:', error);
+                
+                // Fallback to default CSS if configuration fails
+                const fallbackCss = document.createElement('link');
+                fallbackCss.rel = 'stylesheet';
+                fallbackCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                document.head.appendChild(fallbackCss);
+                
+                const fallbackIcons = document.createElement('link');
+                fallbackIcons.rel = 'stylesheet';
+                fallbackIcons.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                document.head.appendChild(fallbackIcons);
+                
+                // Add critical navbar CSS files as fallbacks
+                ['/css/styles.css', '/css/navbar-fix.css', '/css/mobile-nav-fix.css', '/css/navbar-content-fix.css'].forEach(file => {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = file;
+                    document.head.appendChild(link);
+                });
+            }
+        }
+        
+        // Initialize styles when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadStyles);
+    </script>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
     <!-- iOS Safari specific settings -->
@@ -39,16 +132,50 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
 
-    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/images/logo.svg" alt="TrashDrop Logo" width="28" height="28" class="d-inline-block align-top me-2">
+            <a class="navbar-brand" href="/" id="navbarBrand">
+                <img id="navLogo" src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
                 TrashDrop
             </a>
+            <script>
+                // Dynamically update navbar brand and logo from AppConfig
+                document.addEventListener('DOMContentLoaded', async () => {
+                    try {
+                        if (!window.AppConfig || !window.AppConfig.initialized) {
+                            await window.AppConfig.initialize();
+                        }
+                        
+                        const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                        const logoPath = window.AppConfig.get('branding.logo') || '/images/logo.svg';
+                        
+                        // Update brand text
+                        const brandElement = document.getElementById('navbarBrand');
+                        if (brandElement) {
+                            const textNode = Array.from(brandElement.childNodes)
+                                .find(node => node.nodeType === 3);
+                            if (textNode) {
+                                textNode.nodeValue = appName;
+                            } else {
+                                brandElement.appendChild(document.createTextNode(appName));
+                            }
+                        }
+                        
+                        // Update logo image
+                        const logoElement = document.getElementById('navLogo');
+                        if (logoElement) {
+                            logoElement.src = logoPath;
+                            logoElement.alt = appName + ' Logo';
+                        }
+                    } catch (error) {
+                        console.error('Error updating navbar brand:', error);
+                    }
+                });
+            </script>
             <div class="d-flex">
                 <!-- Using inline form to bypass Safari HTTPS upgrade -->
-                <a href="javascript:void(0)" onclick="navigateSafely('http://localhost:3000/login')" class="btn btn-sm btn-outline-light me-2" aria-label="Log In">Log In</a>
-                <a href="javascript:void(0)" onclick="navigateSafely('http://localhost:3000/signup')" class="btn btn-sm btn-light" aria-label="Sign Up">Sign Up</a>
+                <a href="javascript:void(0)" onclick="navigateSafely(window.AppConfig.get('auth.loginUrl') || 'http://localhost:3000/login')" class="btn btn-sm btn-outline-light me-2" aria-label="Log In">Log In</a>
+                <a href="javascript:void(0)" onclick="navigateSafely(window.AppConfig.get('auth.signupUrl') || 'http://localhost:3000/signup')" class="btn btn-sm btn-light" aria-label="Sign Up">Sign Up</a>
                 
                 <script>
                     // Special navigation function that works in Safari
@@ -219,35 +346,31 @@
     </div>
 
     </main>
-    <footer class="bg-dark text-white py-3 mt-auto" role="contentinfo">
-        <div class="container mb-5 mb-lg-0"> <!-- Add bottom margin on mobile for nav bar -->
-            <div class="row g-3">
-                <div class="col-12 col-sm-6 col-md-3">
-                    <h5 class="fs-6 fw-bold">TrashDrop</h5>
-                    <ul class="list-unstyled small">
-                        <li><a href="/" class="text-white">Home</a></li>
-                        <li><a href="/login" class="text-white">Login</a></li>
-                        <li><a href="/signup" class="text-white">Sign Up</a></li>
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5 id="footerBranding">TrashDrop</h5>
+                    <p class="text-muted" id="footerTagline">Smart waste management solution connecting communities with waste collection services.</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled" id="footerLinks">
+                        <li><a href="/about" class="text-decoration-none">About Us</a></li>
+                        <li><a href="/contact" class="text-decoration-none">Contact</a></li>
+                        <li><a href="/privacy" class="text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="/terms" class="text-decoration-none">Terms of Service</a></li>
                     </ul>
                 </div>
-                <div class="col-12 col-sm-6 col-md-3">
-                    <h5 class="fs-6 fw-bold">Features</h5>
-                    <ul class="list-unstyled small">
-                        <li><a href="#" class="text-white">QR Scanning</a></li>
-                        <li><a href="#" class="text-white">Pickup Requests</a></li>
-                        <li><a href="#" class="text-white">Scheduling</a></li>
-                    </ul>
+                <div class="col-md-4">
+                    <h5>Connect</h5>
+                    <div class="d-flex" id="socialLinks">
+                        <a href="#" class="me-2 text-decoration-none"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="me-2 text-decoration-none"><i class="bi bi-twitter"></i></a>
+                        <a href="#" class="me-2 text-decoration-none"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="me-2 text-decoration-none"><i class="bi bi-linkedin"></i></a>
+                    </div>
                 </div>
-                <div class="col-12 col-sm-6 col-md-3">
-                    <h5 class="fs-6 fw-bold">Contact</h5>
-                    <ul class="list-unstyled small">
-                        <li><a href="mailto:support@trashdrop.com" class="text-white"><i class="bi bi-envelope me-1"></i> Email Us</a></li>
-                        <li><a href="tel:+15551234567" class="text-white"><i class="bi bi-telephone me-1"></i> Call Us</a></li>
-                    </ul>
-                </div>
-                <div class="col-12 col-sm-6 col-md-3">
-                    <h5 class="fs-6 fw-bold">Legal</h5>
-                    <ul class="list-unstyled small">
                         <li><a href="#" class="text-white">Privacy Policy</a></li>
                         <li><a href="#" class="text-white">Terms of Service</a></li>
                     </ul>
@@ -284,17 +407,67 @@
 
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Theme Switcher (must be early) -->
-    <script src="/js/theme-switcher.js"></script>
-    <script src="/js/theme-switcher-enhanced.js"></script>
+    <!-- Dynamic script loading -->
+    <script>
+        // Load JavaScript resources dynamically
+        async function loadScripts() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Load Bootstrap JS
+                const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js') || 
+                                      'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = bootstrapJsUrl;
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('Failed to load Bootstrap script'));
+                    document.body.appendChild(script);
+                });
+                
+                // Load application scripts
+                const jsFiles = [
+                    '/js/theme-switcher.js',
+                    '/js/pwa-install-prompt.js',
+                    '/js/pwa-fullscreen.js'
+                ];
+                
+                // Load scripts sequentially to maintain order dependencies
+                for (const file of jsFiles) {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = file;
+                        script.onload = resolve;
+                        script.onerror = (e) => {
+                            console.error(`Error loading script ${file}:`, e);
+                            resolve(); // Continue with next script even if this one fails
+                        };
+                        document.body.appendChild(script);
+                    });
+                }
+                
+                console.log('Dynamic scripts loaded successfully');
+            } catch (error) {
+                console.error('Error loading dynamic scripts:', error);
+                
+                // Fallback to Bootstrap JS if configuration fails
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                document.body.appendChild(fallbackScript);
+            }
+        }
+        
+        // Initialize scripts when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadScripts);
+    </script>
     <!-- Service Worker Registration -->
     <script src="/js/register-sw.js"></script>
     <!-- Accessibility Script -->
     <script src="/js/accessibility.js"></script>
     
-    <!-- Bootstrap JavaScript Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Safari Login Helper Script -->
