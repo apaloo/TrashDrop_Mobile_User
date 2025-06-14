@@ -391,12 +391,43 @@
           }
         }, 100);
         
-        // Timeout after 5 seconds
+        // More robust timeout handler with fallbacks - extended timeout to 3000ms
         setTimeout(() => {
           clearInterval(checkSupabase);
-          console.warn('[AUTH] Timeout waiting for Supabase client');
-          resolve(); // Resolve anyway to unblock the app
-        }, 5000);
+          console.warn("[AUTH] Timeout waiting for Supabase client");
+          
+          // Try to create a client if one doesn't exist already
+          if (!window.supabase?.auth) {
+            console.log("[AUTH] Attempting to initialize Supabase manually after timeout");
+            
+            // Try using the SupabaseAuthLoader if available
+            if (window.SupabaseAuthLoader && typeof window.SupabaseAuthLoader.getClient === "function") {
+              console.log("[AUTH] Using SupabaseAuthLoader.getClient()...");
+              window.SupabaseAuthLoader.getClient()
+                .then(client => {
+                  if (client?.auth) {
+                    console.log("[AUTH] Successfully created client via SupabaseAuthLoader");
+                    window.supabase = client;
+                  } else {
+                    console.warn("[AUTH] SupabaseAuthLoader returned client without auth");
+                  }
+                  resolve();
+                })
+                .catch(err => {
+                  console.error("[AUTH] SupabaseAuthLoader fallback failed:", err);
+                  resolve(); // Give up and unblock the app
+                });
+            } else {
+              console.log("[AUTH] SupabaseAuthLoader not available, continuing without Supabase");
+              resolve(); // Give up and unblock the app
+            }
+          } else {
+            // Client exists but may not be fully initialized
+            console.log("[AUTH] Supabase client exists but may not be fully initialized");
+            resolve(); // Resolve anyway to unblock the app
+          }
+        }, 8000); // Increased from 5 to 8 seconds for better reliability on slower connections
+
       });
     }
     
