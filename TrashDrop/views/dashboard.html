@@ -12,6 +12,231 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
 
+    <!-- Dashboard-specific navbar fix (max force version) -->
+    <style>
+        /* Critical dashboard navbar fixes */
+        
+        /* Force unhide for HTML and body */
+        html, body {
+            overflow-x: visible !important;
+            position: relative !important; 
+            overflow: visible !important;
+        }
+        
+        /* Critical force visible for top navbar - EXTREME SPECIFICITY */
+        nav.navbar, 
+        nav.navbar.navbar-dark, 
+        nav.navbar.navbar-dark.bg-success,
+        .navbar,
+        .bg-success[role="navigation"],
+        [aria-label="Main Navigation"],
+        div.navbar,
+        header nav.navbar {
+            display: flex !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            height: 76px !important; /* Match pickup and report pages */
+            min-height: 76px !important;
+            max-height: none !important;
+            z-index: 999999 !important; /* Maximum z-index */
+            visibility: visible !important;
+            opacity: 1 !important;
+            background-color: #4CAF50 !important; /* Force green background */
+            overflow: visible !important;
+            pointer-events: auto !important;
+            transform: none !important;
+            clip: auto !important;
+            clip-path: none !important;
+        }
+
+        /* Add padding to body */
+        body {
+            padding-top: 65px !important; /* Slightly more padding than navbar height */
+            margin-top: 0 !important;
+            padding-bottom: 65px !important; /* Account for mobile nav */
+        }
+        
+        /* Ensure all links in navbar are visible */
+        nav.navbar a, 
+        nav.navbar button,
+        .navbar a, 
+        .navbar button,
+        [aria-label="Main Navigation"] a,
+        [aria-label="Main Navigation"] button,
+        .navbar-nav a,
+        .navbar-nav .nav-link {
+            visibility: visible !important;
+            display: inline-block !important;
+            opacity: 1 !important;
+            color: white !important;
+        }
+
+        /* Ensure navbar container is visible and matches other pages */
+        nav.navbar .container,
+        .navbar .container,
+        [aria-label="Main Navigation"] .container,
+        nav .container,
+        nav .navbar-collapse {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            width: 772px !important; /* Fixed width to match pickup and report pages */
+            max-width: 100% !important; /* Don't overflow on smaller screens */
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            height: 76px !important; /* Match container height */
+        }
+        
+        /* Ensure all navbar content is middle-aligned */
+        .navbar-brand, 
+        .navbar-nav, 
+        .nav-item,
+        .navbar .navbar-brand,
+        nav.navbar .navbar-brand,
+        .navbar .navbar-brand img,
+        nav.navbar .navbar-brand img {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 100% !important;
+        }
+        
+        .navbar .d-flex, 
+        nav.navbar .d-flex,
+        .navbar-nav .nav-item,
+        .navbar .nav-link,
+        nav.navbar .nav-link {
+            display: flex !important;
+            align-items: center !important;
+            height: 100% !important;
+        }
+        
+        /* Fix dropdown menus */
+        .dropdown-menu {
+            display: none;
+            background-color: white !important;
+            color: #212529 !important;
+            border: 1px solid rgba(0,0,0,.15) !important;
+            z-index: 9999999 !important;
+            position: absolute !important;
+        }
+        
+        .dropdown-menu.show {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Ensure dropdown items have visible and contrasting text */
+        .dropdown-menu a,
+        .dropdown-menu button,
+        .dropdown-menu .dropdown-item,
+        .dropdown-item,
+        .navbar .dropdown-menu a,
+        .navbar-nav .dropdown-menu a {
+            color: #000000 !important; /* Black text for maximum contrast */
+            background-color: white !important;
+            display: block !important;
+            padding: .25rem 1.5rem !important;
+            clear: both !important;
+            visibility: visible !important;
+            text-decoration: none !important;
+            font-weight: normal !important;
+        }
+        
+        /* Hover state for dropdown items */
+        .dropdown-item:hover,
+        .dropdown-menu a:hover,
+        .navbar .dropdown-menu a:hover {
+            background-color: #f8f9fa !important; /* Light gray background on hover */
+            color: #000000 !important;
+        }
+        
+        /* Mobile nav fix - Dimensions match pickup and report pages */
+        .mobile-bottom-nav,
+        div.mobile-bottom-nav,
+        .d-lg-none.mobile-bottom-nav,
+        [class*="mobile-bottom-nav"] {
+            display: flex !important;
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            /* Match dimensions with other pages */
+            width: 772px !important; /* Fixed width to match other pages */
+            max-width: 100% !important; /* Don't overflow on smaller screens */
+            height: 91px !important; /* Match other pages */
+            margin-left: auto !important;
+            margin-right: auto !important;
+            z-index: 999999 !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            background-color: #ffffff !important;
+            border-top: 1px solid #dee2e6 !important;
+            overflow: visible !important;
+            pointer-events: auto !important;
+            justify-content: space-around !important;
+            align-items: center !important;
+        }
+        
+        /* Force mobile nav items to display */
+        .mobile-bottom-nav a,
+        .mobile-bottom-nav span,
+        .mobile-bottom-nav i {
+            visibility: visible !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            opacity: 1 !important;
+            color: #6c757d !important;
+            text-decoration: none !important;
+            font-size: 0.75rem !important;
+        }
+        
+        .mobile-bottom-nav i {
+            font-size: 24px !important; /* Fixed icon size 24px */
+            width: 24px !important; /* Fixed width */
+            height: 24px !important; /* Fixed height */
+            margin: 0px 0px 4px !important; /* 4px bottom margin between icon and label */
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        
+        /* Fix for any overlapping elements that might be hiding the navbar */
+        .container, 
+        main, 
+        header, 
+        section, 
+        div[style*="z-index"] {
+            z-index: auto !important;
+            position: relative !important;
+        }
+        
+        /* Fix any fullscreen toggles */
+        [data-fullscreen="true"],
+        .fullscreen,
+        body[data-fullscreen="true"] nav.navbar {
+            position: relative !important;
+        }
+        
+        /* Desktop-only mobile nav hiding */
+        @media (min-width: 992px) {
+            .mobile-bottom-nav,
+            div.mobile-bottom-nav,
+            .d-lg-none.mobile-bottom-nav,
+            [class*="mobile-bottom-nav"] {
+                display: none !important;
+            }
+        }
+    </style>
+
     <!-- AppConfig for resource management -->
     <script src="/js/config/app-config.js"></script>
     <script src="/js/config/config-loader.js"></script>
@@ -937,6 +1162,10 @@
     })();
     </script>
     
+    <!-- Navigation components -->
+    <script src="/js/mobile-nav.js"></script>
+    <script src="/js/navbar.js"></script>
+    
     <div class="modal fade" id="order-bags-modal" tabindex="-1" aria-labelledby="orderBagsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -1662,5 +1891,76 @@
    <!-- Navigation components -->
    <script src="/js/mobile-nav.js"></script>
    <script src="/js/navbar.js"></script>
+    
+    <!-- Debugging script for navbar issues -->
+    <script>
+        // This script will help diagnose why navigation isn't appearing on the dashboard page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 NAVBAR DEBUG: Document loaded on dashboard page');
+            
+            // Force reset navbar initialization flags
+            console.log('🔍 NAVBAR DEBUG: Resetting navbar initialization flags');
+            window.mobileNavInitialized = false;
+            window.trashDropNavbarInitialized = false;
+            
+            // Check for DOM structure expectations
+            const footer = document.querySelector('footer');
+            console.log('🔍 NAVBAR DEBUG: Footer found:', !!footer);
+            
+            // Check if any navbars exist already
+            const existingNavbars = document.querySelectorAll('nav.navbar');
+            console.log('🔍 NAVBAR DEBUG: Existing navbars found:', existingNavbars.length);
+            existingNavbars.forEach((nav, i) => {
+                console.log(`🔍 NAVBAR DEBUG: Existing navbar ${i}:`, nav.outerHTML.substring(0, 100) + '...');
+                console.log(`🔍 NAVBAR DEBUG: Navbar ${i} visibility:`, window.getComputedStyle(nav).display);
+            });
+            
+            // Directly attempt to force create navbars after a delay
+            setTimeout(function() {
+                console.log('🔍 NAVBAR DEBUG: Attempting forced navbar creation after delay');
+                
+                try {
+                    // Attempt to manually create the mobile navigation
+                    if (typeof window.MobileNavigation === 'function') {
+                        console.log('🔍 NAVBAR DEBUG: MobileNavigation class found, attempting initialization');
+                        const mobileNav = new window.MobileNavigation();
+                        mobileNav.init();
+                        console.log('🔍 NAVBAR DEBUG: Mobile nav initialized');
+                    } else {
+                        console.error('🔍 NAVBAR DEBUG: MobileNavigation class not found!');
+                    }
+                    
+                    // Attempt to manually create the desktop navbar
+                    if (typeof window.TrashDropNavbar === 'function') {
+                        console.log('🔍 NAVBAR DEBUG: TrashDropNavbar class found, attempting initialization');
+                        const navbar = new window.TrashDropNavbar();
+                        navbar.init();
+                        console.log('🔍 NAVBAR DEBUG: Desktop navbar initialized');
+                    } else {
+                        console.error('🔍 NAVBAR DEBUG: TrashDropNavbar class not found!');
+                    }
+                    
+                    // Check what was created
+                    const afterNavbars = document.querySelectorAll('nav.navbar');
+                    console.log('🔍 NAVBAR DEBUG: Navbars after forced creation:', afterNavbars.length);
+                    
+                    const mobileNav = document.querySelector('.mobile-bottom-nav');
+                    console.log('🔍 NAVBAR DEBUG: Mobile nav after forced creation:', !!mobileNav);
+                } catch (error) {
+                    console.error('🔍 NAVBAR DEBUG: Error during forced navbar creation:', error);
+                }
+            }, 500);
+            
+            // Check Bootstrap availability
+            console.log('🔍 NAVBAR DEBUG: Bootstrap available:', typeof bootstrap !== 'undefined');
+            
+            // Check if page has special meta flags that might interfere
+            console.log('🔍 NAVBAR DEBUG: Page data attributes:', {
+                'data-page': document.body.getAttribute('data-page'),
+                'data-fullscreen': document.body.getAttribute('data-fullscreen'),
+                'class': document.body.className
+            });
+        });
+    </script>
 </body>
 </html>

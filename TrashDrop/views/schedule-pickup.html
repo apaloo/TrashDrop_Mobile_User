@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes">
     
+    <!-- Critical CSS that loads immediately for better UX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/navbar-fix.css">
+    <link rel="stylesheet" href="/css/responsive-enhancements.css">
+    <link rel="stylesheet" href="/css/dark-theme.css">
+    <link rel="stylesheet" href="/css/mobile-nav-fix.css">
+    
     <!-- App Configuration -->
     <script src="/js/config/app-config.js"></script>
     
@@ -191,8 +200,60 @@
 </head>
 <body class="bg-light" data-page="schedule-pickup">
     <!-- Navigation will be injected by navbar.js (desktop) and mobile-nav.js (mobile) -->
-    <!-- Desktop navbar placeholder -->
-    <div id="desktop-nav-placeholder"></div>
+    <!-- Top navbar (desktop) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success fixed-top pt-safe-area">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard.html">
+                <img src="/images/logo-white.png" alt="TrashDrop" height="30">
+                TrashDrop
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard.html">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/schedule-pickup.html">
+                            <i class="bi bi-calendar-check"></i> Schedule Pickup
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/rewards.html">
+                            <i class="bi bi-trophy"></i> Rewards
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html">
+                            <i class="bi bi-exclamation-triangle"></i> Report Dumping
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <span id="user-name" class="text-white me-3">User</span>
+                    <span class="badge text-bg-light me-3">
+                        <i class="bi bi-coin"></i> <span id="user-points">0</span> Points
+                    </span>
+                    <button id="toggle-theme" class="btn btn-sm btn-outline-light me-2">
+                        <i class="bi bi-moon-stars"></i>
+                    </button>
+                    <a href="/profile.html" class="btn btn-sm btn-outline-light me-2">
+                        <i class="bi bi-person"></i> Profile
+                    </a>
+                    <button id="logout-button" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Desktop navbar placeholder (for scripts) -->
+    <div id="desktop-nav-placeholder" class="d-none"></div>
     
     <script>
         // Register page-specific data for navbar initialization
@@ -485,5 +546,15 @@
         // Initialize scripts
         loadScripts();    
     </script>
+    <!-- Mobile nav placeholder (for scripts) -->
+    <div id="mobile-nav-placeholder"></div>
+
+    <!-- Ensure scripts load properly -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/base-url.js"></script>
+    <script src="/js/theme-switcher.js"></script>
+    <script src="/js/navbar.js"></script>
+    <script src="/js/mobile-nav.js"></script>
+    <script src="/js/auth/auth-guard.js"></script>
 </body>
 </html>
