@@ -29,7 +29,13 @@
         console.log('[SupabaseAuthLoader] Loading Supabase auth module...');
         
         // Load as regular script - no ESM imports for browser compatibility
-        await loadScript('/js/auth/utils/supabase-auth-unified.js');
+        // First try the relative test path, then the regular app path
+        try {
+          await loadScript('../public/js/auth/utils/supabase-auth-unified.js');
+        } catch (e) {
+          console.log('[SupabaseAuthLoader] Fallback to application path');
+          await loadScript('/js/auth/utils/supabase-auth-unified.js');
+        }
         
         // Wait for window.SupabaseAuth to be defined
         await waitForGlobal('SupabaseAuthManager');

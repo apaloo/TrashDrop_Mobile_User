@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrashDrop Config Validator</title>
+    
+    <!-- Supabase Configuration Meta Tags -->
+    <meta id="supabase-url" content="https://cpeyavpxqcloupolbvyh.supabase.co">
+    <meta id="supabase-anon-key" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.EXAMPLE-KEY-FOR-TESTING-ONLY">
+    
+    <!-- Application Configuration -->
+    <meta name="app-environment" content="development">
+    <meta name="app-version" content="2.0.0">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #0066cc;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        #log {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            height: 400px;
+            overflow-y: auto;
+        }
+        #log div {
+            margin-bottom: 5px;
+            padding: 3px;
+            border-radius: 3px;
+        }
+        #log .success {
+            color: #2e7d32;
+        }
+        #log .error {
+            color: #c62828;
+        }
+        #log .warning {
+            color: #ff8f00;
+        }
+        #summary {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        #summary span.pass {
+            color: #2e7d32;
+        }
+        #summary span.fail {
+            color: #c62828;
+        }
+        #summary span.warn {
+            color: #ff8f00;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0055bb;
+        }
+    </style>
+</head>
+<body>
+    <h1>TrashDrop Configuration Validator</h1>
+    
+    <p>This tool validates that all required configuration values are properly loaded in the browser environment.</p>
+    
+    <div>
+        <button id="runTests">Run Tests</button>
+        <button id="copyResults">Copy Results</button>
+        <button id="clearLog">Clear Log</button>
+    </div>
+    
+    <div id="log"></div>
+    
+    <div id="summary"></div>
+
+    <!-- Load Configuration Files -->
+    <script src="../public/js/config/app-config.js"></script>
+    
+    <!-- Try to load Auth Module -->
+    <script>
+        // Try to load auth module
+        function loadAuthScripts() {
+            return new Promise((resolve) => {
+                // First load the Supabase library
+                const supabaseScript = document.createElement('script');
+                supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js';
+                supabaseScript.onload = () => {
+                    console.log('Supabase library loaded');
+                    
+                    // Then load the auth module with correct path
+                    const authScript = document.createElement('script');
+                    authScript.src = '../public/js/auth/utils/supabase-auth-unified.js';
+                    authScript.onload = () => {
+                        console.log('Auth unified script loaded');
+                        
+                        // Finally load the auth loader
+                        const loaderScript = document.createElement('script');
+                        loaderScript.src = '../public/js/auth/supabase-auth-loader.js';
+                        loaderScript.onload = () => {
+                            console.log('Auth loader script loaded');
+                            resolve();
+                        };
+                        loaderScript.onerror = () => {
+                            console.error('Failed to load auth loader script');
+                            resolve(); // Still resolve to continue testing
+                        };
+                        document.head.appendChild(loaderScript);
+                    };
+                    authScript.onerror = (err) => {
+                        console.error('Failed to load auth unified script:', err);
+                        resolve(); // Still resolve to continue testing
+                    };
+                    document.head.appendChild(authScript);
+                };
+                supabaseScript.onerror = (err) => {
+                    console.error('Failed to load Supabase library:', err);
+                    resolve(); // Still resolve to continue testing
+                };
+                document.head.appendChild(supabaseScript);
+            });
+        }
+        
+        // Initialize
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadAuthScripts();
+            
+            document.getElementById('runTests').addEventListener('click', () => {
+                const logElem = document.getElementById('log');
+                logElem.innerHTML = '';
+                
+                // Load and run the validator
+                const script = document.createElement('script');
+                script.src = './config-validator.js';
+                document.head.appendChild(script);
+            });
+            
+            document.getElementById('copyResults').addEventListener('click', () => {
+                const logElem = document.getElementById('log');
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = logElem.innerText;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempTextArea);
+                alert('Results copied to clipboard');
+            });
+            
+            document.getElementById('clearLog').addEventListener('click', () => {
+                document.getElementById('log').innerHTML = '';
+                document.getElementById('summary').innerHTML = '';
+            });
+        });
+    </script>
+</body>
+</html>

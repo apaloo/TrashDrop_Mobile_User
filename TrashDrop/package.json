@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "deploy": "echo 'Deploy command needs to be updated for Supabase'",
     "serve": "node server.js",
-    "build": "echo 'Building application...'"
+    "build": "echo 'Building application...'",
+    "config:test": "node tests/config-validator.js"
   },
   "keywords": [],
   "author": "",

@@ -49,6 +49,44 @@ SESSION_DURATION=86400000
 SMS_API_ENDPOINT=your_sms_api_endpoint
 MAPS_API_KEY=your_maps_api_key
 
+### Configuration Validation
+
+TrashDrop includes a configuration validation tool that helps verify all required configuration values are properly loaded. This ensures your application is correctly configured before deployment.
+
+#### Running the Validator
+
+**For Server-Side Configuration:**
+
+Run the following npm script to validate all environment variables and server-side configuration:
+
+```bash
+npm run config:test
+```
+
+**For Client-Side Configuration:**
+
+Open the following HTML file in your browser to validate client-side configuration:
+
+```
+/tests/config-validator.html
+```
+
+#### What it Validates
+
+- **Environment Variables**: Verifies all required environment variables are defined
+- **Server Configuration**: Tests that the config manager initializes and can access nested configuration values
+- **Supabase Authentication**: Validates authentication configuration and client initialization
+- **Browser Compatibility**: Tests configuration in different browser environments
+
+#### Fixing Configuration Issues
+
+If the validator reports any missing configuration:
+
+1. Check your `.env` file for missing variables
+2. Verify Supabase credentials are valid
+3. Ensure configuration paths match the expected nested structure (e.g., `app.name` not `APP_NAME`)
+4. Confirm the config manager is initialized before accessing values
+
 # CORS Configuration
 CORS_ALLOWED_DOMAINS=http://localhost:3000,https://trashdrop.example.com
 
