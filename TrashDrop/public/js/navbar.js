@@ -16,10 +16,27 @@
             right: 0 !important;
             left: 0 !important;
             z-index: 1030 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
         
-        /* Hide duplicate navbars */
-        nav.navbar.navbar-dark.bg-success:not(:first-of-type) {
+        /* Ensure explicitly created navbars are always visible */
+        nav.navbar[data-explicitly-created="true"] {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        
+        /* CRITICAL: Dashboard page specific styles */
+        body[data-page="dashboard"] nav.navbar,
+        body nav.navbar.navbar-dark.bg-success[data-timestamp] {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        
+        /* Hide duplicate navbars, but not explicitly created ones */
+        nav.navbar.navbar-dark.bg-success:not(:first-of-type):not([data-explicitly-created="true"]) {
             display: none !important;
         }
         
@@ -52,6 +69,11 @@
         .bg-success:not(.navbar) {
             display: none !important;
         }
+        
+        /* Fix body padding to account for fixed navbar consistently */
+        body {
+            padding-top: 56px !important; /* Standard navbar height */
+        }
     `;
     document.head.appendChild(style);
     
@@ -67,20 +89,36 @@
         function performRemoval() {
             // Skip this on pages that handle their own navbars
             const currentPath = window.location.pathname;
-            if (currentPath === '/scan' || 
-                currentPath === '/pickup' || 
+            if (currentPath === '/pickup' || 
                 currentPath === '/report') {
                 console.log('On specialized page, skipping navbar cleanup');
                 return;
             }
             
+            // Previously excluded '/scan' path, now allowing it for navbar consistency
+            
             try {
                 // Find all navbars
                 const navbars = document.querySelectorAll('nav.navbar.navbar-dark.bg-success');
+                console.log(`DEBUG: 🔦 Found ${navbars.length} total navbars during cleanup scan`);
                 
-                // Keep only the first navbar
-                if (navbars.length > 1) {
-                    console.log(`Found ${navbars.length} navbars, removing duplicates`);
+                // Check for navbar that has our explicit attribute
+                const explicitNavbar = document.querySelector('nav.navbar[data-explicitly-created="true"]');
+                
+                // If we have an explicitly created navbar, keep it and remove others
+                if (explicitNavbar) {
+                    console.log('DEBUG: 🏆 Found explicitly created navbar, keeping it:', explicitNavbar);
+                    // Remove all navbars except the explicitly created one
+                    for (let i = 0; i < navbars.length; i++) {
+                        if (navbars[i] !== explicitNavbar && navbars[i].parentNode) {
+                            console.log('DEBUG: 🗑️ Removing non-explicit navbar:', navbars[i]);
+                            navbars[i].parentNode.removeChild(navbars[i]);
+                        }
+                    }
+                } 
+                // Otherwise keep only the first navbar
+                else if (navbars.length > 1) {
+                    console.log(`Found ${navbars.length} navbars, removing duplicates (keeping first)`);
                     for (let i = 1; i < navbars.length; i++) {
                         if (navbars[i] && navbars[i].parentNode) {
                             navbars[i].parentNode.removeChild(navbars[i]);
@@ -99,6 +137,13 @@
                         }
                     }
                 }
+                
+                // Check what remains after cleanup
+                setTimeout(() => {
+                    const remainingNavbars = document.querySelectorAll('nav.navbar');
+                    console.log(`DEBUG: 📊 After cleanup: ${remainingNavbars.length} navbars remain`);
+                }, 50);
+                
             } catch (error) {
                 console.error('Error removing duplicate navbars:', error);
             }
@@ -144,7 +189,11 @@
     }
 })();
 
-// TrashDrop Navbar Class
+// TrashDrop Navbar Class - Only define if not already defined
+if (!window.TrashDropNavbar) {
+// Use a global variable to track if navbar is already initialized
+window.trashDropNavbarInitialized = window.trashDropNavbarInitialized || false;
+
 class TrashDropNavbar {
     constructor() {
         this.currentPath = window.location.pathname;
@@ -228,8 +277,7 @@ class TrashDropNavbar {
                         </div>
                     </div>
                     <div class="d-flex align-items-center">
-                        <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                        <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+                        <!-- Connection status indicators removed as requested -->
                         <a href="/rewards" class="text-white me-3 text-decoration-none">
                             <i class="bi bi-award-fill me-1"></i>
                             <span id="user-points">0</span> points
@@ -259,32 +307,54 @@ class TrashDropNavbar {
      */
     injectNavbar() {
         // Skip on specialized pages that have their own navbar
-        if (this.currentPath === '/scan' || 
-            this.currentPath === '/pickup' || 
+        if (this.currentPath === '/pickup' || 
             this.currentPath === '/report') {
             console.log('On specialized page, skipping navbar injection');
             return;
         }
+        
+        // Previously excluded '/scan' path, now allowing it for navbar consistency
+        console.log('DEBUG: ✨ Beginning navbar injection on path:', this.currentPath);
         
         // Create a new navbar element
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = this.getNavbarHTML().trim();
         const newNavbar = tempDiv.firstChild;
         
+        // Force the navbar to be visible
+        newNavbar.style.display = 'flex !important';
+        newNavbar.setAttribute('data-explicitly-created', 'true');
+        newNavbar.setAttribute('data-timestamp', new Date().getTime());
+        
+        console.log('DEBUG: 🔍 New navbar element created:', newNavbar);
+        
         // Find existing navbar
         const existingNavbar = document.querySelector('nav.navbar.navbar-dark.bg-success');
         
         if (existingNavbar) {
             // Replace existing navbar
+            console.log('DEBUG: 🔄 Replacing existing navbar:', existingNavbar);
             existingNavbar.parentNode.replaceChild(newNavbar, existingNavbar);
         } else {
             // Insert at the beginning of the body
+            console.log('DEBUG: ➕ No existing navbar found, inserting new one at body start');
             document.body.insertBefore(newNavbar, document.body.firstChild);
         }
         
         // Add padding to body to prevent content from being hidden under fixed navbar
-        const navbarHeight = newNavbar.offsetHeight;
+        const navbarHeight = newNavbar.offsetHeight || 56; // Use 56px if height can't be determined
+        console.log('DEBUG: 📏 Setting body padding-top to', navbarHeight + 'px');
         document.body.style.paddingTop = navbarHeight + 'px';
+        
+        // Verify navbar is in DOM after injection
+        setTimeout(() => {
+            const navbarsInDOM = document.querySelectorAll('nav.navbar.navbar-dark.bg-success');
+            console.log(`DEBUG: 🔢 Navbars in DOM after injection: ${navbarsInDOM.length}`);
+            navbarsInDOM.forEach((nav, i) => {
+                console.log(`DEBUG: 🧪 Navbar ${i} display style:`, window.getComputedStyle(nav).display);
+                console.log(`DEBUG: 🧪 Navbar ${i} position style:`, window.getComputedStyle(nav).position);
+            });
+        }, 100); // Check shortly after injection
     }
 
     /**
@@ -490,8 +560,103 @@ class TrashDropNavbar {
     }
 }
 
-// Initialize the navbar when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    const navbar = new TrashDropNavbar();
-    navbar.init();
+// Make TrashDropNavbar globally accessible
+window.TrashDropNavbar = TrashDropNavbar;
+
+// CRITICAL UPDATE: Re-enable navbar creation
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 Navbar initializer starting - TrashDropNavbar is available:', !!window.TrashDropNavbar);
+    
+    // Reset the initialization flag
+    window.trashDropNavbarInitialized = false;
+    
+    // Check if this is a home page - if so, skip navbar creation
+    const path = window.location.pathname;
+    const isHomePage = path === '/' || path === '/index.html' || path.endsWith('/views/index.html');
+    
+    console.log('Checking path for navbar creation:', path);
+    
+    if (isHomePage) {
+        console.log('Home page detected - skipping navbar creation as requested');
+        return;
+    }
+    
+    // Explicitly ensure dashboard pages get a navbar
+    const isDashboard = path.includes('/dashboard') || path.endsWith('/views/dashboard.html');
+    if (isDashboard) {
+        console.log('Dashboard page detected - will create navbar');
+    }
+    
+    // Clean up any previous navbar elements first
+    function cleanupExistingNavbars() {
+        const existingNavbars = document.querySelectorAll('nav.navbar.navbar-dark.bg-success');
+        if (existingNavbars.length > 1) { // Keep the first one if it exists
+            console.log(`Found ${existingNavbars.length} navbars, removing duplicates`);
+            // Remove all but the first navbar
+            for (let i = 1; i < existingNavbars.length; i++) {
+                if (existingNavbars[i] && existingNavbars[i].parentNode) {
+                    existingNavbars[i].parentNode.removeChild(existingNavbars[i]);
+                }
+            }
+        }
+    }
+    
+    // Create a new navbar (safely)
+    function createNavbar() {
+        console.log('🚀 Creating new navbar');
+        try {
+            // At this point, TrashDropNavbar should be available
+            const navbar = new TrashDropNavbar();
+            navbar.init();
+            window.trashDropNavbarInitialized = true;
+            console.log('✅ Navbar successfully created and initialized');
+        } catch (error) {
+            console.error('❌ Error during navbar creation:', error);
+        }
+    }
+    
+    // Clean up and create
+    cleanupExistingNavbars();
+    createNavbar();
 });
+
+// Also handle navigation events to ensure navbar consistency
+window.addEventListener('pageshow', function() {
+    // Check if we need to reinitialize
+    if (sessionStorage.getItem('forceNavbarInit') === 'true') {
+        console.log('Found forceNavbarInit flag, checking page type');
+        sessionStorage.removeItem('forceNavbarInit');
+        window.trashDropNavbarInitialized = false;
+        
+        // Check if this is a home page - if so, skip navbar creation
+        const path = window.location.pathname;
+        const isHomePage = path === '/' || path === '/index.html' || path.endsWith('/views/index.html');
+        
+        console.log('Navigation - checking path for navbar creation:', path);
+        
+        if (isHomePage) {
+            console.log('Home page detected during navigation - skipping navbar creation');
+            return;
+        }
+        
+        // Explicitly ensure dashboard pages get a navbar during navigation
+        const isDashboard = path.includes('/dashboard') || path.endsWith('/views/dashboard.html');
+        if (isDashboard) {
+            console.log('Dashboard page detected during navigation - will create navbar');
+        }
+        
+        // Create a new navbar if class is available and not on home page
+        if (window.TrashDropNavbar) {
+            try {
+                const navbar = new TrashDropNavbar();
+                navbar.init();
+                console.log('Navbar reinitialized after navigation');
+            } catch (error) {
+                console.error('Error reinitializing navbar:', error);
+            }
+        }
+    }
+});
+
+// Close the conditional TrashDropNavbar class declaration
+}

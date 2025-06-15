@@ -3,13 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrashDrop Auth - Clean</title>
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
     
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Default title, will be updated dynamically -->
+    <title>TrashDrop Auth</title>
+    
+    <!-- Dynamic resource loading -->
+    <script>
+        // Load CSS resources dynamically
+        async function loadStyles() {
+            try {
+                // Ensure AppConfig exists
+                if (typeof window.AppConfig === 'undefined') {
+                    console.warn('AppConfig was not defined. Creating a default instance.');
+                    window.AppConfig = {
+                        initialized: false,
+                        initialize: async function() {
+                            console.log('Using default AppConfig initialization');
+                            this.initialized = true;
+                            return { cdnResources: { bootstrap: {} } }; // Minimal default config
+                        },
+                        get: function(key) {
+                            return null; // Default implementation returns null for all keys
+                        }
+                    };
+                }
+                
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const pageTitle = window.AppConfig.get('ui.pages.authStandalone.title') || 'Auth';
+                document.title = `${appName} ${pageTitle}`;
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css') || 
+                                        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = bootstrapCssUrl;
+                document.head.appendChild(bootstrapCss);
+                
+                // Load Bootstrap Icons
+                const bootstrapIconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons') || 
+                                         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
+                
+                const bootstrapIcons = document.createElement('link');
+                bootstrapIcons.rel = 'stylesheet';
+                bootstrapIcons.href = bootstrapIconsUrl;
+                document.head.appendChild(bootstrapIcons);
+                
+                console.log('Dynamic styles loaded successfully');
+                return true;
+            } catch (error) {
+                console.error('Error loading dynamic styles:', error);
+                
+                // Fallback to default CSS if configuration fails
+                const fallbackCss = document.createElement('link');
+                fallbackCss.rel = 'stylesheet';
+                fallbackCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                document.head.appendChild(fallbackCss);
+                
+                const fallbackIcons = document.createElement('link');
+                fallbackIcons.rel = 'stylesheet';
+                fallbackIcons.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
+                document.head.appendChild(fallbackIcons);
+                
+                return false;
+            }
+        }
+        
+        // Initialize styles when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadStyles);
+    </script>
     
     <style>
         body {
@@ -45,10 +117,41 @@
 <body>
     <div class="container">
         <div class="auth-container">
-            <div class="text-center mb-4">
-                <h2>Welcome to TrashDrop</h2>
+            <div class="text-center mb-4" id="welcome-header">
+                <!-- Will be dynamically populated -->
+                <h2>Welcome</h2>
                 <p class="text-muted">Sign up or sign in to continue</p>
             </div>
+            
+            <script>
+                // Update welcome message with branding from AppConfig
+                document.addEventListener('DOMContentLoaded', async function() {
+                    try {
+                        // Wait for AppConfig to be initialized
+                        if (window.AppConfig && !window.AppConfig.initialized) {
+                            await window.AppConfig.initialize();
+                        }
+                        
+                        if (window.AppConfig) {
+                            // Get branding from config
+                            const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                            const welcomeText = window.AppConfig.get('ui.auth.welcomeText') || `Welcome to ${appName}`;
+                            const subText = window.AppConfig.get('ui.auth.subText') || 'Sign up or sign in to continue';
+                            
+                            // Update DOM
+                            const welcomeHeader = document.getElementById('welcome-header');
+                            if (welcomeHeader) {
+                                welcomeHeader.innerHTML = `
+                                    <h2>${welcomeText}</h2>
+                                    <p class="text-muted">${subText}</p>
+                                `;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error updating welcome message:', error);
+                    }
+                });
+            </script>
             
             <!-- Sign Up Form -->
             <div id="signup-form">
@@ -109,11 +212,57 @@
         </div>
     </div>
 
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Dynamic JS Loading -->
+    <script>
+        // Load JS resources dynamically
+        async function loadScripts() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Load Bootstrap JS
+                const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js') || 
+                                      'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                
+                const bootstrapJs = document.createElement('script');
+                bootstrapJs.src = bootstrapJsUrl;
+                document.body.appendChild(bootstrapJs);
+                
+                // Wait for Bootstrap JS to load
+                await new Promise((resolve) => {
+                    bootstrapJs.onload = resolve;
+                });
+                
+                // Load Supabase JS
+                const supabaseJsUrl = window.AppConfig.get('cdnResources.supabase.js') || 
+                                     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+                
+                const supabaseJs = document.createElement('script');
+                supabaseJs.src = supabaseJsUrl;
+                document.body.appendChild(supabaseJs);
+                
+                // Wait for Supabase JS to load
+                await new Promise((resolve) => {
+                    supabaseJs.onload = resolve;
+                });
+                
+                // Initialize Supabase and setup page
+                await initializeSupabase();
+                loadSignupScript();
+                
+                console.log('Dynamic scripts loaded successfully');
+                return true;
+            } catch (error) {
+                console.error('Error loading dynamic scripts:', error);
+                showError('Failed to load required resources. Please refresh the page and try again.');
+                return false;
+            }
+        }
+        
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadScripts);
+    </script>
     
     <!-- Custom Script -->
     <script>
@@ -129,8 +278,21 @@
           }
           
           console.log('Initializing Supabase...');
-          const SUPABASE_URL = 'https://cpeyavpxqcloupolbvyh.supabase.co';
-          const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwZXlhdnB4cWNsb3Vwb2xidnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTY4OTYsImV4cCI6MjA2MTA3Mjg5Nn0.5rxsiRuLHCpeJZ5TqoIA5X4UwoAAuxIpNu_reafwwbQ';
+          
+          // Get Supabase configuration from AppConfig
+          let SUPABASE_URL, SUPABASE_KEY;
+          
+          if (window.AppConfig && window.AppConfig.initialized) {
+              SUPABASE_URL = window.AppConfig.get('supabase.url');
+              SUPABASE_KEY = window.AppConfig.get('supabase.key');
+          }
+          
+          // Fallback values if config fails
+          if (!SUPABASE_URL || !SUPABASE_KEY) {
+              console.warn('Using fallback Supabase config');
+              SUPABASE_URL = 'https://cpeyavpxqcloupolbvyh.supabase.co';
+              SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwZXlhdnB4cWNsb3Vwb2xidnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTY4OTYsImV4cCI6MjA2MTA3Mjg5Nn0.5rxsiRuLHCpeJZ5TqoIA5X4UwoAAuxIpNu_reafwwbQ';
+          }
           
           // Create and initialize Supabase client
           const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {

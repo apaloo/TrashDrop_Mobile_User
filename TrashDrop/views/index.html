@@ -46,45 +46,10 @@
                 }
                 
                 // Load Bootstrap CSS
-                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css') || 
-                                        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
-                
-                const bootstrapCss = document.createElement('link');
-                bootstrapCss.rel = 'stylesheet';
-                bootstrapCss.href = bootstrapCssUrl;
-                document.head.appendChild(bootstrapCss);
-                
-                // Load Bootstrap Icons
-                const bootstrapIconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons') || 
-                                         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
-                
-                const bootstrapIcons = document.createElement('link');
-                bootstrapIcons.rel = 'stylesheet';
-                bootstrapIcons.href = bootstrapIconsUrl;
-                document.head.appendChild(bootstrapIcons);
-                
-                // Load application CSS
-                const cssFiles = [
-                    '/css/styles.css',
-                    '/css/accessibility.css',
-                    '/css/dark-theme.css',
-                    '/css/navbar-fix.css',
-                    '/css/mobile-nav-fix.css',
-                    '/css/navbar-content-fix.css'
-                ];
-                
-                cssFiles.forEach(file => {
-                    const link = document.createElement('link');
-                    link.rel = 'stylesheet';
-                    link.href = file;
-                    document.head.appendChild(link);
-                });
-                
-                console.log('Dynamic styles loaded successfully');
             } catch (error) {
-                console.error('Error loading dynamic styles:', error);
+                console.error('Error loading styles:', error);
                 
-                // Fallback to default CSS if configuration fails
+                // Fallback CSS if loading fails
                 const fallbackCss = document.createElement('link');
                 fallbackCss.rel = 'stylesheet';
                 fallbackCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
@@ -518,5 +483,7 @@
         }
     </script>
     <script src="/js/pwa-install-prompt.js"></script>
+    
+    <!-- Navbar components intentionally removed from home page -->
 </body>
 </html>

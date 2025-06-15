@@ -3,11 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Default title, will be updated dynamically -->
     <title>Safari Access - TrashDrop</title>
-    <style>
+    
+    <script>
+        // Set dynamic page title
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const safariAccessText = window.AppConfig.get('ui.pages.safariEntry.title') || 'Safari Access';
+                document.title = `${safariAccessText} - ${appName}`;
+            } catch (e) {
+                console.error('Error setting page title:', e);
+            }
+        });
+    </script>
+    <style id="dynamic-styles">
+        /* Base styles that will be enhanced with dynamic theming */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: #f8f9fa;
+            background-color: #f8f9fa; /* Default, will be overridden */
             color: #212529;
             text-align: center;
             padding: 20px;
@@ -27,11 +52,11 @@
             width: 100%;
         }
         h1 {
-            color: #4CAF50;
+            color: #4CAF50; /* Default, will be overridden */
             margin-top: 0;
         }
         .btn {
-            background-color: #4CAF50;
+            background-color: #4CAF50; /* Default, will be overridden */
             color: white;
             border: none;
             padding: 15px 25px;
@@ -43,12 +68,12 @@
             display: inline-block;
         }
         .btn:hover {
-            background-color: #45a049;
+            background-color: #45a049; /* Default, will be overridden */
         }
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             border-radius: 50%;
-            border-top: 4px solid #4CAF50;
+            border-top: 4px solid #4CAF50; /* Default, will be overridden */
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
@@ -68,46 +93,223 @@
             text-align: left;
         }
     </style>
+    
+    <script>
+        // Apply dynamic theme colors once configuration is loaded
+        async function applyThemeColors() {
+            try {
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get theme colors from config
+                const primaryColor = window.AppConfig.get('ui.theme.primaryColor') || '#4CAF50';
+                const primaryColorHover = window.AppConfig.get('ui.theme.primaryColorHover') || '#45a049';
+                const secondaryColor = window.AppConfig.get('ui.theme.secondaryColor') || '#6c757d';
+                const backgroundColor = window.AppConfig.get('ui.theme.backgroundColor') || '#f8f9fa';
+                
+                // Create dynamic style overrides
+                const dynamicStyles = `
+                    body { background-color: ${backgroundColor}; }
+                    h1 { color: ${primaryColor}; }
+                    .btn { background-color: ${primaryColor}; }
+                    .btn:hover { background-color: ${primaryColorHover}; }
+                    .btn.secondary { background-color: ${secondaryColor}; }
+                    .spinner { border-top-color: ${primaryColor}; }
+                `;
+                
+                // Apply dynamic styles
+                const styleElement = document.createElement('style');
+                styleElement.textContent = dynamicStyles;
+                document.head.appendChild(styleElement);
+            } catch (error) {
+                console.error('Error applying theme colors:', error);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', applyThemeColors);
+    </script>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to TrashDrop</h1>
-        <p>This special entry page helps Safari users access the TrashDrop application.</p>
-        
+    <div class="container" id="main-container">
+        <!-- Content will be dynamically populated -->
         <div id="spinner" class="spinner"></div>
-        
-        <div id="buttons">
-            <a href="http://127.0.0.1:3000/account-access" id="accessBtn" class="btn">Access TrashDrop</a>
-            <button id="tryAgainBtn" class="btn" style="background-color: #6c757d;">Try Alternative Method</button>
-        </div>
-        
-        <div class="note">
-            <p><strong>Note:</strong> Safari has special security requirements for localhost connections. This page helps bypass those restrictions by using 127.0.0.1 instead.</p>
-            <p>If you continue to have issues, try using Chrome or Firefox which have fewer restrictions for local development.</p>
-        </div>
+    </div>
+    
+    <script>
+        // Initialize page content
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Ensure configuration is loaded
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                const container = document.getElementById('main-container');
+                if (!container) return;
+                
+                // Get branding and content from configuration
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const welcomeMsg = window.AppConfig.get('ui.pages.safariEntry.welcomeMessage') || 
+                                  `Welcome to ${appName}`;
+                const description = window.AppConfig.get('ui.pages.safariEntry.description') || 
+                                   `This special entry page helps Safari users access the ${appName} application.`;
+                const accessBtnText = window.AppConfig.get('ui.pages.safariEntry.accessButtonText') || 
+                                     `Access ${appName}`;
+                const altBtnText = window.AppConfig.get('ui.pages.safariEntry.alternativeButtonText') || 
+                                  'Try Alternative Method';
+                const noteTitle = window.AppConfig.get('ui.pages.safariEntry.noteTitle') || 'Note:';
+                const noteText1 = window.AppConfig.get('ui.pages.safariEntry.noteText1') || 
+                                 'Safari has special security requirements for localhost connections. This page helps bypass those restrictions by using 127.0.0.1 instead.';
+                const noteText2 = window.AppConfig.get('ui.pages.safariEntry.noteText2') || 
+                                 'If you continue to have issues, try using Chrome or Firefox which have fewer restrictions for local development.';
+                
+                // Create and add header
+                const header = document.createElement('h1');
+                header.textContent = welcomeMsg;
+                container.insertBefore(header, container.firstChild);
+                
+                // Create and add description
+                const descPara = document.createElement('p');
+                descPara.textContent = description;
+                container.insertBefore(descPara, document.getElementById('spinner'));
+                
+                // Create buttons container
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.id = 'buttons';
+                
+                // Create and add access button
+                const accessBtn = document.createElement('a');
+                accessBtn.id = 'accessBtn';
+                accessBtn.className = 'btn';
+                accessBtn.textContent = accessBtnText;
+                
+                // Create and add alternative button
+                const tryAgainBtn = document.createElement('button');
+                tryAgainBtn.id = 'tryAgainBtn';
+                tryAgainBtn.className = 'btn secondary';
+                tryAgainBtn.textContent = altBtnText;
+                
+                // Add buttons to container
+                buttonsDiv.appendChild(accessBtn);
+                buttonsDiv.appendChild(tryAgainBtn);
+                container.insertBefore(buttonsDiv, container.querySelector('.spinner').nextSibling);
+                
+                // Create note section
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note';
+                
+                // Add note content
+                const notePara1 = document.createElement('p');
+                const noteStrong = document.createElement('strong');
+                noteStrong.textContent = noteTitle + ' ';
+                notePara1.appendChild(noteStrong);
+                notePara1.appendChild(document.createTextNode(noteText1));
+                
+                const notePara2 = document.createElement('p');
+                notePara2.textContent = noteText2;
+                
+                noteDiv.appendChild(notePara1);
+                noteDiv.appendChild(notePara2);
+                container.appendChild(noteDiv);
+            } catch (error) {
+                console.error('Error initializing page content:', error);
+                // Fallback to static content
+                const container = document.getElementById('main-container');
+                if (container) {
+                    container.innerHTML = `
+                        <h1>Welcome to TrashDrop</h1>
+                        <p>This special entry page helps Safari users access the TrashDrop application.</p>
+                        <div id="spinner" class="spinner"></div>
+                        <div id="buttons">
+                            <a href="http://127.0.0.1:3000/account-access" id="accessBtn" class="btn">Access TrashDrop</a>
+                            <button id="tryAgainBtn" class="btn" style="background-color: #6c757d;">Try Alternative Method</button>
+                        </div>
+                        <div class="note">
+                            <p><strong>Note:</strong> Safari has special security requirements for localhost connections. This page helps bypass those restrictions by using 127.0.0.1 instead.</p>
+                            <p>If you continue to have issues, try using Chrome or Firefox which have fewer restrictions for local development.</p>
+                        </div>
+                    `;
+                }
+            }
+        });
+    </script>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const accessBtn = document.getElementById('accessBtn');
-            const tryAgainBtn = document.getElementById('tryAgainBtn');
-            const spinner = document.getElementById('spinner');
-            
-            accessBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                spinner.style.display = 'block';
-                setTimeout(() => {
-                    window.location.href = 'http://127.0.0.1:3000/account-access';
-                }, 500);
-            });
-            
-            tryAgainBtn.addEventListener('click', function() {
-                spinner.style.display = 'block';
-                // Try the IP address with explicit port
-                accessBtn.href = 'http://127.0.0.1:3000/account-access';
-                accessBtn.textContent = 'Access via IP Address';
-                spinner.style.display = 'none';
-            });
+        // Set up button click handlers after main content is initialized
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Wait for main content initialization to complete
+            setTimeout(async function() {
+                try {
+                    // Ensure configuration is loaded
+                    if (!window.AppConfig || !window.AppConfig.initialized) {
+                        await window.AppConfig.initialize();
+                    }
+                    
+                    const accessBtn = document.getElementById('accessBtn');
+                    const tryAgainBtn = document.getElementById('tryAgainBtn');
+                    const spinner = document.getElementById('spinner');
+                    
+                    if (!accessBtn || !tryAgainBtn || !spinner) {
+                        console.error('Required DOM elements not found');
+                        return;
+                    }
+                    
+                    // Get URLs from configuration
+                    const defaultPort = window.AppConfig.get('server.port') || '3000';
+                    const accountAccessPath = window.AppConfig.get('routes.accountAccess') || '/account-access';
+                    const ipAccessUrl = `http://127.0.0.1:${defaultPort}${accountAccessPath}`;
+                    
+                    // Set initial href
+                    accessBtn.href = ipAccessUrl;
+                    
+                    // Button text for alternative method
+                    const ipAddressBtnText = window.AppConfig.get('ui.pages.safariEntry.ipAddressButtonText') || 'Access via IP Address';
+                    
+                    accessBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        spinner.style.display = 'block';
+                        setTimeout(() => {
+                            window.location.href = accessBtn.href;
+                        }, 500);
+                    });
+                    
+                    tryAgainBtn.addEventListener('click', function() {
+                        spinner.style.display = 'block';
+                        // Try the IP address with explicit port
+                        accessBtn.href = ipAccessUrl;
+                        accessBtn.textContent = ipAddressBtnText;
+                        spinner.style.display = 'none';
+                    });
+                } catch (error) {
+                    console.error('Error setting up button handlers:', error);
+                    
+                    // Fallback to default behavior if configuration fails
+                    const accessBtn = document.getElementById('accessBtn');
+                    const tryAgainBtn = document.getElementById('tryAgainBtn');
+                    const spinner = document.getElementById('spinner');
+                    
+                    if (accessBtn && tryAgainBtn && spinner) {
+                        accessBtn.href = 'http://127.0.0.1:3000/account-access';
+                        
+                        accessBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            spinner.style.display = 'block';
+                            setTimeout(() => {
+                                window.location.href = accessBtn.href;
+                            }, 500);
+                        });
+                        
+                        tryAgainBtn.addEventListener('click', function() {
+                            spinner.style.display = 'block';
+                            accessBtn.href = 'http://127.0.0.1:3000/account-access';
+                            accessBtn.textContent = 'Access via IP Address';
+                            spinner.style.display = 'none';
+                        });
+                    }
+                }
+            }, 100); // Small delay to ensure main content is initialized
         });
     </script>
 </body>

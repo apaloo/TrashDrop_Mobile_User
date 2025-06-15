@@ -1150,42 +1150,104 @@ async function toggleDarkMode(e) {
     // Toggle dark mode class on body
     const isDarkMode = !document.body.classList.contains('dark-mode');
     
-    // Apply the theme consistently
+    // Apply the theme consistently - this will make visual changes immediately
     applyDarkMode(isDarkMode);
+    console.log('Applied dark mode visual change:', isDarkMode);
     
-    // Get user data
-    const user = await AuthManager.getCurrentUser();
-    
-    // Handle development mode and production mode differently
-    if (AuthManager.isDev()) {
-      // In development mode, just update the local storage
-      const currentUser = devUserStorage.getUser();
-      if (currentUser) {
-        const updatedUser = { ...currentUser, dark_mode: isDarkMode };
-        devUserStorage.setUser(updatedUser);
-        console.log('Dark mode preference updated in development mode:', isDarkMode);
-      }
-    } else {
-      // In production mode, update the database
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ 
-            dark_mode: isDarkMode,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-          
-        if (error) throw error;
-      } catch (dbError) {
-        console.error('Database error when updating dark mode:', dbError);
-        // Continue execution - the visual change already happened
-      }
+    // Local storage fallback - always store preference locally
+    try {
+      localStorage.setItem('trashdrop_dark_mode', isDarkMode.toString());
+    } catch (localStorageError) {
+      console.warn('Could not save dark mode preference to localStorage:', localStorageError);
     }
     
+    // Try to persist settings to user profile if authenticated
+    try {
+      // Check if AuthManager exists and user is authenticated
+      if (typeof AuthManager === 'undefined') {
+        console.warn('AuthManager not available, dark mode preference only stored locally');
+        return; // Exit early but keep visual changes
+      }
+      
+      // Check if user is authenticated without throwing errors
+      const isAuthenticated = await AuthManager.isAuthenticated().catch(err => {
+        console.warn('Error checking authentication:', err);
+        return false;
+      });
+      
+      if (!isAuthenticated) {
+        console.log('User not authenticated, dark mode preference only stored locally');
+        return; // Exit early but keep visual changes
+      }
+      
+      // Try to get current user
+      const user = await AuthManager.getCurrentUser().catch(err => {
+        console.warn('Error getting current user:', err);
+        return null;
+      });
+      
+      if (!user || !user.id) {
+        console.warn('User data unavailable, dark mode preference only stored locally');
+        return; // Exit early but keep visual changes
+      }
+      
+      // Handle development mode and production mode differently
+      if (typeof AuthManager.isDevMode === 'function' && AuthManager.isDevMode()) {
+        // In development mode, just update the local storage
+        if (typeof devUserStorage !== 'undefined' && typeof devUserStorage.getUser === 'function') {
+          const currentUser = devUserStorage.getUser();
+          if (currentUser) {
+            const updatedUser = { ...currentUser, dark_mode: isDarkMode };
+            devUserStorage.setUser(updatedUser);
+            console.log('Dark mode preference updated in development mode:', isDarkMode);
+          }
+        } else {
+          console.warn('devUserStorage not available, dark mode preference only stored in localStorage');
+        }
+      } else {
+        // In production mode, update the database
+        try {
+          // Get Supabase client safely - check if it exists in window
+          const client = window.supabase || 
+                        (window.SupabaseAuthLoader && typeof window.SupabaseAuthLoader.getClient === 'function' && 
+                         await window.SupabaseAuthLoader.getClient());
+          
+          if (!client) {
+            console.warn('Supabase client not available for dark mode update. Visual change applied without database update.');
+            return;
+          }
+          
+          const { error } = await client
+            .from('profiles')
+            .update({ 
+              dark_mode: isDarkMode,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+            
+          if (error) {
+            console.error('Supabase update error:', error);
+            throw error;
+          }
+          
+          console.log('Dark mode preference successfully updated in database');
+        } catch (dbError) {
+          console.error('Database error when updating dark mode:', dbError);
+          // Visual change already applied, so we just log the error
+        }
+      }
+    } catch (persistError) {
+      console.error('Error persisting dark mode preference:', persistError);
+      // Visual change already applied, so we don't throw
+    }
+    
+    // Return success since visual changes were applied even if persistence failed
+    return true;
   } catch (error) {
-    console.error('Error toggling dark mode:', error);
+    // This should only happen if the visual changes couldn't be applied
+    console.error('Critical error toggling dark mode:', error);
     showToast('Error', 'Failed to update theme preference.', 'danger');
+    return false;
   }
 }
 

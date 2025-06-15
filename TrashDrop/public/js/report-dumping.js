@@ -1,17 +1,59 @@
-// Development mode check
-const isDevelopment = window.location.hostname === 'localhost' || 
-                   window.location.hostname === '127.0.0.1' || 
-                   window.location.hostname === '';
+/**
+ * TrashDrop - Report Dumping Module
+ * 
+ * Handles illegal dumping reporting, photo capture, location selection,
+ * and submission to the backend or local storage when offline.
+ * 
+ * @version 2.0.0
+ * @author TrashDrop Engineering
+ */
 
-// Development user data
-const devUser = {
-    id: 'dev-user-' + Date.now(),
-    email: 'dev@example.com',
-    name: 'Development User'
+// Configuration helpers
+const getConfig = (key, defaultValue) => {
+    if (window.AppConfig && window.AppConfig.get) {
+        return window.AppConfig.get(key) || defaultValue;
+    }
+    return defaultValue;
 };
 
-// Supabase client is already initialized in auth.js
-// We'll use the existing supabase instance
+// Development mode check using AppConfig if available
+const isDevelopment = () => {
+    if (window.AppConfig && window.AppConfig.get) {
+        // Check environment config first
+        const environment = window.AppConfig.get('app.environment');
+        if (environment === 'development') return true;
+        
+        // Check feature flags
+        const devMode = window.AppConfig.get('features.developmentMode');
+        if (devMode) return true;
+    }
+    
+    // Fall back to hostname check
+    const hostname = window.location.hostname;
+    return hostname === 'localhost' || 
+           hostname === '127.0.0.1' || 
+           hostname === '' ||
+           hostname.includes('ngrok');
+};
+
+// Development user data
+const getDevUser = () => {
+    // Try to get from AuthManager first if available
+    if (window.AuthManager && window.AuthManager.getDevUser) {
+        const authDevUser = window.AuthManager.getDevUser();
+        if (authDevUser) return authDevUser;
+    }
+    
+    return {
+        id: 'dev-user-' + Date.now(),
+        email: getConfig('development.defaultUserEmail', 'dev@trashdrop.local'),
+        name: getConfig('development.defaultUserName', 'Development User'),
+        user_metadata: {
+            name: getConfig('development.defaultUserName', 'Development User'),
+            avatar_url: getConfig('development.defaultAvatarUrl', '/img/profile-placeholder.jpg')
+        }
+    };
+};
 
 // Global variables for report data and state
 let reportData = {
@@ -23,10 +65,11 @@ let reportData = {
 
 // Initialize shared variables
 let map, marker;
-let currentLatitude = 40.7128; // Default to New York
-let currentLongitude = -74.0060;
+// Get default coordinates from config or fall back to New York
+let currentLatitude = getConfig('maps.defaultLatitude', 40.7128); 
+let currentLongitude = getConfig('maps.defaultLongitude', -74.0060);
 let mediaStream = null;
-let cameraFacingMode = 'environment'; // Start with rear camera
+let cameraFacingMode = getConfig('camera.defaultFacingMode', 'environment'); // Start with rear camera
 let user;
 let isPageLoaded = false;
 
@@ -44,13 +87,24 @@ window.addEventListener('error', function(event) {
 document.addEventListener('DOMContentLoaded', async () => {
     // Authentication check
     try {
+        // Wait for AppConfig to be initialized if possible
+        if (window.AppConfig && !window.AppConfig.initialized) {
+            try {
+                await window.AppConfig.initialize();
+                console.log('AppConfig initialized for report-dumping.js');
+            } catch (configError) {
+                console.warn('Failed to initialize AppConfig, using defaults', configError);
+            }
+        }
+        
         if (window.AuthManager) {
             user = await window.AuthManager.getCurrentUser();
             if (!user) {
                 const isAuthenticated = await window.AuthManager.isAuthenticated();
                 if (!isAuthenticated) {
-                    if (!isDevelopment) {
-                        window.location.href = '/login';
+                    if (!isDevelopment()) {
+                        const loginUrl = getConfig('routes.login', '/login');
+                        window.location.href = loginUrl;
                         return;
                     }
                 } else {
@@ -58,25 +112,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     user = await window.AuthManager.getUserProfile();
                 }
             }
-        } else if (!isDevelopment) {
+        } else if (!isDevelopment()) {
             console.error('AuthManager not available');
-            window.location.href = '/login';
+            const loginUrl = getConfig('routes.login', '/login');
+            window.location.href = loginUrl;
             return;
         }
         
         // Use development user if in development mode and no user is authenticated
-        if ((!user || !user.id) && isDevelopment) {
+        if ((!user || !user.id) && isDevelopment()) {
             console.log('Using development user');
-            user = devUser;
+            user = getDevUser();
         }
     } catch (error) {
         console.error('Authentication error:', error);
-        if (!isDevelopment) {
-            window.location.href = '/login';
+        if (!isDevelopment()) {
+            const loginUrl = getConfig('routes.login', '/login');
+            window.location.href = loginUrl;
             return;
         }
         console.log('Continuing with development mode after auth error');
-        user = devUser;
+        user = getDevUser();
     }
     
     // Initialize offline handling
@@ -297,10 +353,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             map = L.map('map').setView([currentLatitude, currentLongitude], 13);
             
-            // Use OpenStreetMap tiles with offline fallback
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19
+            // Get map configuration from AppConfig or use defaults
+            const mapTileUrl = getConfig('maps.tileUrl', 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+            const mapAttribution = getConfig('maps.attribution', '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
+            const mapMaxZoom = getConfig('maps.maxZoom', 19);
+            
+            // Use configured tile layer
+            L.tileLayer(mapTileUrl, {
+                attribution: mapAttribution,
+                maxZoom: mapMaxZoom
             }).addTo(map);
             
             // Add marker for current position
@@ -513,6 +574,112 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Prepare progress indicator
             showToast('Processing report...', 3000);
+            
+            /**
+             * Uploads a photo and returns the public URL
+             * @param {string} dataUrl - The data URL of the photo to upload
+             * @returns {Promise<string>} - The URL of the uploaded photo or null if upload fails
+             */
+            async function uploadPhoto(dataUrl) {
+                try {
+                    // Get upload configuration from AppConfig
+                    const enableCompression = getConfig('uploads.enableCompression', true);
+                    const compressionQuality = getConfig('uploads.compressionQuality', 0.7);
+                    const maxWidth = getConfig('uploads.maxWidth', 1200);
+                    const maxHeight = getConfig('uploads.maxHeight', 1200);
+                    
+                    // If in development mode, we can use mock URLs to simulate uploads
+                    if (isDevelopment()) {
+                        const mockFileBaseUrl = getConfig('development.mockFileBaseUrl', 'https://storage.trashdrop.dev/photos/');
+                        const mockFileName = 'photo-' + Date.now() + '-' + Math.floor(Math.random() * 1000) + '.jpg';
+                        console.log('Using mock file upload URL for development:', mockFileBaseUrl + mockFileName);
+                        // Simulate network delay
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        return mockFileBaseUrl + mockFileName;
+                    }
+                    
+                    // In production, we'll upload to Supabase storage
+                    // First, compress the image if enabled
+                    let finalDataUrl = dataUrl;
+                    if (enableCompression) {
+                        finalDataUrl = await compressImage(dataUrl, compressionQuality, maxWidth, maxHeight);
+                    }
+                    
+                    // Extract base64 data from data URL
+                    const base64Data = finalDataUrl.split(',')[1];
+                    if (!base64Data) {
+                        throw new Error('Invalid data URL format');
+                    }
+                    
+                    // Upload to Supabase storage
+                    const fileName = 'report-photo-' + Date.now() + '.jpg';
+                    const { data, error } = await supabase.storage
+                        .from('report-photos')
+                        .upload(`public/${user.id}/${fileName}`, decode(base64Data), {
+                            contentType: 'image/jpeg',
+                            upsert: true,
+                        });
+                    
+                    if (error) {
+                        console.error('Error uploading photo:', error);
+                        return null;
+                    }
+                    
+                    // Get public URL
+                    const { data: urlData } = supabase.storage
+                        .from('report-photos')
+                        .getPublicUrl(`public/${user.id}/${fileName}`);
+                    
+                    return urlData.publicUrl;
+                } catch (error) {
+                    console.error('Error in uploadPhoto:', error);
+                    return null;
+                }
+            }
+            
+            // Function to compress image using canvas
+            async function compressImage(dataUrl, quality = 0.7, maxWidth = 1200, maxHeight = 1200) {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Calculate new dimensions
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > maxWidth) {
+                            height = (height * maxWidth) / width;
+                            width = maxWidth;
+                        }
+                        
+                        if (height > maxHeight) {
+                            width = (width * maxHeight) / height;
+                            height = maxHeight;
+                        }
+                        
+                        // Create canvas and draw image
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Get compressed data URL
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressedDataUrl);
+                    };
+                    img.src = dataUrl;
+                });
+            }
+            
+            // Helper function to decode base64 data
+            function decode(base64String) {
+                const binaryString = atob(base64String);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return bytes;
+            }
             
             // Upload photos if online
             if (isOnline && reportData.photos && reportData.photos.length > 0) {
@@ -795,106 +962,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         photoItem.appendChild(img);
         photoItem.appendChild(removeBtn);
         
-        // Insert before the add button
-        const addPhotoBtn = document.getElementById('add-photo');
-        photoGrid.insertBefore(photoItem, addPhotoBtn);
+        // Add the photo to the grid
+        photoGrid.appendChild(photoItem);
     }
-    
-    // Upload a photo to Supabase Storage (mock for development)
-    async function uploadPhoto(dataUrl) {
-        try {
-            // In development mode, we'll just use the data URL directly
-            console.log('Mock photo upload in development mode');
-            
-            // Generate a mock URL for development
-            const timestamp = new Date().getTime();
-            const mockUrl = `mock-photo-url-${timestamp}.jpg`;
-            
-            // In a real environment, we would upload to Supabase Storage
-            // For development, we'll just return a fake URL
-            return mockUrl;
-        } catch (error) {
-            console.error('Error handling photo:', error);
-            return null;
-        }
-    }
-    
-    // Store report in IndexedDB for offline use
-    async function storeOfflineReport(reportData) {
-        // Add timestamp and photos as data URLs
-        reportData.createdAt = new Date().toISOString();
-        reportData.pending = true;
-        
-        // Get photo data URLs
-        const photoElements = document.querySelectorAll('.photo-preview-item img');
-        const photoDataUrls = [];
-        
-        for (let i = 0; i < photoElements.length; i++) {
-            photoDataUrls.push(photoElements[i].src);
-        }
-        
-        reportData.photoDataUrls = photoDataUrls;
-        
-        // Store in offline-reports store
-        const db = await openIndexedDB();
-        const tx = db.transaction('offline-reports', 'readwrite');
-        const store = tx.objectStore('offline-reports');
-        await store.add(reportData);
-        
-        return new Promise((resolve, reject) => {
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    }
-    
-    // Open IndexedDB
-    function openIndexedDB() {
-        return new Promise((resolve, reject) => {
-            try {
-                const request = indexedDB.open('trashdrop-db', 1);
-                
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    
-                    // Create offline-reports store if it doesn't exist
-                    if (!db.objectStoreNames.contains('offline-reports')) {
-                        db.createObjectStore('offline-reports', { keyPath: 'createdAt' });
-                    }
-                };
-                
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = (event) => {
-                    console.error('IndexedDB error:', event.target.error);
-                    reject(event.target.error);
-                };
-            } catch (error) {
-                console.error('Error opening IndexedDB:', error);
-                reject(error);
-            }
-        });
-    }
-    
-    // Handle online/offline status
-    function handleOfflineStatus() {
-        const offlineIndicator = document.querySelector('.offline-indicator');
-        
-        // Initial status check
-        if (!navigator.onLine) {
-            offlineIndicator.style.display = 'block';
-        }
-        
-        // Listen for online/offline events
-        window.addEventListener('online', () => {
-            offlineIndicator.style.display = 'none';
-            syncOfflineReports();
-        });
-        
-        window.addEventListener('offline', () => {
-            offlineIndicator.style.display = 'block';
-        });
-    }
-    
-    // Sync offline reports when back online
+
+    // Function to handle offline reports
     async function syncOfflineReports() {
         try {
             const db = await openIndexedDB();
@@ -902,20 +974,69 @@ document.addEventListener('DOMContentLoaded', async () => {
             const store = tx.objectStore('offline-reports');
             const reports = await store.getAll();
             
-            if (reports.length === 0) return;
+            if (reports.length > 0) {
+                console.log(`Found ${reports.length} offline reports`);
+                showToast(`Syncing ${reports.length} offline report(s)...`);
+                
+                // Process each offline report
+                for (const report of reports) {
+                    try {
+                        await processOfflineReport(report, db);
+                    } catch (processError) {
+                        console.error('Error processing report:', processError);
+                    }
+                }
+                
+                showToast('All offline reports synced successfully!');
+                loadPastReports(); // Refresh the list
+            }
+        } catch (error) {
+            console.error('Error checking offline reports:', error);
+            showToast('Error syncing some reports. They will be tried again later.');
+        }
+    }
+    
+    // Process a single offline report
+    async function processOfflineReport(report, db) {
+        try {
+            console.log('Processing offline report:', report);
             
-            showToast(`Syncing ${reports.length} offline report(s)...`);
-            
-            // Process each offline report
-            for (const report of reports) {
+            // Upload the photos if there are any
+            if (report.photos && report.photos.length > 0) {
                 try {
-                    // Upload any photos first
-                    if (report.photoDataUrls && report.photoDataUrls.length > 0) {
-                        const uploadPromises = report.photoDataUrls.map(url => uploadPhoto(url));
-                        const uploadedUrls = await Promise.all(uploadPromises);
-                        report.photos = uploadedUrls.filter(url => url !== null);
+                    // Get photo upload configuration
+                    const uploadBatchSize = getConfig('uploads.batchSize', 3);
+                    const uploadConcurrency = getConfig('uploads.concurrency', true);
+                    const photoUrls = [];
+                    
+                    if (uploadConcurrency) {
+                        // Concurrent uploads with configured batch size
+                        const chunks = [];
+                        for (let i = 0; i < report.photos.length; i += uploadBatchSize) {
+                            chunks.push(report.photos.slice(i, i + uploadBatchSize));
+                        }
+                        
+                        for (const chunk of chunks) {
+                            const chunkResults = await Promise.all(chunk.map(photo => uploadPhoto(photo)));
+                            photoUrls.push(...chunkResults.filter(url => url !== null));
+                        }
+                    } else {
+                        // Sequential uploads
+                        for (const photo of report.photos) {
+                            const url = await uploadPhoto(photo);
+                            if (url) photoUrls.push(url);
+                        }
                     }
                     
+                    // Update report with uploaded photo URLs
+                    report.photos = photoUrls;
+                    
+                    console.log('Photos uploaded successfully');
+                } catch (error) {
+                    console.error('Photo upload failed:', error);
+                }
+                
+                try {
                     // Remove photo data URLs to save bandwidth
                     delete report.photoDataUrls;
                     delete report.pending;
@@ -935,16 +1056,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 } catch (error) {
                     console.error('Error syncing report:', error);
+                    throw error; // Re-throw to be caught by the caller
                 }
             }
-            
-            showToast('All offline reports synced successfully!');
-            loadPastReports(); // Refresh the list
         } catch (error) {
-            console.error('Error syncing offline reports:', error);
-            showToast('Error syncing some reports. They will be tried again later.');
+            console.error('Error processing offline report:', error);
+            throw error; // Re-throw to be caught by the caller
         }
     }
+    
+    // Initialize offline sync when appropriate
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            syncOfflineReports().catch(err => {
+                console.error('Failed to sync offline reports:', err);
+            });
+        }, 3000); // Delay to ensure other initialization is complete
+    });
+    
     
     // Load user's past reports
     async function loadPastReports() {
@@ -1214,4 +1343,3 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 300);
         }, 3000);
     }
-});

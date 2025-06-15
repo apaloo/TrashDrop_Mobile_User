@@ -1,11 +1,12 @@
 const axios = require('axios');
+const configManager = require('../config/config-manager');
 
 // Environment check
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = configManager.get('environment') !== 'production';
 
 // SMS Provider configuration (only used in production)
-const SMS_API_URL = 'https://api.yoursmsservice.com/send';
-const SMS_API_KEY = process.env.SMS_API_KEY;
+const SMS_API_URL = configManager.get('services.sms.apiUrl') || 'https://api.yoursmsservice.com/send';
+const SMS_API_KEY = configManager.get('services.sms.apiKey');
 
 exports.sendOTP = async (phoneNumber, otp) => {
   // In development mode, just log the OTP and return success

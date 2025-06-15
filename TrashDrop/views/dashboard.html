@@ -4,33 +4,139 @@
     <!-- MINIMAL REFRESH BLOCKER - SINGLE SCRIPT SOLUTION -->    
     <script src="/js/refresh-blocker.js"></script>
     <!-- Additional blockers as backup -->
-    <script src="/js/logout-redirect-blocker.js"></script>
-    <!-- Protocol interceptor must run early -->
     <script src="/js/protocol-interceptor.js"></script>
-    <!-- Emergency logout removal script - runs early to prevent button appearance -->
-    <script src="/js/remove-emergency-logout.js"></script>
-    <!-- Navigation fix script - ensures proper URL handling during redirects -->
-    <script src="/js/navigation-fix.js"></script>
-    <!-- Mobile logout fix - specific handling for mobile logout issues -->
-    <script src="/js/mobile-logout-fix.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes">
-    <meta name="description" content="TrashDrop Dashboard - Manage your waste collection, view upcoming pickups, and track your recycling points">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="description" content="TrashDrop Dashboard - Track your waste pickup activities and view statistics">
     <title>Dashboard - TrashDrop</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/accessibility.css">
-    <link rel="stylesheet" href="/css/navbar-fix.css">
-    <link rel="stylesheet" href="/css/hide-emergency-logout.css">
-    <link rel="stylesheet" href="/css/pwa-install-prompt.css">
-    <link rel="stylesheet" href="/css/pwa-fullscreen.css">
-    <link rel="stylesheet" href="/css/immersive-mode.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4CAF50">
+
+    <!-- AppConfig for resource management -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Dynamic resource loading -->
+    <script>
+        // Load CSS resources dynamically
+        async function loadStyles() {
+            try {
+                // Ensure AppConfig exists
+                if (typeof window.AppConfig === 'undefined') {
+                    console.warn('AppConfig was not defined. Creating a default instance.');
+                    window.AppConfig = {
+                        initialized: false,
+                        initialize: async function() {
+                            console.log('Using default AppConfig initialization');
+                            this.initialized = true;
+                            return true;
+                        },
+                        get: function(key) {
+                            return null; // Default implementation returns null for all keys
+                        }
+                    };
+                }
+                
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title and meta
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const pageTitle = window.AppConfig.get('ui.pages.dashboard.title') || 'Dashboard';
+                document.title = `${pageTitle} - ${appName}`;
+                
+                // Update meta description
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) {
+                    metaDesc.setAttribute('content', 
+                        window.AppConfig.get('ui.pages.dashboard.description') || 
+                        `${appName} Dashboard - Track your waste pickup activities and view statistics`);
+                }
+                
+                // Update theme color
+                const themeColor = document.querySelector('meta[name="theme-color"]');
+                if (themeColor) {
+                    themeColor.setAttribute('content', 
+                        window.AppConfig.get('theme.primaryColor') || '#4CAF50');
+                }
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css') || 
+                                        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = bootstrapCssUrl;
+                document.head.appendChild(bootstrapCss);
+                
+                // Load Bootstrap Icons
+                const bootstrapIconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons') || 
+                                         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                
+                const bootstrapIcons = document.createElement('link');
+                bootstrapIcons.rel = 'stylesheet';
+                bootstrapIcons.href = bootstrapIconsUrl;
+                document.head.appendChild(bootstrapIcons);
+                
+                // Load Leaflet CSS
+                const leafletCssUrl = window.AppConfig.get('cdnResources.leaflet.css') || 
+                                    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                
+                const leafletCss = document.createElement('link');
+                leafletCss.rel = 'stylesheet';
+                leafletCss.href = leafletCssUrl;
+                document.head.appendChild(leafletCss);
+                
+                // Load application CSS
+                const cssFiles = [
+                    '/css/styles.css',
+                    '/css/accessibility.css',
+                    '/css/navbar-fix.css',
+                    '/css/dark-theme.css',
+                    '/css/mobile-nav-fix.css'
+                ];
+                
+                cssFiles.forEach(file => {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = file;
+                    document.head.appendChild(link);
+                });
+                
+                console.log('Dynamic styles loaded successfully');
+            } catch (error) {
+                console.error('Error loading dynamic styles:', error);
+                
+                // Fallback to default CSS if configuration fails
+                const fallbackCss = document.createElement('link');
+                fallbackCss.rel = 'stylesheet';
+                fallbackCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                document.head.appendChild(fallbackCss);
+                
+                const fallbackIcons = document.createElement('link');
+                fallbackIcons.rel = 'stylesheet';
+                fallbackIcons.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                document.head.appendChild(fallbackIcons);
+                
+                const fallbackLeaflet = document.createElement('link');
+                fallbackLeaflet.rel = 'stylesheet';
+                fallbackLeaflet.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(fallbackLeaflet);
+            }
+        }
+        
+        // Initialize styles when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadStyles);
+    </script>
     <link rel="stylesheet" href="/css/responsive-enhancements.css">
     <link rel="stylesheet" href="/css/device-optimizations.css">
     <link rel="stylesheet" href="/css/navbar-content-fix.css">
     <link rel="stylesheet" href="/css/modal-fixes.css">
     <link rel="stylesheet" href="/css/button-consistency-fix.css">
+    <link rel="stylesheet" href="/css/offline-map.css" />
+    <script src="/js/offline-map.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="/css/dark-theme.css">
     <link rel="stylesheet" href="/css/mobile-nav-fix.css">
     <link rel="manifest" href="/manifest.json">
@@ -98,7 +204,8 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
 
-    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+    <!-- STATIC NAVBAR: Directly included in HTML to guarantee visibility -->
+    <nav class="navbar navbar-dark bg-success" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1030; display: flex !important; width: 100%;" role="navigation" aria-label="Main Navigation">
         <div class="container">
             <!-- Mobile view (simplified) -->
             <div class="d-flex d-lg-none justify-content-between align-items-center w-100">
@@ -107,11 +214,9 @@
                     TrashDrop
                 </a>
                 <div class="d-flex align-items-center">
-                    <span id="connection-status-mobile" class="badge text-bg-success me-2">Online</span>
-                    <span id="pickup-offline-indicator-mobile" class="badge rounded-pill text-bg-warning d-none">0</span>
                     <a href="/rewards" class="text-white me-3 text-decoration-none">
-                        <i class="bi bi-award-fill"></i>
-                        <span id="user-points-mobile">0</span>
+                        <i class="bi bi-award-fill me-1"></i>
+                        <span id="user-points-mobile">0</span> points
                     </a>
                     <div class="dropdown">
                         <button class="btn btn-sm btn-outline-light rounded-circle p-1" type="button" id="userDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false">
@@ -121,7 +226,6 @@
                             <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
                             <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
                             <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                         </ul>
                     </div>
@@ -134,41 +238,61 @@
                     <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
                     TrashDrop
                 </a>
-                <button class="navbar-toggler d-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse show" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        <!-- Navbar items removed as requested -->
-                    </ul>
-                    <div class="d-flex align-items-center">
-                        <div class="d-flex align-items-center me-3">
-                            <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                            <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
-                        </div>
-                        <a href="/rewards" class="text-white me-3 text-decoration-none">
-                            <i class="bi bi-award-fill me-1"></i>
-                            <span id="user-points">0</span> points
-                        </a>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-person-circle me-1"></i>
-                                <span id="user-name">User</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                                <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                                <li><a class="dropdown-item" href="/views/db-performance.html"><i class="bi bi-speedometer2 me-2"></i>DB Performance</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                                <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                            </ul>
-                        </div>
+                <div class="d-flex align-items-center">
+                    <a href="/dashboard" class="nav-link text-white active me-3">
+                        <i class="bi bi-house-door-fill me-1"></i> Dashboard
+                    </a>
+                    <a href="/request-pickup" class="nav-link text-white me-3">
+                        <i class="bi bi-truck me-1"></i> Request Pickup
+                    </a>
+                    <a href="/report" class="nav-link text-white me-3">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Report Dumping
+                    </a>
+                    <a href="/scan" class="nav-link text-white me-3">
+                        <i class="bi bi-qr-code-scan me-1"></i> Scan Code
+                    </a>
+                    <div class="dropdown me-3">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="moreDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            More
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="moreDropdown">
+                            <li><a class="dropdown-item" href="/all-activities"><i class="bi bi-activity me-2"></i>View All Activities</a></li>
+                            <li><a class="dropdown-item" href="/all-reports"><i class="bi bi-list-ul me-2"></i>View All Reports</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/order-bags"><i class="bi bi-bag-fill me-2"></i>Order Bags</a></li>
+                            <li><a class="dropdown-item" href="/rewards"><i class="bi bi-trophy-fill me-2"></i>Rewards</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <a href="/rewards" class="text-white me-3 text-decoration-none">
+                        <i class="bi bi-award-fill me-1"></i>
+                        <span id="user-points">0</span> points
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span id="user-name">User</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
+    
+    <!-- Add padding to prevent content from being hidden under navbar -->
+    <style>
+        body {
+            padding-top: 56px !important;
+        }
+    </style>
 
     <main id="main-content" class="container py-3" style="padding-top: 1.5rem !important; margin-top: 0.5rem;">
         <h1 class="mb-3 fs-4 fw-bold" id="dashboard-title">Dashboard</h1>
@@ -953,10 +1077,69 @@
         </div>
     </div>
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap Icons loaded via AppConfig -->
+    <script>
+        // Load Bootstrap Icons using AppConfig
+        (function() {
+            try {
+                const iconsCss = document.createElement('link');
+                iconsCss.rel = 'stylesheet';
+                
+                // Get URL from AppConfig if available, otherwise use fallback
+                if (window.AppConfig && window.AppConfig.get) {
+                    iconsCss.href = window.AppConfig.get('cdnResources.bootstrap.icons') || 
+                                 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                } else {
+                    iconsCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                }
+                
+                document.head.appendChild(iconsCss);
+            } catch (error) {
+                console.error('Failed to load Bootstrap Icons from AppConfig:', error);
+                // Fallback if AppConfig fails
+                const fallbackIcons = document.createElement('link');
+                fallbackIcons.rel = 'stylesheet';
+                fallbackIcons.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                document.head.appendChild(fallbackIcons);
+            }
+        })();
+    </script>
+    <!-- Bootstrap Bundle with Popper loaded via AppConfig -->
+    <script>
+        // Load Bootstrap JS using AppConfig
+        (function() {
+            try {
+                const bootstrapJs = document.createElement('script');
+                
+                // Get URL from AppConfig if available, otherwise use fallback
+                if (window.AppConfig && window.AppConfig.get) {
+                    bootstrapJs.src = window.AppConfig.get('cdnResources.bootstrap.js') || 
+                                  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                } else {
+                    bootstrapJs.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                }
+                
+                bootstrapJs.onload = function() {
+                    console.log('Bootstrap JS loaded successfully via AppConfig');
+                };
+                
+                bootstrapJs.onerror = function() {
+                    console.error('Failed to load Bootstrap JS from AppConfig, using fallback');
+                    const fallbackJs = document.createElement('script');
+                    fallbackJs.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                    document.body.appendChild(fallbackJs);
+                };
+                
+                document.body.appendChild(bootstrapJs);
+            } catch (error) {
+                console.error('Error loading Bootstrap JS via AppConfig:', error);
+                // Fallback if AppConfig fails
+                const fallbackJs = document.createElement('script');
+                fallbackJs.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                document.body.appendChild(fallbackJs);
+            }
+        })();
+    </script>
     <!-- Theme Switcher (must be early) -->
     <script src="/js/theme-switcher.js"></script>
     <script src="/js/theme-switcher-enhanced.js"></script>
@@ -1293,62 +1476,88 @@
     <!-- Initialize persistence immediately during page load -->
     <script>
         // Sync mobile and desktop UI elements
+        // This function is deprecated and should be replaced with setupMobileDesktopSync
+        // Adding defensive coding to prevent null reference errors if it gets called
         function syncMobileDesktopElements() {
+            console.warn('syncMobileDesktopElements is deprecated, use setupMobileDesktopSync instead');
             // Sync user information
-            const userData = JSON.parse(localStorage.getItem('userData')) || {};
-            const userName = userData.name || 'User';
-            const userPoints = userData.points || '0';
-            
-            // Update desktop elements
-            document.getElementById('user-name').textContent = userName;
-            document.getElementById('user-points').textContent = userPoints;
-            
-            // Update mobile elements
-            document.getElementById('user-points-mobile').textContent = userPoints;
-            
-            // Sync connection status
-            const isOnline = navigator.onLine;
-            const connectionStatus = document.getElementById('connection-status');
-            const connectionStatusMobile = document.getElementById('connection-status-mobile');
-            
-            if (isOnline) {
-                connectionStatus.textContent = 'Online';
-                connectionStatus.classList.remove('text-bg-danger');
-                connectionStatus.classList.add('text-bg-success');
+            try {
+                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                const userName = userData.name || 'User';
+                const userPoints = userData.points || '0';
                 
-                connectionStatusMobile.textContent = 'Online';
-                connectionStatusMobile.classList.remove('text-bg-danger');
-                connectionStatusMobile.classList.add('text-bg-success');
-            } else {
-                connectionStatus.textContent = 'Offline';
-                connectionStatus.classList.remove('text-bg-success');
-                connectionStatus.classList.add('text-bg-danger');
+                // Update desktop elements - static navbar now
+                const userNameEl = document.getElementById('user-name');
+                const userPointsEl = document.getElementById('user-points');
+                const userPointsMobileEl = document.getElementById('user-points-mobile');
                 
-                connectionStatusMobile.textContent = 'Offline';
-                connectionStatusMobile.classList.remove('text-bg-success');
-                connectionStatusMobile.classList.add('text-bg-danger');
+                // Safely update elements if they exist
+                if (userNameEl) userNameEl.textContent = userName;
+                if (userPointsEl) userPointsEl.textContent = userPoints;
+                if (userPointsMobileEl) userPointsMobileEl.textContent = userPoints;
+                
+                // Display online status in console only (no more status indicators in UI)
+                const isOnline = navigator.onLine;
+                console.log(`Connection status: ${isOnline ? 'Online' : 'Offline'}`);
+                
+                // Update offline alert visibility based on connection
+                const offlineAlert = document.getElementById('offline-alert');
+                if (offlineAlert) {
+                    if (isOnline) {
+                        offlineAlert.classList.add('d-none');
+                    } else {
+                        offlineAlert.classList.remove('d-none');
+                    }
+                }
+                
+                console.log('✅ Synced user information in navbar');
+            } catch (error) {
+                console.error('❌ Error syncing navbar elements:', error);
             }
         }
         
         // Sync mobile/desktop event handlers
         function setupMobileDesktopSync() {
-            // Dark mode toggle
-            document.getElementById('toggle-theme-mobile').addEventListener('click', function(e) {
-                document.getElementById('toggle-theme').click();
-            });
-            
-            // Logout is now handled by mobile-logout-fix.js
-            // No need for duplicate event listeners here
+            // Give navbar.js time to inject elements
+            setTimeout(() => {
+                // Dark mode toggle
+                const toggleThemeMobile = document.getElementById('toggle-theme-mobile');
+                const toggleTheme = document.getElementById('toggle-theme');
+                
+                if (toggleThemeMobile && toggleTheme) {
+                    toggleThemeMobile.addEventListener('click', function(e) {
+                        toggleTheme.click();
+                    });
+                    console.log('Dark mode toggle set up');
+                } else {
+                    console.log('Missing theme toggle elements, skipping event setup');
+                }
+                
+                // Logout is now handled by mobile-logout-fix.js
+                // No need for duplicate event listeners here
+            }, 600); // Slightly longer delay than syncMobileDesktopElements
         }
         
         // Setup responsive behaviors when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            syncMobileDesktopElements();
+            // Removed syncMobileDesktopElements call to fix null reference errors
+            // We're using a static navbar now, so dynamic sync is not needed
+            
+            // Only keep the setupMobileDesktopSync function which safely handles only UI elements
             setupMobileDesktopSync();
             
-            // Update on network status change
-            window.addEventListener('online', syncMobileDesktopElements);
-            window.addEventListener('offline', syncMobileDesktopElements);
+            // Handle online/offline events directly without using syncMobileDesktopElements
+            window.addEventListener('online', function() {
+                console.log('Online status: Connected');
+                const offlineAlert = document.getElementById('offline-alert');
+                if (offlineAlert) offlineAlert.classList.add('d-none');
+            });
+            
+            window.addEventListener('offline', function() {
+                console.log('Online status: Disconnected');
+                const offlineAlert = document.getElementById('offline-alert');
+                if (offlineAlert) offlineAlert.classList.remove('d-none');
+            });
         });
         
         // Run persistence check as early as possible during page load
@@ -1362,6 +1571,7 @@
     <script src="/js/theme-switcher-enhanced.js"></script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/mobile-nav.js"></script>
+    <script src="/js/navbar.js"></script>
     <script src="/js/remove-emergency-logout.js"></script>
     <!-- Initialize Bootstrap components -->
     <script>
@@ -1395,28 +1605,39 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Ensure proper ARIA states for dynamic content
         const updateAriaStates = function() {
-            // Update aria-hidden based on display state
-            document.querySelectorAll('[style*="display: none"]').forEach(el => {
-                el.setAttribute('aria-hidden', 'true');
-            });
-            
-            document.querySelectorAll('[style*="display: block"], [style*="display: flex"]').forEach(el => {
-                el.setAttribute('aria-hidden', 'false');
-            });
-            
-            // Add missing labels to interactive elements
-            document.querySelectorAll('button:not([aria-label])').forEach(btn => {
-                if (!btn.textContent.trim() && btn.querySelector('i')) {
-                    const iconClass = btn.querySelector('i').className;
-                    if (iconClass.includes('plus')) {
-                        btn.setAttribute('aria-label', 'Add');
-                    } else if (iconClass.includes('trash')) {
-                        btn.setAttribute('aria-label', 'Delete');
-                    } else if (iconClass.includes('edit')) {
-                        btn.setAttribute('aria-label', 'Edit');
+            try {
+                // Update aria-hidden based on display state
+                document.querySelectorAll('[style*="display: none"]').forEach(el => {
+                    if (el) el.setAttribute('aria-hidden', 'true');
+                });
+                
+                document.querySelectorAll('[style*="display: block"], [style*="display: flex"]').forEach(el => {
+                    if (el) el.setAttribute('aria-hidden', 'false');
+                });
+                
+                // Add missing labels to interactive elements
+                document.querySelectorAll('button:not([aria-label])').forEach(btn => {
+                    // Add deep null checks
+                    if (btn && typeof btn.textContent !== 'undefined') {
+                        const btnText = btn.textContent || '';
+                        const icon = btn.querySelector('i');
+                        
+                        if (btnText.trim() === '' && icon && icon.className) {
+                            const iconClass = icon.className;
+                            if (iconClass.includes('plus')) {
+                                btn.setAttribute('aria-label', 'Add');
+                            } else if (iconClass.includes('trash')) {
+                                btn.setAttribute('aria-label', 'Delete');
+                            } else if (iconClass.includes('edit')) {
+                                btn.setAttribute('aria-label', 'Edit');
+                            }
+                        }
                     }
-                }
-            });
+                });
+                console.log('✅ Accessibility attributes updated');
+            } catch (error) {
+                console.error('❌ Error updating accessibility attributes:', error);
+            }
         };
         
         // Run initially and set up observer for dynamic changes
@@ -1437,5 +1658,9 @@
         });
     });
     </script>
+    
+   <!-- Navigation components -->
+   <script src="/js/mobile-nav.js"></script>
+   <script src="/js/navbar.js"></script>
 </body>
 </html>

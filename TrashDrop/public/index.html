@@ -5,10 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TrashDrop - Waste Management</title>
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Supabase Auth Loader Script -->    
+    <script src="/js/auth/supabase-auth-loader.js"></script>
+    
+    <!-- CSS will be loaded dynamically from AppConfig -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css');
+                if (bootstrapCssUrl) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = bootstrapCssUrl;
+                    document.head.appendChild(link);
+                } else {
+                    console.warn('Bootstrap CSS URL not found in config, using fallback');
+                    const fallbackLink = document.createElement('link');
+                    fallbackLink.rel = 'stylesheet';
+                    fallbackLink.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css';
+                    document.head.appendChild(fallbackLink);
+                }
+                
+                // Load Bootstrap Icons
+                const iconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons');
+                if (iconsUrl) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = iconsUrl;
+                    document.head.appendChild(link);
+                } else {
+                    console.warn('Bootstrap Icons URL not found in config, using fallback');
+                    const fallbackLink = document.createElement('link');
+                    fallbackLink.rel = 'stylesheet';
+                    fallbackLink.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css';
+                    document.head.appendChild(fallbackLink);
+                }
+            } catch (e) {
+                console.error('Error loading CSS from AppConfig:', e);
+                // Add fallback CSS loading here if needed
+            }
+        });
+    </script>
     
     <style>
         body { 
@@ -231,16 +277,99 @@
     </div>
 </div>
 
-<!-- Bootstrap Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<!-- Bootstrap Icons are now loaded dynamically via AppConfig -->
 
-<!-- Bootstrap JS and dependencies -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Supabase Configuration -->
+<!-- Bootstrap JS will be loaded dynamically -->
 <script>
-const SUPABASE_URL = 'https://cpeyavpxqcloupolbvyh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwZXlhdnB4cWNsb3Vwb2xidnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTY4OTYsImV4cCI6MjA2MTA3Mjg5Nn0.5rxsiRuLHCpeJZ5TqoIA5X4UwoAAuxIpNu_reafwwbQ';
+    // Load Bootstrap JS from AppConfig
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            if (!window.AppConfig || !window.AppConfig.initialized) {
+                await window.AppConfig.initialize();
+            }
+            
+            // Load Bootstrap JS
+            const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js');
+            if (bootstrapJsUrl) {
+                const script = document.createElement('script');
+                script.src = bootstrapJsUrl;
+                document.body.appendChild(script);
+            } else {
+                console.warn('Bootstrap JS URL not found in config, using fallback');
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js';
+                document.body.appendChild(fallbackScript);
+            }
+        } catch (e) {
+            console.error('Error loading Bootstrap JS from AppConfig:', e);
+            // Add fallback loading if needed
+            const fallbackScript = document.createElement('script');
+            fallbackScript.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js';
+            document.body.appendChild(fallbackScript);
+        }
+    });
+</script>
+
+<!-- Supabase Configuration with AppConfig -->
+<script>
+// Configuration using AppConfig
+let SUPABASE_URL;
+let SUPABASE_KEY;
+
+// Initialize configuration
+async function initializeConfig() {
+    try {
+        if (!window.AppConfig || !window.AppConfig.initialized) {
+            await window.AppConfig.initialize();
+        }
+        
+        // Get Supabase credentials from AppConfig
+        SUPABASE_URL = window.AppConfig.get('supabase.url');
+        SUPABASE_KEY = window.AppConfig.get('supabase.anonKey');
+        
+        console.log('Configuration initialized successfully');
+        return true;
+    } catch (error) {
+        console.error('Failed to initialize configuration:', error);
+        return false;
+    }
+}
+
+// Load Supabase script dynamically
+async function loadSupabaseScript() {
+    return new Promise((resolve, reject) => {
+        // Check if Supabase is already loaded
+        if (window.supabase) {
+            console.log('Supabase already loaded');
+            return resolve(window.supabase);
+        }
+
+        console.log('Loading Supabase script...');
+        
+        // Get Supabase script URL from AppConfig or use fallback
+        const supabaseScriptUrl = window.AppConfig?.get('cdnResources.supabase') || 
+            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.4.0/dist/umd/supabase.min.js';
+        
+        const script = document.createElement('script');
+        script.src = supabaseScriptUrl;
+        script.async = true;
+        
+        script.onload = () => {
+            console.log('Supabase script loaded successfully');
+            if (window.supabase) {
+                resolve(window.supabase);
+            } else {
+                reject(new Error('Failed to load Supabase client - global object not available'));
+            }
+        };
+        
+        script.onerror = () => {
+            reject(new Error('Failed to load Supabase script'));
+        };
+        
+        document.head.appendChild(script);
+    });
+}
 
 // Initialize Supabase client with no session persistence
 let supabase;
@@ -275,16 +404,40 @@ function createAuthStorage() {
 // Initialize Supabase when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Initialize Supabase client with custom storage and disabled session persistence
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false,
-                detectSessionInUrl: false,
-                storage: createAuthStorage()
+        // Initialize configuration first
+        await initializeConfig();
+        
+        // Initialize Supabase using the consolidated auth module
+        console.log('Initializing Supabase using consolidated auth module...');
+        if (!window.SupabaseAuthLoader) {
+            console.error('Auth loader not available, falling back to legacy initialization');
+            // Legacy fallback - only used if auth loader fails
+            await loadSupabaseScript();
+            
+            // Verify we have the required configuration
+            if (!SUPABASE_URL || !SUPABASE_KEY) {
+                throw new Error('Missing Supabase configuration');
             }
-        });
-
+            
+            // Initialize Supabase client with custom storage and disabled session persistence
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false,
+                    detectSessionInUrl: false,
+                    storage: createAuthStorage()
+                }
+            });
+        } else {
+            // Use the consolidated auth module
+            await window.SupabaseAuthLoader.initialize();
+            supabase = await window.SupabaseAuthLoader.getClient();
+            
+            if (!supabase) {
+                throw new Error('Failed to initialize Supabase client');
+            }
+        }
+        
         // Store supabase client globally
         window.supabase = supabase;
 
@@ -493,8 +646,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     spinner.classList.remove('d-none');
                     buttonText.textContent = 'Signing in...';
                     
+                    // Get the Supabase client from our consolidated auth module
+                    let client;
+                    if (window.SupabaseAuthLoader) {
+                        client = await window.SupabaseAuthLoader.getClient();
+                    } else {
+                        client = supabase; // Fallback to global variable
+                    }
+                    
                     // Sign in with email and password using Supabase
-                    const { data, error } = await supabase.auth.signInWithPassword({
+                    const { data, error } = await client.auth.signInWithPassword({
                         email,
                         password
                     });
@@ -794,10 +955,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Initialize the application
+        // Initialize UI elements with values from AppConfig
+        function initializeUiFromConfig() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    console.warn('AppConfig not initialized, using default values');
+                    return;
+                }
+                
+                // Update logo images if defined in config
+                const logoUrl = window.AppConfig.get('ui.logoUrl');
+                if (logoUrl) {
+                    document.querySelectorAll('.navbar-brand img, .auth-logo img').forEach(img => {
+                        if (img) img.src = logoUrl;
+                    });
+                }
+                
+                // Update navigation links from config
+                updateNavigationLinks();
+                
+                // Update footer content if present
+                updateFooterContent();
+                
+                console.log('UI initialized from configuration');
+            } catch (error) {
+                console.error('Error initializing UI from config:', error);
+            }
+        }
+        
+        // Update navigation links from configuration
+        function updateNavigationLinks() {
+            const navLinks = {
+                'login': window.AppConfig.get('routes.login'),
+                'signup': window.AppConfig.get('routes.signup'),
+                'about': window.AppConfig.get('routes.about'),
+                'contact': window.AppConfig.get('routes.contact'),
+                'privacy': window.AppConfig.get('routes.privacy'),
+                'terms': window.AppConfig.get('routes.terms'),
+                'home': window.AppConfig.get('routes.home')
+            };
+            
+            // Update all navigation links with configured routes
+            for (const [key, path] of Object.entries(navLinks)) {
+                if (path) {
+                    document.querySelectorAll(`a[data-nav="${key}"], a[href="/${key}.html"]`).forEach(link => {
+                        link.href = path;
+                    });
+                }
+            }
+        }
+        
+        // Update footer content from configuration
+        function updateFooterContent() {
+            const copyrightYear = window.AppConfig.get('app.copyrightYear');
+            const companyName = window.AppConfig.get('app.companyName');
+            
+            if (copyrightYear && companyName) {
+                document.querySelectorAll('.copyright, .footer-copyright').forEach(element => {
+                    if (element) element.textContent = `\u00a9 ${copyrightYear} ${companyName}. All rights reserved.`;
+                });
+            }
+        }
+        
         async function initApp() {
             console.log('[AUTH] Initializing application...');
             
             try {
+                // Initialize UI elements from configuration
+                initializeUiFromConfig();
+                
                 // Initialize Bootstrap tooltips
                 const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 tooltipTriggerList.forEach(function (tooltipTriggerEl) {
@@ -1115,5 +1341,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize the application when the DOM is fully loaded
     document.addEventListener('DOMContentLoaded', initApp);
     </script>
+    
+    <!-- Navbar components intentionally removed from home page -->
 </body>
 </html>

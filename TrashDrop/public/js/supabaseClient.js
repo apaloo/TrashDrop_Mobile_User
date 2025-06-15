@@ -1,73 +1,74 @@
 /*
-  Supabase Client Initialization
+  Supabase Client Module
+  Adapted to use the consolidated Supabase authentication utility module
+  
   This module centralizes the Supabase client so that all services share a single
-  instance. The URL and anonymous key are injected at build / deploy time using
-  environment variables (recommended) or at runtime via <meta> tags (fallback).
+  instance provided by our consolidated authentication utility.
 
   Usage:
     import supabase from './supabaseClient.js';
     const { data, error } = await supabase.from('profiles').select('*');
 */
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm';
+// Use dynamic import for the consolidated auth module
+const moduleUrl = new URL('/js/auth/utils/supabase-auth-unified.js', window.location.origin);
 
-function getSupabaseEnv(key) {
-  // 1. Try direct environment variables first (Vite/Node)
-  if (typeof import.meta !== 'undefined' && import.meta.env?.[key]) {
-    return import.meta.env[key];
-  }
-  if (typeof process !== 'undefined' && process.env?.[key]) {
-    return process.env[key];
-  }
+// Client promise to allow async initialization but synchronous module export
+let clientPromise = null;
 
-  // 2. Try window variables
-  if (typeof window !== 'undefined' && window[key]) {
-    return window[key];
-  }
-
-  // 3. Try meta tags with different naming conventions
-  if (typeof document !== 'undefined') {
-    // Try exact match first
-    let meta = document.querySelector(`meta[name="${key}"]`);
-    if (meta) return meta.getAttribute('content');
+/**
+ * Initialize the client asynchronously
+ * This will happen automatically when the module is imported
+ */
+async function initializeClient() {
+  try {
+    console.log('[supabaseClient] Loading consolidated auth module from:', moduleUrl.href);
+    const { SupabaseAuthManager } = await import(moduleUrl.href);
     
-    // Try kebab-case (SUPABASE_URL -> supabase-url)
-    const kebabKey = key.toLowerCase().replace(/_/g, '-');
-    meta = document.querySelector(`meta[name="${kebabKey}"]`);
-    if (meta) return meta.getAttribute('content');
+    // Get the singleton instance
+    const authManager = SupabaseAuthManager.getInstance();
+    await authManager.initialize();
     
-    // Try lowercase
-    meta = document.querySelector(`meta[name="${key.toLowerCase()}"]`);
-    if (meta) return meta.getAttribute('content');
+    // Get the client from our utility
+    return authManager.getClient();
+  } catch (error) {
+    console.error('[supabaseClient] Error initializing client:', error);
+    throw error;
   }
-
-  return '';
 }
 
-const SUPABASE_URL = getSupabaseEnv('SUPABASE_URL');
-const SUPABASE_KEY = getSupabaseEnv('SUPABASE_ANON_KEY');
+// Start initialization immediately
+clientPromise = initializeClient();
 
-// Debug: Log the values being read
-console.log('[Supabase Debug] SUPABASE_URL:', SUPABASE_URL);
-console.log('[Supabase Debug] SUPABASE_KEY:', SUPABASE_KEY ? '***KEY PRESENT***' : 'MISSING');
-
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.warn('[Supabase] URL / Key missing – API calls will fail.');
-  console.warn('[Supabase] Check if meta tags are properly set in the HTML head');
-  
-  // Try to find any meta tags for debugging
-  const metaTags = document.getElementsByTagName('meta');
-  console.log('[Supabase Debug] Found meta tags:', Array.from(metaTags).map(tag => ({
-    name: tag.name || tag.getAttribute('name'),
-    content: tag.content ? '***' + tag.content.slice(-10) : 'empty'
-  })));
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true
+// This is a proxy that will wait for the client to be ready before operations
+const supabaseProxy = new Proxy({}, {
+  get(target, prop) {
+    // Handle special cases
+    if (prop === 'then' || prop === 'catch' || prop === 'finally') {
+      // If someone tries to await or Promise.resolve(supabase), return the promise
+      return clientPromise[prop].bind(clientPromise);
+    }
+    
+    // For everything else, return a function that gets the client first
+    return async (...args) => {
+      try {
+        const client = await clientPromise;
+        if (!client) throw new Error('Supabase client initialization failed');
+        
+        // If this prop is a method on the client
+        if (typeof client[prop] === 'function') {
+          return client[prop](...args);
+        }
+        
+        // If this prop is a property or object on the client (like .auth or .from)
+        return client[prop];
+      } catch (error) {
+        console.error(`[supabaseClient] Error in operation ${prop}:`, error);
+        throw error;
+      }
+    };
   }
 });
 
-export default supabase;
+// Export the proxy as the default export
+export default supabaseProxy;

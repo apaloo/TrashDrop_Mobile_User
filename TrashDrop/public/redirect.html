@@ -2,21 +2,97 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0;url=/login">
-    <title>Redirecting to Login...</title>
+    
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Default title and redirect, will be updated dynamically -->
+    <title>Redirecting...</title>
+    
     <script>
-        // Immediate redirect to login page
-        window.location.href = '/login';
+        // Initialize configuration and redirect
+        async function initializeAndRedirect() {
+            try {
+                // Load configuration
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get login URL from config
+                const loginUrl = window.AppConfig.get('routes.login') || '/login';
+                
+                // Set redirect metadata
+                const metaRefresh = document.createElement('meta');
+                metaRefresh.setAttribute('http-equiv', 'refresh');
+                metaRefresh.setAttribute('content', `0;url=${loginUrl}`);
+                document.head.appendChild(metaRefresh);
+                
+                // Update page title
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const pageTitle = window.AppConfig.get('ui.pages.redirect.title') || 'Redirecting...';
+                document.title = `${appName} - ${pageTitle}`;
+                
+                // Perform redirect
+                window.location.href = loginUrl;
+                
+                return true;
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+                
+                // Fallback to default redirect
+                window.location.href = '/login';
+                return false;
+            }
+        }
+        
+        // Initialize and redirect when script loads
+        initializeAndRedirect();
     </script>
 </head>
 <body>
-    <div style="text-align: center; margin-top: 100px;">
-        <h2>Redirecting to Login Page...</h2>
-        <p>If you are not redirected automatically, please <a href="/login">click here</a>.</p>
+    <div style="text-align: center; margin-top: 100px;" id="redirect-message">
+        <h2>Redirecting...</h2>
+        <p>If you are not redirected automatically, please <a href="/login" id="redirect-link">click here</a>.</p>
     </div>
     <script>
-        // Set the href for the manual redirect link
-        document.getElementById('redirect-link').href = 'http://127.0.0.1:3000' + window.location.pathname;
+        // Update UI elements with configuration
+        async function updateUI() {
+            try {
+                // Wait for AppConfig to be initialized
+                if (window.AppConfig && !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                if (window.AppConfig) {
+                    // Get login URL and messages from config
+                    const loginUrl = window.AppConfig.get('routes.login') || '/login';
+                    const redirectHeading = window.AppConfig.get('ui.pages.redirect.heading') || 'Redirecting to Login Page...';
+                    const redirectMessage = window.AppConfig.get('ui.pages.redirect.message') || 
+                                          'If you are not redirected automatically, please click here.';
+                    
+                    // Update redirect link and message
+                    const redirectLink = document.getElementById('redirect-link');
+                    if (redirectLink) {
+                        redirectLink.href = loginUrl;
+                    }
+                    
+                    // Update redirect message
+                    const messageContainer = document.getElementById('redirect-message');
+                    if (messageContainer) {
+                        messageContainer.innerHTML = `
+                            <h2>${redirectHeading}</h2>
+                            <p>${redirectMessage} <a href="${loginUrl}" id="redirect-link">click here</a>.</p>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating UI:', error);
+            }
+        }
+        
+        // Update UI when DOM is loaded
+        document.addEventListener('DOMContentLoaded', updateUI);
     </script>
 </body>
 </html>

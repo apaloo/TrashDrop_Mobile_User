@@ -2,10 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile & Settings - TrashDrop</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Profile & Settings</title>
+    
+    <!-- Load AppConfig first for configuration-driven rendering -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Conditional title and meta description will be set by script -->
+    <meta name="description" content="">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Local styles that don't depend on CDN -->
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/accessibility.css">
     <link rel="stylesheet" href="/css/navbar-fix.css">
@@ -14,72 +22,250 @@
     <link rel="stylesheet" href="/css/device-optimizations.css">
     <link rel="stylesheet" href="/css/navbar-content-fix.css">
     <link rel="stylesheet" href="/css/dark-theme.css">
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#4CAF50">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <meta name="description" content="TrashDrop profile and account settings - Manage your personal information, preferences, notifications, and security settings">
+    
+    <script>
+        // Initialize page configuration
+        async function initPageConfig() {
+            try {
+                // Initialize AppConfig if not already done
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get app name from config
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                
+                // Set page title
+                const pageTitle = `Profile & Settings - ${appName}`;
+                document.title = pageTitle;
+                
+                // Set meta description
+                const metaDescription = window.AppConfig.get('ui.profilePage.metaDescription') || 
+                    `${appName} profile and account settings - Manage your personal information, preferences, notifications, and security settings`;
+                document.querySelector('meta[name="description"]').setAttribute('content', metaDescription);
+                
+                // Set theme color
+                const themeColor = window.AppConfig.get('app.themeColor') || '#4CAF50';
+                const metaThemeColor = document.createElement('meta');
+                metaThemeColor.setAttribute('name', 'theme-color');
+                metaThemeColor.setAttribute('content', themeColor);
+                document.head.appendChild(metaThemeColor);
+                
+                // Load external CSS from CDN
+                await loadExternalCSS();
+                
+            } catch (error) {
+                console.error('Error initializing page config:', error);
+                
+                // Fallback for critical elements if configuration fails
+                if (!document.title || document.title === 'Profile & Settings') {
+                    document.title = 'Profile & Settings - TrashDrop';
+                }
+                
+                if (!document.querySelector('meta[name="description"]').getAttribute('content')) {
+                    document.querySelector('meta[name="description"]').setAttribute(
+                        'content', 
+                        'TrashDrop profile and account settings - Manage your personal information, preferences, notifications, and security settings'
+                    );
+                }
+                
+                // Ensure theme color is set
+                if (!document.querySelector('meta[name="theme-color"]')) {
+                    const metaThemeColor = document.createElement('meta');
+                    metaThemeColor.setAttribute('name', 'theme-color');
+                    metaThemeColor.setAttribute('content', '#4CAF50');
+                    document.head.appendChild(metaThemeColor);
+                }
+                
+                // Load fallback CSS if needed
+                loadFallbackCSS();
+            }
+        }
+        
+        // Load external CSS resources
+        async function loadExternalCSS() {
+            try {
+                // Get CSS URLs from config
+                const bootstrapCssUrl = window.AppConfig.get('resources.bootstrapCssUrl') || 
+                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                const bootstrapIconsCssUrl = window.AppConfig.get('resources.bootstrapIconsCssUrl') || 
+                    'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css';
+                
+                // Load Bootstrap CSS
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = bootstrapCssUrl;
+                document.head.appendChild(bootstrapCss);
+                
+                // Load Bootstrap Icons CSS
+                const bootstrapIconsCss = document.createElement('link');
+                bootstrapIconsCss.rel = 'stylesheet';
+                bootstrapIconsCss.href = bootstrapIconsCssUrl;
+                document.head.appendChild(bootstrapIconsCss);
+                
+                return Promise.resolve();
+            } catch (error) {
+                console.error('Error loading external CSS:', error);
+                return Promise.reject(error);
+            }
+        }
+        
+        // Fallback CSS loading if configuration fails
+        function loadFallbackCSS() {
+            if (!document.querySelector('link[href*="bootstrap.min.css"]')) {
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                document.head.appendChild(bootstrapCss);
+            }
+            
+            if (!document.querySelector('link[href*="bootstrap-icons.css"]')) {
+                const bootstrapIconsCss = document.createElement('link');
+                bootstrapIconsCss.rel = 'stylesheet';
+                bootstrapIconsCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css';
+                document.head.appendChild(bootstrapIconsCss);
+            }
+        }
+        
+        // Initialize page as soon as script is loaded
+        initPageConfig();
+    </script>
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
-        <div class="container">
-            <!-- Mobile view (simplified) -->
-            <div class="d-flex d-lg-none justify-content-between align-items-center w-100">
-                <a class="navbar-brand" href="/dashboard">
-                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                    TrashDrop
-                </a>
-                <div class="d-flex align-items-center">
-                    <span id="connection-status-mobile" class="badge text-bg-success me-2">Online</span>
-                    <span id="pickup-offline-indicator-mobile" class="badge rounded-pill text-bg-warning d-none">0</span>
-                    <a href="/rewards" class="text-white me-3 text-decoration-none">
-                        <i class="bi bi-award-fill"></i>
-                        <span id="user-points-mobile">0</span>
-                    </a>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-light rounded-circle p-1" type="button" id="userDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownMobile">
-                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                            <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Desktop view -->
-            <div class="d-none d-lg-flex justify-content-between align-items-center w-100">
-                <a class="navbar-brand" href="/dashboard">
-                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                    TrashDrop
-                </a>
-                <div class="d-flex align-items-center">
-                    <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                    <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
-                    <a href="/rewards" class="text-white me-3 text-decoration-none">
-                        <i class="bi bi-award-fill me-1"></i>
-                        <span id="user-points">0</span> points
-                    </a>
-                    <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle me-1"></i>
-                            <span id="user-name">User</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- Navbar placeholder for dynamic insertion -->
+    <div id="navbar-container"></div>
+    
+    <script>
+        // Dynamically create navbar with AppConfig
+        async function createNavbar() {
+            try {
+                // Initialize AppConfig if not already done
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get branding information
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const logoPath = window.AppConfig.get('app.logoPath') || '/images/logo.svg';
+                const logoAlt = window.AppConfig.get('app.logoAlt') || `${appName} Logo`;
+                const logoWidth = window.AppConfig.get('app.logoWidth') || 30;
+                const logoHeight = window.AppConfig.get('app.logoHeight') || 30;
+                const dashboardUrl = window.AppConfig.get('navigation.dashboardUrl') || '/dashboard';
+                const profileUrl = window.AppConfig.get('navigation.profileUrl') || '/profile';
+                const rewardsUrl = window.AppConfig.get('navigation.rewardsUrl') || '/rewards';
+                
+                // Get UI text
+                const onlineText = window.AppConfig.get('ui.connectionStatus.onlineText') || 'Online';
+                const pointsText = window.AppConfig.get('ui.rewards.pointsText') || 'points';
+                const profileText = window.AppConfig.get('ui.navbar.profileText') || 'Profile';
+                const darkModeText = window.AppConfig.get('ui.navbar.darkModeText') || 'Dark Mode';
+                const emergencyLogoutText = window.AppConfig.get('ui.navbar.emergencyLogoutText') || 'Emergency Logout';
+                const logoutText = window.AppConfig.get('ui.navbar.logoutText') || 'Logout';
+                
+                const navbarHtml = `
+                    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+                        <div class="container">
+                            <!-- Mobile view (simplified) -->
+                            <div class="d-flex d-lg-none justify-content-between align-items-center w-100">
+                                <a class="navbar-brand" href="${dashboardUrl}">
+                                    <img src="${logoPath}" alt="${logoAlt}" width="${logoWidth}" height="${logoHeight}" class="d-inline-block align-top me-2">
+                                    ${appName}
+                                </a>
+                                <div class="d-flex align-items-center">
+                                    <span id="connection-status-mobile" class="badge text-bg-success me-2">${onlineText}</span>
+                                    <span id="pickup-offline-indicator-mobile" class="badge rounded-pill text-bg-warning d-none">0</span>
+                                    <a href="${rewardsUrl}" class="text-white me-3 text-decoration-none">
+                                        <i class="bi bi-award-fill"></i>
+                                        <span id="user-points-mobile">0</span>
+                                    </a>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-light rounded-circle p-1" type="button" id="userDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-person-circle"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownMobile">
+                                            <li><a class="dropdown-item" href="${profileUrl}"><i class="bi bi-person me-2"></i>${profileText}</a></li>
+                                            <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>${darkModeText}</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>${emergencyLogoutText}</a></li>
+                                            <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>${logoutText}</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                    
+                            <!-- Desktop view -->
+                            <div class="d-none d-lg-flex justify-content-between align-items-center w-100">
+                                <a class="navbar-brand" href="${dashboardUrl}">
+                                    <img src="${logoPath}" alt="${logoAlt}" width="${logoWidth}" height="${logoHeight}" class="d-inline-block align-top me-2">
+                                    ${appName}
+                                </a>
+                                <div class="d-flex align-items-center">
+                                    <span id="connection-status" class="badge text-bg-success me-2">${onlineText}</span>
+                                    <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+                                    <a href="${rewardsUrl}" class="text-white me-3 text-decoration-none">
+                                        <i class="bi bi-award-fill me-1"></i>
+                                        <span id="user-points">0</span> ${pointsText}
+                                    </a>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-person-circle me-1"></i>
+                                            <span id="user-name">User</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                            <li><a class="dropdown-item" href="${profileUrl}"><i class="bi bi-person me-2"></i>${profileText}</a></li>
+                                            <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>${darkModeText}</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>${emergencyLogoutText}</a></li>
+                                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>${logoutText}</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                `;
+                
+                // Insert navbar into the page
+                const navbarContainer = document.getElementById('navbar-container');
+                if (navbarContainer) {
+                    navbarContainer.innerHTML = navbarHtml;
+                }
+            } catch (error) {
+                console.error('Error creating navbar:', error);
+                
+                // Fallback to simple navbar if configuration fails
+                const navbarContainer = document.getElementById('navbar-container');
+                if (navbarContainer) {
+                    navbarContainer.innerHTML = `
+                        <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+                            <div class="container">
+                                <a class="navbar-brand" href="/dashboard">
+                                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                                    TrashDrop
+                                </a>
+                                <div class="d-flex align-items-center">
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-person-circle me-1"></i>
+                                            <span id="user-name">User</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </nav>
+                    `;
+                }
+            }
+        }
+        
+        // Initialize navbar when DOM is ready
+        document.addEventListener('DOMContentLoaded', createNavbar);
+    </script>
+    <!-- Navbar is now dynamically generated by the script above -->
 
     <div class="container py-3">
         <h1 class="mb-3 fs-4 fw-bold">Profile & Settings</h1>
@@ -546,21 +732,216 @@
         <div id="toast-container"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/theme-switcher.js"></script>
-    <script src="/js/theme-switcher-enhanced.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/offline-sync.js"></script>
-    <script src="/js/remove-emergency-logout.js"></script>
-    <script src="/js/profile.js"></script>
-    <script src="/js/profile-notifications.js"></script>
-    <script src="/js/profile-preferences.js"></script>
-    <script src="/js/profile-locations.js"></script>
-    <!-- Leaflet Map for Location Selection -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-    <script src="/js/pwa-fullscreen.js"></script>
+    <!-- Footer placeholder (will be dynamically populated by JavaScript) -->
+    <div id="footer-container"></div>
+    
+    <script>
+        // Dynamically load JavaScript resources
+        async function loadScripts() {
+            try {
+                // Initialize AppConfig if not already initialized
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get script URLs from config
+                const bootstrapJsUrl = window.AppConfig.get('resources.bootstrapJsUrl') || 
+                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                const supabaseUrl = window.AppConfig.get('resources.supabaseJsUrl') || 
+                    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js';
+                const leafletCssUrl = window.AppConfig.get('resources.leafletCssUrl') || 
+                    'https://unpkg.com/leaflet@1.9.3/dist/leaflet.css';
+                const leafletJsUrl = window.AppConfig.get('resources.leafletJsUrl') || 
+                    'https://unpkg.com/leaflet@1.9.3/dist/leaflet.js';
+                
+                // Load Bootstrap JS
+                const bootstrapScript = document.createElement('script');
+                bootstrapScript.src = bootstrapJsUrl;
+                document.body.appendChild(bootstrapScript);
+                
+                // Wait for Bootstrap to load before loading other scripts
+                await new Promise(resolve => bootstrapScript.onload = resolve);
+                
+                // Load Theme Switcher scripts
+                const themeSwitcherScript = document.createElement('script');
+                themeSwitcherScript.src = '/js/theme-switcher.js';
+                document.body.appendChild(themeSwitcherScript);
+                
+                const themeSwitcherEnhancedScript = document.createElement('script');
+                themeSwitcherEnhancedScript.src = '/js/theme-switcher-enhanced.js';
+                document.body.appendChild(themeSwitcherEnhancedScript);
+                
+                // Load Leaflet CSS
+                const leafletCss = document.createElement('link');
+                leafletCss.rel = 'stylesheet';
+                leafletCss.href = leafletCssUrl;
+                document.head.appendChild(leafletCss);
+                
+                // Load Leaflet JS
+                const leafletScript = document.createElement('script');
+                leafletScript.src = leafletJsUrl;
+                document.body.appendChild(leafletScript);
+                
+                // Load Supabase
+                const supabaseScript = document.createElement('script');
+                supabaseScript.src = supabaseUrl;
+                document.body.appendChild(supabaseScript);
+                
+                // Wait for critical dependencies to load
+                await Promise.all([
+                    new Promise(resolve => leafletScript.onload = resolve),
+                    new Promise(resolve => supabaseScript.onload = resolve)
+                ]);
+                
+                // Load custom scripts in sequence to maintain execution order
+                const customScripts = [
+                    '/js/auth.js',
+                    '/js/offline-sync.js',
+                    '/js/remove-emergency-logout.js',
+                    '/js/profile.js',
+                    '/js/profile-notifications.js',
+                    '/js/profile-preferences.js',
+                    '/js/profile-locations.js',
+                    '/js/pwa-fullscreen.js',
+                    '/js/mobile-nav.js'
+                ];
+                
+                for (const scriptSrc of customScripts) {
+                    const script = document.createElement('script');
+                    script.src = scriptSrc;
+                    document.body.appendChild(script);
+                    
+                    // Wait for each script to load to maintain execution order
+                    await new Promise(resolve => {
+                        script.onload = resolve;
+                        // If script fails to load after 3 seconds, continue anyway
+                        setTimeout(resolve, 3000);
+                    });
+                }
+                
+                // Create footer after scripts are loaded
+                createFooter();
+                
+            } catch (error) {
+                console.error('Error loading scripts:', error);
+                
+                // Fallback - load critical scripts directly
+                if (!document.querySelector('script[src="/js/auth.js"]')) {
+                    const authScript = document.createElement('script');
+                    authScript.src = '/js/auth.js';
+                    document.body.appendChild(authScript);
+                }
+                
+                if (!document.querySelector('script[src="/js/profile.js"]')) {
+                    const profileScript = document.createElement('script');
+                    profileScript.src = '/js/profile.js';
+                    document.body.appendChild(profileScript);
+                }
+                
+                // Create footer even if scripts fail
+                createFooter();
+            }
+        }
+        
+        // Create footer with AppConfig values
+        async function createFooter() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get branding information
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const logoPath = window.AppConfig.get('app.footerLogoPath') || '/images/logo-white.svg';
+                const logoAlt = window.AppConfig.get('app.logoAlt') || `${appName} Logo`;
+                const logoWidth = window.AppConfig.get('app.logoWidth') || 30;
+                const logoHeight = window.AppConfig.get('app.logoHeight') || 30;
+                const currentYear = new Date().getFullYear();
+                const copyright = window.AppConfig.get('app.copyright') || `&copy; ${currentYear} ${appName}. All rights reserved.`;
+                
+                // Get footer links
+                const aboutUrl = window.AppConfig.get('navigation.aboutUrl') || '/about';
+                const privacyUrl = window.AppConfig.get('navigation.privacyUrl') || '/privacy';
+                const termsUrl = window.AppConfig.get('navigation.termsUrl') || '/terms';
+                const contactUrl = window.AppConfig.get('navigation.contactUrl') || '/contact';
+                
+                const aboutText = window.AppConfig.get('ui.footer.aboutText') || 'About';
+                const privacyText = window.AppConfig.get('ui.footer.privacyText') || 'Privacy Policy';
+                const termsText = window.AppConfig.get('ui.footer.termsText') || 'Terms';
+                const contactText = window.AppConfig.get('ui.footer.contactText') || 'Contact';
+                
+                const footerHtml = `
+                    <footer class="mt-auto py-4 bg-dark text-white">
+                        <div class="container">
+                            <div class="row align-items-center gy-3">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center">
+                                        <img src="${logoPath}" alt="${logoAlt}" width="${logoWidth}" height="${logoHeight}" class="me-3">
+                                        <div>
+                                            <h5 class="mb-0">${appName}</h5>
+                                            <small>${copyright}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="nav justify-content-md-end justify-content-center">
+                                        <li class="nav-item"><a href="${aboutUrl}" class="nav-link px-2 text-white">${aboutText}</a></li>
+                                        <li class="nav-item"><a href="${privacyUrl}" class="nav-link px-2 text-white">${privacyText}</a></li>
+                                        <li class="nav-item"><a href="${termsUrl}" class="nav-link px-2 text-white">${termsText}</a></li>
+                                        <li class="nav-item"><a href="${contactUrl}" class="nav-link px-2 text-white">${contactText}</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
+                `;
+                
+                // Insert footer into the page
+                const footerContainer = document.getElementById('footer-container');
+                if (footerContainer) {
+                    footerContainer.innerHTML = footerHtml;
+                }
+            } catch (error) {
+                console.error('Error creating footer:', error);
+                
+                // Fallback to default footer if configuration fails
+                const footerContainer = document.getElementById('footer-container');
+                if (footerContainer) {
+                    footerContainer.innerHTML = `
+                        <footer class="mt-auto py-4 bg-dark text-white">
+                            <div class="container">
+                                <div class="row align-items-center gy-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <img src="/images/logo-white.svg" alt="TrashDrop Logo" width="30" height="30" class="me-3">
+                                            <div>
+                                                <h5 class="mb-0">TrashDrop</h5>
+                                                <small>&copy; ${new Date().getFullYear()} TrashDrop. All rights reserved.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <ul class="nav justify-content-md-end justify-content-center">
+                                            <li class="nav-item"><a href="/about" class="nav-link px-2 text-white">About</a></li>
+                                            <li class="nav-item"><a href="/privacy" class="nav-link px-2 text-white">Privacy Policy</a></li>
+                                            <li class="nav-item"><a href="/terms" class="nav-link px-2 text-white">Terms</a></li>
+                                            <li class="nav-item"><a href="/contact" class="nav-link px-2 text-white">Contact</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </footer>
+                    `;
+                }
+            }
+        }
+        
+        // Call script loader
+        loadScripts();
+    </script>
+    
+    <!-- Navigation components -->
     <script src="/js/mobile-nav.js"></script>
+    <script src="/js/navbar.js"></script>
 </body>
 </html>

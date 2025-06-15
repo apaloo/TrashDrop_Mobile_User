@@ -19,7 +19,14 @@
     console.log('Added CSS to ensure mobile navbar is hidden on desktop');
 })();
 
-class MobileNavigation {
+// Only define if not already defined
+if (typeof window.MobileNavigation === 'undefined') {
+
+// Use a global variable to track initialization
+window.mobileNavInitialized = window.mobileNavInitialized || false;
+
+// Define the class
+window.MobileNavigation = class MobileNavigation {
     constructor() {
         this.currentPath = window.location.pathname;
         this.navItems = [
@@ -34,8 +41,27 @@ class MobileNavigation {
      * Initialize the mobile navigation
      */
     init() {
+        // Clean up any existing navbars to prevent duplicates
+        this.cleanupDuplicateNavbars();
         this.injectNavigation();
         this.highlightCurrentPage();
+    }
+    
+    /**
+     * Clean up any duplicate navbars
+     */
+    cleanupDuplicateNavbars() {
+        const existingNavbars = document.querySelectorAll('.mobile-bottom-nav');
+        
+        if (existingNavbars.length > 1) {
+            console.log(`Found ${existingNavbars.length} mobile navbars. Removing duplicates...`);
+            // Keep only the first navbar and remove the rest
+            for (let i = 1; i < existingNavbars.length; i++) {
+                existingNavbars[i].remove();
+            }
+        } else if (existingNavbars.length === 1) {
+            console.log('Found one mobile navbar. No duplicates to remove.');
+        }
     }
 
     /**
@@ -48,8 +74,9 @@ class MobileNavigation {
         
         // Add navigation items
         this.navItems.forEach(item => {
+            // CRITICAL FIX: Add data attribute to reset navbar initialization on navigation
             html += `
-            <a href="${item.path}" class="mobile-nav-item">
+            <a href="${item.path}" class="mobile-nav-item" data-reset-navbar="true">
                 <i class="bi bi-${item.icon}"></i>
                 <span>${item.label}</span>
             </a>`;
@@ -155,6 +182,22 @@ class MobileNavigation {
             navElement.innerHTML = this.getNavigationHTML();
             document.body.appendChild(navElement.firstElementChild);
         }
+        
+        // CRITICAL FIX: Add click event listeners to reset navbar initialization flag
+        setTimeout(() => {
+            const navItems = document.querySelectorAll('.mobile-nav-item[data-reset-navbar="true"]');
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    // Reset navbar initialization flag on navigation
+                    console.log('Navigation link clicked, resetting navbar initialization flags');
+                    window.trashDropNavbarInitialized = false;
+                    
+                    // Store a flag in sessionStorage to force navbar initialization on next page
+                    sessionStorage.setItem('forceNavbarInit', 'true');
+                });
+            });
+            console.log(`Added reset handlers to ${navItems.length} navigation items`);
+        }, 100); // Small delay to ensure DOM is ready
     }
 
     /**
@@ -182,8 +225,18 @@ class MobileNavigation {
     }
 }
 
-// Initialize the mobile navigation when the DOM is loaded
+// Initialize the navigation when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    const mobileNav = new MobileNavigation();
-    mobileNav.init();
+    // Only initialize once
+    if (!window.mobileNavInitialized) {
+        const mobileNav = new MobileNavigation();
+        mobileNav.init();
+        window.mobileNavInitialized = true;
+        console.log('Mobile navigation initialized');
+    } else {
+        console.log('Mobile navigation already initialized, skipping');
+    }
 });
+
+// Close the conditional
+}

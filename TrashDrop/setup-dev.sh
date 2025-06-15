@@ -30,18 +30,8 @@ fi
 
 echo "✅ Using npm $(npm -v)"
 
-# Check if Firebase CLI is installed
-if ! command -v firebase &> /dev/null; then
-    echo "🔧 Firebase CLI not found. Installing firebase-tools globally..."
-    npm install -g firebase-tools
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to install firebase-tools. Please try installing manually with: npm install -g firebase-tools"
-        exit 1
-    fi
-    echo "✅ Firebase CLI installed successfully"
-else
-    echo "✅ Firebase CLI is already installed"
-fi
+# Firebase CLI installation removed - now using Supabase exclusively
+echo "✅ TrashDrop now uses Supabase exclusively for backend services"
 
 # Install project dependencies
 echo "🔧 Installing project dependencies..."
@@ -65,37 +55,37 @@ fi
 if [ ! -f ".env" ]; then
     echo "🔧 Creating .env file..."
     cat > .env <<EOL
-# Firebase Configuration
-FIREBASE_API_KEY=your_api_key
-FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-FIREBASE_APP_ID=your-app-id
-FIREBASE_MEASUREMENT_ID=your-measurement-id
+# Supabase Configuration
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # App Configuration
-NODE_ENV=development
-API_BASE_URL=http://localhost:3000
+APP_NAME=TrashDrop
+APP_ENV=development
+APP_VERSION=1.0.0
+APP_URL=http://localhost:3000
+SERVER_PORT=3000
 
-# Optional: Google Maps API Key (if using maps)
-VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+# Security Configuration
+SESSION_SECRET=your_session_secret_here
+JWT_SECRET=your_jwt_secret_here
+SESSION_DURATION=86400000
+
+# External APIs
+SMS_API_ENDPOINT=your_sms_api_endpoint
+MAPS_API_KEY=your_maps_api_key
+
+# CORS Configuration
+CORS_ALLOWED_DOMAINS=http://localhost:3000,http://127.0.0.1:3000
 EOL
-    echo "✅ Created .env file. Please update it with your Firebase configuration."
+    echo "✅ Created .env file template. Please update it with your Supabase configuration."
 else
     echo "✅ .env file already exists"
 fi
 
-# Check for firebase.json
-if [ ! -f "firebase.json" ]; then
-    echo "🔧 Creating firebase.json..."
-    firebase init
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to initialize Firebase. Please run 'firebase init' manually."
-    fi
-else
-    echo "✅ firebase.json already exists"
-fi
+# Firebase initialization removed - now using Supabase exclusively
+# No need for firebase.json as we've migrated to Supabase
 
 # Set execute permissions on scripts
 chmod +x scripts/*.sh 2>/dev/null

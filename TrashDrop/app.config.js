@@ -9,6 +9,7 @@ require('dotenv').config();
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
+const isDevelopment = !isProduction && !isTest;
 
 /**
  * Application Configuration
@@ -71,6 +72,9 @@ const config = {
       noCache: isDevelopment,
       referrerPolicy: { policy: 'same-origin' },
     },
+    // Session security configuration
+    sessionSecret: process.env.SESSION_SECRET || 'trashdrop-session-secret-key',
+    sessionDuration: 24 * 60 * 60 * 1000, // 24 hours
   },
 
   // Session
@@ -95,6 +99,20 @@ const config = {
     maxFiles: '14d',
   },
 
+  // Supabase configuration
+  supabase: {
+    url: process.env.SUPABASE_URL || 'https://cpeyavpxqcloupolbvyh.supabase.co',
+    anonKey: process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwZXlhdnB4cWNsb3Vwb2xidnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTY4OTYsImV4cCI6MjA2MTA3Mjg5Nn0.5rxsiRuLHCpeJZ5TqoIA5X4UwoAAuxIpNu_reafwwbQ',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  },
+
+  // Server configuration
+  server: {
+    port: process.env.PORT || 3000,
+    isDevelopment: isDevelopment,
+    isProduction: isProduction,
+  },
+  
   // Client-side configuration (exposed to the client)
   client: {
     firebase: {

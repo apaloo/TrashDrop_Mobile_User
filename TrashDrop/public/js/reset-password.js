@@ -1,15 +1,44 @@
 // TrashDrop Password Reset - Email-based
 
-// Configuration
-const CONFIG = {
-  SUPABASE_URL: 'https://cpeyavpxqcloupolbvyh.supabase.co',
-  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwZXlhdnB4cWNsb3Vwb2xidnloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0OTY4OTYsImV4cCI6MjA2MTA3Mjg5Nn0.5rxsiRuLHCpeJZ5TqoIA5X4UwoAAuxIpNu_reafwwbQ',
-  REDIRECT_URL: window.location.origin + '/reset-password.html',
+// Configuration using AppConfig
+let CONFIG = {
   PASSWORD_REQUIREMENTS: {
     minLength: 8,
     hasUppercase: /[A-Z]/,
     hasNumber: /\d/,
     hasSpecial: /[!@#$%^&*(),.?":{}|<>]/
+  },
+  REDIRECT_URL: window.location.origin + '/reset-password.html'
+};
+
+// Initialize configuration asynchronously
+async function initializeConfig() {
+  try {
+    if (window.AppConfig && !window.AppConfig.initialized) {
+      await window.AppConfig.initialize();
+    }
+    
+    // Load Supabase credentials from AppConfig
+    CONFIG.SUPABASE_URL = window.AppConfig.get('supabase.url');
+    CONFIG.SUPABASE_KEY = window.AppConfig.get('supabase.anonKey');
+    
+    // Update redirect URL from config if available
+    const resetPasswordPath = window.AppConfig.get('routes.resetPassword');
+    if (resetPasswordPath) {
+      CONFIG.REDIRECT_URL = window.location.origin + resetPasswordPath;
+    }
+    
+    // Update password requirements if specified in config
+    const passwordMinLength = window.AppConfig.get('security.password.minLength');
+    if (passwordMinLength) {
+      CONFIG.PASSWORD_REQUIREMENTS.minLength = passwordMinLength;
+    }
+    
+    console.log('Configuration initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize configuration:', error);
+    return false;
   }
 };
 
@@ -36,6 +65,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('Initializing password reset...');
   
   try {
+    // Initialize configuration
+    await initializeConfig();
+    
     // Initialize Supabase
     await initializeSupabase();
     

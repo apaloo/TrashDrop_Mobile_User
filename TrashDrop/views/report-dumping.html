@@ -3,29 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- App Config initialization -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <script>
+        // Initialize AppConfig as early as possible
+        (async function() {
+            try {
+                // Start loading configuration
+                await window.AppConfig.initialize();
+                
+                // Update meta tags and title when config is loaded
+                updatePageMetadata();
+            } catch (error) {
+                console.error('Error initializing AppConfig:', error);
+            }
+        })();
+        
+        // Update page title and meta information
+        function updatePageMetadata() {
+            try {
+                // Get app name from config or use default
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const themeColor = window.AppConfig.get('app.themeColor') || '#4CAF50';
+                const pageTitle = window.AppConfig.get('ui.reportPage.title') || 'Report Illegal Dumping';
+                const pageDescription = window.AppConfig.get('ui.reportPage.description') || 
+                    `Report illegal waste disposal with ${appName}`;
+                
+                // Update document title
+                document.title = `${pageTitle} - ${appName}`;
+                
+                // Update meta description
+                const metaDescription = document.querySelector('meta[name="description"]');
+                if (metaDescription) {
+                    metaDescription.content = pageDescription;
+                } else {
+                    const meta = document.createElement('meta');
+                    meta.name = 'description';
+                    meta.content = pageDescription;
+                    document.head.appendChild(meta);
+                }
+                
+                // Update theme color
+                const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+                if (themeColorMeta) {
+                    themeColorMeta.content = themeColor;
+                } else {
+                    const meta = document.createElement('meta');
+                    meta.name = 'theme-color';
+                    meta.content = themeColor;
+                    document.head.appendChild(meta);
+                }
+            } catch (error) {
+                console.error('Error updating page metadata:', error);
+            }
+        }
+        
+        // Dynamically load CSS resources
+        async function loadStyles() {
+            try {
+                // Wait for AppConfig to be initialized if needed
+                if (!window.AppConfig.initialized) {
+                    await new Promise(resolve => {
+                        const checkInterval = setInterval(() => {
+                            if (window.AppConfig.initialized) {
+                                clearInterval(checkInterval);
+                                resolve();
+                            }
+                        }, 100);
+                        
+                        // Timeout after 2 seconds
+                        setTimeout(() => {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }, 2000);
+                    });
+                }
+                
+                // Get CDN URLs from config using standardized paths
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css');
+                const bootstrapIconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons');
+                const leafletCssUrl = window.AppConfig.get('cdnResources.leaflet.css');
+                
+                // Load external CSS resources
+                const externalStyles = [
+                    { href: bootstrapCssUrl, id: 'bootstrap-css' },
+                    { href: bootstrapIconsUrl, id: 'bootstrap-icons-css' },
+                    { href: leafletCssUrl, id: 'leaflet-css' }
+                ];
+                
+                // Create and append external CSS links
+                externalStyles.forEach(style => {
+                    if (!document.getElementById(style.id)) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = style.href;
+                        link.id = style.id;
+                        document.head.appendChild(link);
+                    }
+                });
+                
+                // Load local CSS resources
+                const localStyles = [
+                    '/css/navbar-fix.css',
+                    '/css/hide-emergency-logout.css',
+                    '/css/responsive-enhancements.css',
+                    '/css/device-optimizations.css',
+                    '/css/navbar-content-fix.css',
+                    '/css/styles.css',
+                    '/css/form-selection.css',
+                    '/css/dark-theme.css' // Add dark theme support
+                ];
+                
+                // Create and append local CSS links
+                localStyles.forEach((href, index) => {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = href;
+                    link.id = `local-css-${index}`;
+                    document.head.appendChild(link);
+                });
+                
+                // Load icon and PWA assets from config
+                updatePwaAssets();
+                
+            } catch (error) {
+                console.error('Error loading styles:', error);
+                loadFallbackStyles();
+            }
+        }
+        
+        // Update PWA and icon assets
+        function updatePwaAssets() {
+            try {
+                const iconPath = window.AppConfig.get('app.iconPath') || '/images/icon-192.png';
+                
+                // Update favicon
+                let favicon = document.querySelector('link[rel="icon"]');
+                if (!favicon) {
+                    favicon = document.createElement('link');
+                    favicon.rel = 'icon';
+                    favicon.type = 'image/png';
+                    document.head.appendChild(favicon);
+                }
+                favicon.href = iconPath;
+                
+                // Update apple-touch-icon
+                let appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]');
+                if (!appleTouchIcon) {
+                    appleTouchIcon = document.createElement('link');
+                    appleTouchIcon.rel = 'apple-touch-icon';
+                    document.head.appendChild(appleTouchIcon);
+                }
+                appleTouchIcon.href = iconPath;
+                
+                // Add manifest link
+                let manifest = document.querySelector('link[rel="manifest"]');
+                if (!manifest) {
+                    manifest = document.createElement('link');
+                    manifest.rel = 'manifest';
+                    manifest.href = '/manifest.json';
+                    document.head.appendChild(manifest);
+                }
+                
+                // Add mobile web app capable meta
+                let webAppCapable = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+                if (!webAppCapable) {
+                    webAppCapable = document.createElement('meta');
+                    webAppCapable.name = 'apple-mobile-web-app-capable';
+                    webAppCapable.content = 'yes';
+                    document.head.appendChild(webAppCapable);
+                }
+                
+                // Add status bar style meta
+                let statusBarStyle = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+                if (!statusBarStyle) {
+                    statusBarStyle = document.createElement('meta');
+                    statusBarStyle.name = 'apple-mobile-web-app-status-bar-style';
+                    statusBarStyle.content = 'black-translucent';
+                    document.head.appendChild(statusBarStyle);
+                }
+                
+            } catch (error) {
+                console.error('Error updating PWA assets:', error);
+            }
+        }
+        
+        // Fallback styles if config loading fails
+        function loadFallbackStyles() {
+            const styles = [
+                { href: 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css', id: 'bootstrap-css' },
+                { href: 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css', id: 'bootstrap-icons-css' },
+                { href: 'https://unpkg.com/leaflet@1.9.3/dist/leaflet.css', id: 'leaflet-css' },
+                { href: '/css/navbar-fix.css', id: 'local-css-0' },
+                { href: '/css/hide-emergency-logout.css', id: 'local-css-1' },
+                { href: '/css/responsive-enhancements.css', id: 'local-css-2' },
+                { href: '/css/device-optimizations.css', id: 'local-css-3' },
+                { href: '/css/navbar-content-fix.css', id: 'local-css-4' },
+                { href: '/css/styles.css', id: 'local-css-5' },
+                { href: '/css/form-selection.css', id: 'local-css-6' }
+            ];
+            
+            styles.forEach(style => {
+                if (!document.getElementById(style.id)) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = style.href;
+                    link.id = style.id;
+                    document.head.appendChild(link);
+                }
+            });
+        }
+        
+        // Initialize styles
+        loadStyles();
+    </script>
+    
+    <!-- Basic metadata (will be updated by script) -->
     <title>Report Illegal Dumping - TrashDrop</title>
     <meta name="description" content="Report illegal waste disposal with TrashDrop">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" type="image/png" href="/images/icon-192.png">
-    <link rel="apple-touch-icon" href="/images/icon-192.png">
     <meta name="theme-color" content="#4CAF50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-    <!-- Navbar font consistency fix -->
-    <link rel="stylesheet" href="/css/navbar-fix.css">
-    <link rel="stylesheet" href="/css/hide-emergency-logout.css">
-    <link rel="stylesheet" href="/css/responsive-enhancements.css">
-    <link rel="stylesheet" href="/css/device-optimizations.css">
-    <link rel="stylesheet" href="/css/navbar-content-fix.css">
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/form-selection.css">
     <style>
         /* Standardized form section styling */
         .form-section {
@@ -171,78 +372,7 @@
     <link rel="stylesheet" href="/css/mobile-nav-fix.css">
 </head>
 <body class="bg-light" data-page="report">
-    <!-- Navbar will be injected here by navbar.js -->
-    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
-        <div class="container">
-            <!-- Mobile view (simplified) -->
-            <div class="d-flex d-lg-none justify-content-between align-items-center w-100">
-                <a class="navbar-brand" href="/dashboard">
-                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                    TrashDrop
-                </a>
-                <div class="d-flex align-items-center">
-                    <span id="connection-status-mobile" class="badge text-bg-success me-2">Online</span>
-                    <span id="pickup-offline-indicator-mobile" class="badge rounded-pill text-bg-warning d-none">0</span>
-                    <a href="/rewards" class="text-white me-3 text-decoration-none">
-                        <i class="bi bi-award-fill me-1"></i>
-                        <span id="user-points-mobile">0</span> points
-                    </a>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-light rounded-circle p-1" type="button" id="userDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownMobile">
-                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                            <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Desktop view (full) -->
-            <div class="d-none d-lg-flex justify-content-between align-items-center w-100">
-                <a class="navbar-brand" href="/dashboard">
-                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                    TrashDrop
-                </a>
-                <button class="navbar-toggler d-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse show" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        <!-- Navbar items removed as requested -->
-                    </ul>
-                    <div class="d-flex align-items-center">
-                        <div class="d-flex align-items-center me-3">
-                            <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                            <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
-                        </div>
-                        <a href="/rewards" class="text-white me-3 text-decoration-none">
-                            <i class="bi bi-award-fill me-1"></i>
-                            <span id="user-points">0</span> points
-                        </a>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-person-circle me-1"></i>
-                                <span id="user-name">User</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                                <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                                <li><a class="dropdown-item" href="/views/db-performance.html"><i class="bi bi-speedometer2 me-2"></i>DB Performance</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                                <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- Placeholder for navbar - will be injected by navbar.js -->
 
     
     <main id="main-content" class="container py-3 mb-5 pb-4">
@@ -453,27 +583,160 @@
     <!-- File Input (Hidden) -->
     <input type="file" id="gallery-input" accept="image/*" multiple style="display: none;">
 
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/remove-emergency-logout.js"></script>
-    <script src="/js/theme-switcher.js"></script>
-    <script src="/js/theme-switcher-enhanced.js"></script>
+    <script>
+        // Dynamically load JavaScript libraries and initialize the app
+        async function loadScripts() {
+            try {
+                // Wait for AppConfig to be fully initialized
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await new Promise(resolve => {
+                        const checkInterval = setInterval(() => {
+                            if (window.AppConfig && window.AppConfig.initialized) {
+                                clearInterval(checkInterval);
+                                resolve();
+                            }
+                        }, 100);
+                        
+                        // Timeout after 2 seconds
+                        setTimeout(() => {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }, 2000);
+                    });
+                }
+                
+                // Get external script URLs from AppConfig using standardized paths with fallbacks
+                const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js') || 
+                    'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js';
+                
+                const supabaseJsUrl = window.AppConfig.get('cdnResources.supabase.js') || 
+                    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.7.1/dist/umd/supabase.min.js';
+                
+                const leafletJsUrl = window.AppConfig.get('cdnResources.leaflet.js') || 
+                    'https://unpkg.com/leaflet@1.9.3/dist/leaflet.js';
+                
+                // External script resources with validation
+                const externalScripts = [];
+                
+                if (bootstrapJsUrl) externalScripts.push({ src: bootstrapJsUrl, id: 'bootstrap-js' });
+                if (supabaseJsUrl) externalScripts.push({ src: supabaseJsUrl, id: 'supabase-js' });
+                if (leafletJsUrl) externalScripts.push({ src: leafletJsUrl, id: 'leaflet-js' });
+                
+                // Load external scripts sequentially
+                for (const script of externalScripts) {
+                    if (!document.getElementById(script.id)) {
+                        await loadScript(script.src, script.id);
+                    }
+                }
+                
+                // Load local scripts - Order matters!
+                const localScripts = [
+                    '/js/remove-emergency-logout.js',
+                    '/js/theme-switcher.js',
+                    '/js/theme-switcher-enhanced.js',
+                    '/js/mobile-nav.js',
+                    '/js/navbar.js',
+                    '/js/back-button.js',
+                    '/js/auth.js',              // Auth JS must be loaded before report-dumping.js
+                    '/js/offline-sync.js',
+                    '/js/form-validation.js',
+                    '/js/report-dumping.js',
+                    '/js/report-dumping-validation.js',
+                    '/js/pwa-fullscreen.js'
+                ];
+                
+                // Load local scripts sequentially
+                for (let i = 0; i < localScripts.length; i++) {
+                    await loadScript(localScripts[i], `local-script-${i}`);
+                }
+                
+                console.log('All scripts loaded successfully');
+                
+            } catch (error) {
+                console.error('Error loading scripts:', error);
+                loadFallbackScripts(); // Try to load critical scripts as fallback
+            }
+        }
+        
+        // Helper function to load a single script
+        function loadScript(src, id) {
+            return new Promise((resolve, reject) => {
+                if (!src) {
+                    console.warn(`Invalid script source for ${id}, skipping...`);
+                    resolve(); // Skip invalid scripts but continue the chain
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = src;
+                script.id = id;
+                script.onload = () => {
+                    console.log(`Successfully loaded script: ${id}`);
+                    resolve();
+                };
+                script.onerror = (error) => {
+                    console.error(`Error loading script ${id} from ${src}:`, error);
+                    // Try alternative source for critical scripts
+                    if (id === 'supabase-js') {
+                        console.log('Attempting to load Supabase from alternative CDN...');
+                        loadAlternativeSupabase().then(resolve);
+                    } else {
+                        // Resolve anyway to continue loading other scripts
+                        resolve();
+                    }
+                };
+                document.body.appendChild(script);
+                
+                // Set a timeout for script loading as fallback
+                setTimeout(() => resolve(), 5000);
+            });
+        }
+        
+        // Load Supabase from alternative source if primary fails
+        function loadAlternativeSupabase() {
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@supabase/supabase-js@2.7.1/dist/umd/supabase.min.js';
+                script.id = 'supabase-js-alt';
+                script.onload = () => {
+                    console.log('Successfully loaded Supabase from alternative source');
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error('Failed to load Supabase from alternative source');
+                    resolve(); // Continue anyway
+                };
+                document.body.appendChild(script);
+                
+                // Set a timeout for script loading as fallback
+                setTimeout(() => resolve(), 5000);
+            });
+        }
+        
+        // Fallback script loading if AppConfig fails
+        function loadFallbackScripts() {
+            const criticalScripts = [
+                'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+                'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+                'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js',
+                '/js/auth.js',
+                '/js/report-dumping.js'
+            ];
+            
+            criticalScripts.forEach((src, index) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.id = `fallback-script-${index}`;
+                document.body.appendChild(script);
+            });
+        }
+        
+        // Start loading scripts
+        loadScripts();
+    </script>
+    
+    <!-- Navigation components -->
     <script src="/js/mobile-nav.js"></script>
     <script src="/js/navbar.js"></script>
-    <script src="/js/back-button.js"></script>
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <!-- Auth JS - Must be loaded before report-dumping.js -->
-    <script src="/js/auth.js"></script>
-    <!-- Offline Sync JS -->
-    <script src="/js/offline-sync.js"></script>
-    <!-- Form Validation JS -->
-    <script src="/js/form-validation.js"></script>
-    <!-- App JS -->
-    <script src="/js/report-dumping.js"></script>
-    <script src="/js/report-dumping-validation.js"></script>
-    <script src="/js/pwa-fullscreen.js"></script>
 </body>
 </html>

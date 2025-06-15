@@ -3,10 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Default title, will be updated dynamically -->
     <title>TrashDrop - Offline</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <!-- Base styles, will be enhanced with dynamic loading -->
     <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Dynamic resource loading -->
+    <script>
+        // Load CSS resources dynamically
+        async function loadStyles() {
+            try {
+                // Ensure AppConfig exists
+                if (typeof window.AppConfig === 'undefined') {
+                    console.warn('AppConfig was not defined. Creating a default instance.');
+                    window.AppConfig = {
+                        initialized: false,
+                        initialize: async function() {
+                            console.log('Using default AppConfig initialization');
+                            this.initialized = true;
+                            return { cdnResources: { bootstrap: {} } }; // Minimal default config
+                        },
+                        get: function(key) {
+                            return null; // Default implementation returns null for all keys
+                        }
+                    };
+                }
+                
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const offlineText = window.AppConfig.get('ui.pages.offline.title') || 'Offline';
+                document.title = `${appName} - ${offlineText}`;
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css') || 
+                                        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = bootstrapCssUrl;
+                document.head.appendChild(bootstrapCss);
+                
+                // Load Bootstrap Icons
+                const bootstrapIconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons') || 
+                                         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                
+                const bootstrapIcons = document.createElement('link');
+                bootstrapIcons.rel = 'stylesheet';
+                bootstrapIcons.href = bootstrapIconsUrl;
+                document.head.appendChild(bootstrapIcons);
+                
+                console.log('Dynamic styles loaded successfully');
+                return true;
+            } catch (error) {
+                console.error('Error loading dynamic styles:', error);
+                
+                // Fallback to default CSS if configuration fails
+                const fallbackCss = document.createElement('link');
+                fallbackCss.rel = 'stylesheet';
+                fallbackCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                document.head.appendChild(fallbackCss);
+                
+                const fallbackIcons = document.createElement('link');
+                fallbackIcons.rel = 'stylesheet';
+                fallbackIcons.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                document.head.appendChild(fallbackIcons);
+                
+                return false;
+            }
+        }
+        
+        // Initialize styles when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadStyles);
+    </script>
     <style>
         .offline-container {
             min-height: 100vh;
@@ -61,60 +139,212 @@
     </style>
 </head>
 <body>
-    <div class="container offline-container">
-        <div class="offline-status">
-            <span class="status-indicator"></span>
-            <span>Currently Offline</span>
-        </div>
-
-        <i class="bi bi-wifi-off offline-icon"></i>
-        <h1>You're offline</h1>
-        <p class="lead">Don't worry, you can still access your cached data and perform actions that will sync when you're back online.</p>
-        
-        <button id="reconnect-btn" class="btn btn-primary reconnect-btn">
-            <i class="bi bi-arrow-repeat"></i> Try to reconnect
-        </button>
-        
-        <div class="cached-content">
-            <h3>Available Offline</h3>
-            <p>The following pages are available offline:</p>
-            
-            <div class="cached-links">
-                <a href="/dashboard" class="cached-link">
-                    <i class="bi bi-speedometer2"></i> Dashboard
-                </a>
-                <a href="/scan" class="cached-link">
-                    <i class="bi bi-qr-code-scan"></i> Scan Bags
-                </a>
-                <a href="/profile" class="cached-link">
-                    <i class="bi bi-person-circle"></i> Profile
-                </a>
-            </div>
-        </div>
-
-        <div class="mt-4">
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Any actions you perform while offline will be synchronized automatically when your connection is restored.
+    <div class="container offline-container" id="content-container">
+        <!-- Content will be dynamically populated -->
+        <div id="loading-placeholder" class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
         </div>
     </div>
 
     <script>
-        // Check connection status periodically
-        function checkConnection() {
-            if (navigator.onLine) {
-                // If we're back online, reload the page
-                window.location.reload();
+        // Initialize page content with dynamic configuration
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Ensure configuration is loaded
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                const contentContainer = document.getElementById('content-container');
+                if (!contentContainer) return;
+                
+                // Clear loading placeholder
+                contentContainer.innerHTML = '';
+                
+                // Get content from configuration
+                const offlineStatusText = window.AppConfig.get('ui.pages.offline.statusText') || 'Currently Offline';
+                const offlineTitle = window.AppConfig.get('ui.pages.offline.title') || 'You\'re offline';
+                const offlineMessage = window.AppConfig.get('ui.pages.offline.message') || 
+                                     'Don\'t worry, you can still access your cached data and perform actions that will sync when you\'re back online.';
+                const reconnectText = window.AppConfig.get('ui.pages.offline.reconnectText') || 'Try to reconnect';
+                const availableTitle = window.AppConfig.get('ui.pages.offline.availableTitle') || 'Available Offline';
+                const availableMessage = window.AppConfig.get('ui.pages.offline.availableMessage') || 'The following pages are available offline:';
+                const syncNote = window.AppConfig.get('ui.pages.offline.syncNote') || 
+                               'Any actions you perform while offline will be synchronized automatically when your connection is restored.';
+                
+                // Get navigation links from configuration
+                const dashboardUrl = window.AppConfig.get('routes.dashboard') || '/dashboard';
+                const dashboardText = window.AppConfig.get('ui.navigation.dashboard') || 'Dashboard';
+                const dashboardIcon = window.AppConfig.get('ui.icons.dashboard') || 'bi-speedometer2';
+                
+                const scanUrl = window.AppConfig.get('routes.scan') || '/scan';
+                const scanText = window.AppConfig.get('ui.navigation.scan') || 'Scan Bags';
+                const scanIcon = window.AppConfig.get('ui.icons.scan') || 'bi-qr-code-scan';
+                
+                const profileUrl = window.AppConfig.get('routes.profile') || '/profile';
+                const profileText = window.AppConfig.get('ui.navigation.profile') || 'Profile';
+                const profileIcon = window.AppConfig.get('ui.icons.profile') || 'bi-person-circle';
+                
+                // Create status indicator
+                const offlineStatus = document.createElement('div');
+                offlineStatus.className = 'offline-status';
+                offlineStatus.innerHTML = `
+                    <span class="status-indicator"></span>
+                    <span>${offlineStatusText}</span>
+                `;
+                contentContainer.appendChild(offlineStatus);
+                
+                // Create offline icon
+                const offlineIcon = document.createElement('i');
+                offlineIcon.className = 'bi bi-wifi-off offline-icon';
+                contentContainer.appendChild(offlineIcon);
+                
+                // Create heading
+                const heading = document.createElement('h1');
+                heading.textContent = offlineTitle;
+                contentContainer.appendChild(heading);
+                
+                // Create message
+                const message = document.createElement('p');
+                message.className = 'lead';
+                message.textContent = offlineMessage;
+                contentContainer.appendChild(message);
+                
+                // Create reconnect button
+                const reconnectBtn = document.createElement('button');
+                reconnectBtn.id = 'reconnect-btn';
+                reconnectBtn.className = 'btn btn-primary reconnect-btn';
+                reconnectBtn.innerHTML = `<i class="bi bi-arrow-repeat"></i> ${reconnectText}`;
+                contentContainer.appendChild(reconnectBtn);
+                
+                // Create cached content section
+                const cachedContent = document.createElement('div');
+                cachedContent.className = 'cached-content';
+                
+                const availableHeading = document.createElement('h3');
+                availableHeading.textContent = availableTitle;
+                cachedContent.appendChild(availableHeading);
+                
+                const availableText = document.createElement('p');
+                availableText.textContent = availableMessage;
+                cachedContent.appendChild(availableText);
+                
+                // Create cached links container
+                const cachedLinks = document.createElement('div');
+                cachedLinks.className = 'cached-links';
+                
+                // Add dashboard link
+                const dashboardLink = document.createElement('a');
+                dashboardLink.href = dashboardUrl;
+                dashboardLink.className = 'cached-link';
+                dashboardLink.innerHTML = `<i class="bi ${dashboardIcon}"></i> ${dashboardText}`;
+                cachedLinks.appendChild(dashboardLink);
+                
+                // Add scan link
+                const scanLink = document.createElement('a');
+                scanLink.href = scanUrl;
+                scanLink.className = 'cached-link';
+                scanLink.innerHTML = `<i class="bi ${scanIcon}"></i> ${scanText}`;
+                cachedLinks.appendChild(scanLink);
+                
+                // Add profile link
+                const profileLink = document.createElement('a');
+                profileLink.href = profileUrl;
+                profileLink.className = 'cached-link';
+                profileLink.innerHTML = `<i class="bi ${profileIcon}"></i> ${profileText}`;
+                cachedLinks.appendChild(profileLink);
+                
+                // Add links to cached content
+                cachedContent.appendChild(cachedLinks);
+                contentContainer.appendChild(cachedContent);
+                
+                // Add sync note
+                const noteContainer = document.createElement('div');
+                noteContainer.className = 'mt-4';
+                
+                const noteAlert = document.createElement('div');
+                noteAlert.className = 'alert alert-info';
+                noteAlert.innerHTML = `<i class="bi bi-info-circle"></i> ${syncNote}`;
+                
+                noteContainer.appendChild(noteAlert);
+                contentContainer.appendChild(noteContainer);
+                
+                // Setup event handlers after content is created
+                setupEventHandlers();
+            } catch (error) {
+                console.error('Error initializing page content:', error);
+                // Fallback to static content
+                const contentContainer = document.getElementById('content-container');
+                if (contentContainer) {
+                    contentContainer.innerHTML = `
+                        <div class="offline-status">
+                            <span class="status-indicator"></span>
+                            <span>Currently Offline</span>
+                        </div>
+
+                        <i class="bi bi-wifi-off offline-icon"></i>
+                        <h1>You're offline</h1>
+                        <p class="lead">Don't worry, you can still access your cached data and perform actions that will sync when you're back online.</p>
+                        
+                        <button id="reconnect-btn" class="btn btn-primary reconnect-btn">
+                            <i class="bi bi-arrow-repeat"></i> Try to reconnect
+                        </button>
+                        
+                        <div class="cached-content">
+                            <h3>Available Offline</h3>
+                            <p>The following pages are available offline:</p>
+                            
+                            <div class="cached-links">
+                                <a href="/dashboard" class="cached-link">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a>
+                                <a href="/scan" class="cached-link">
+                                    <i class="bi bi-qr-code-scan"></i> Scan Bags
+                                </a>
+                                <a href="/profile" class="cached-link">
+                                    <i class="bi bi-person-circle"></i> Profile
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Any actions you perform while offline will be synchronized automatically when your connection is restored.
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Setup event handlers for fallback content
+                    setupEventHandlers();
+                }
             }
-        }
-
-        // Try to reconnect manually
-        document.getElementById('reconnect-btn').addEventListener('click', () => {
-            checkConnection();
         });
+    </script>
 
-        // Check connection every 10 seconds
-        setInterval(checkConnection, 10000);
+    <script>
+        // Function to setup event handlers for the offline page
+        function setupEventHandlers() {
+            // Check connection status periodically
+            function checkConnection() {
+                if (navigator.onLine) {
+                    // If we're back online, reload the page
+                    window.location.reload();
+                }
+            }
+
+            // Try to reconnect manually with retry button
+            const reconnectBtn = document.getElementById('reconnect-btn');
+            if (reconnectBtn) {
+                reconnectBtn.addEventListener('click', () => {
+                    checkConnection();
+                });
+            }
+
+            // Check connection every 10 seconds
+            setInterval(checkConnection, 10000);
+        }
 
         // Listen for online event
         window.addEventListener('online', () => {

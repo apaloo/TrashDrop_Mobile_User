@@ -3,8 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
     <title>TrashDrop - Loading</title>
     <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Set dynamic page title -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Ensure AppConfig exists
+                if (typeof window.AppConfig === 'undefined') {
+                    console.warn('AppConfig was not defined. Creating a default instance.');
+                    window.AppConfig = {
+                        initialized: false,
+                        initialize: async function() {
+                            console.log('Using default AppConfig initialization');
+                            this.initialized = true;
+                            return { cdnResources: { bootstrap: {} } }; // Minimal default config
+                        },
+                        get: function(key) {
+                            return null; // Default implementation returns null for all keys
+                        }
+                    };
+                }
+                
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const loadingText = window.AppConfig.get('ui.pages.splash.loadingText') || 'Loading';
+                document.title = `${appName} - ${loadingText}`;
+            } catch (e) {
+                console.error('Error setting page title:', e);
+            }
+        });
+    </script>
     <style>
         body {
             background-color: #4CAF50;
@@ -75,20 +114,112 @@
         }
     </style>
     <script>
-        // Redirect to dashboard after splash animation
-        window.addEventListener('load', function() {
-            setTimeout(function() {
-                window.location.href = '/dashboard';
-            }, 1500); // Redirect after 1.5 seconds
+        // Initialize and redirect to dashboard after splash animation
+        window.addEventListener('load', async function() {
+            try {
+                // Initialize AppConfig if not already done
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get splash screen display duration from config
+                const splashDuration = window.AppConfig.get('ui.pages.splash.durationMs') || 1500;
+                
+                // Get dashboard URL from config
+                const dashboardUrl = window.AppConfig.get('routes.dashboard') || '/dashboard.html';
+                
+                // Determine if we need to add base URL for development environments
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const localSiteUrl = window.AppConfig.get('app.localSiteUrl');
+                const usePort = isLocalhost && localSiteUrl && localSiteUrl.includes(':');
+                
+                // Form the complete redirect URL
+                let redirectUrl = dashboardUrl;
+                
+                // For local development, ensure port is included if required
+                if (usePort && !window.location.port && dashboardUrl.startsWith('/')) {
+                    const port = localSiteUrl.split(':').pop();
+                    if (port && port !== '80' && port !== '443') {
+                        const protocol = window.location.protocol;
+                        const hostname = window.location.hostname;
+                        redirectUrl = `${protocol}//${hostname}:${port}${dashboardUrl}`;
+                    }
+                }
+                
+                // Redirect after splash duration
+                setTimeout(function() {
+                    console.log(`Redirecting to ${redirectUrl}`);
+                    window.location.href = redirectUrl;
+                }, splashDuration);
+            } catch (error) {
+                console.error('Error during splash initialization:', error);
+                // Fallback to default redirect
+                setTimeout(function() {
+                    window.location.href = '/dashboard.html';
+                }, 1500);
+            }
         });
     </script>
 </head>
 <body>
-    <div class="splash-container">
-        <img src="/images/icon-192.png" alt="TrashDrop" class="app-icon">
-        <h1>TrashDrop</h1>
-        <p>Waste Management Made Easy</p>
+    <div class="splash-container" id="splash-container">
+        <!-- Content will be dynamically populated -->
         <div class="loading-indicator"></div>
     </div>
+
+    <script>
+        // Initialize splash screen content
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Initialize AppConfig if not already done
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                const splashContainer = document.getElementById('splash-container');
+                if (!splashContainer) return;
+                
+                // Create and add app icon
+                const iconUrl = window.AppConfig.get('app.icons.splash') || '/images/icon-192.png';
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                
+                const iconImg = document.createElement('img');
+                iconImg.src = iconUrl;
+                iconImg.alt = appName;
+                iconImg.className = 'app-icon';
+                
+                // Create and add app title
+                const titleElem = document.createElement('h1');
+                titleElem.textContent = appName;
+                
+                // Create and add tagline
+                const tagline = window.AppConfig.get('app.tagline') || 'Waste Management Made Easy';
+                const taglineElem = document.createElement('p');
+                taglineElem.textContent = tagline;
+                
+                // Insert elements at start of container
+                const loadingIndicator = splashContainer.querySelector('.loading-indicator');
+                splashContainer.insertBefore(iconImg, loadingIndicator);
+                splashContainer.insertBefore(titleElem, loadingIndicator);
+                splashContainer.insertBefore(taglineElem, loadingIndicator);
+                
+                // Apply theme color
+                const themeColor = window.AppConfig.get('ui.theme.primaryColor') || '#4CAF50';
+                document.body.style.backgroundColor = themeColor;
+            } catch (error) {
+                console.error('Error initializing splash screen:', error);
+                // Fallback to static content if configuration fails
+                const splashContainer = document.getElementById('splash-container');
+                if (splashContainer) {
+                    splashContainer.innerHTML = `
+                        <img src="/images/icon-192.png" alt="TrashDrop" class="app-icon">
+                        <h1>TrashDrop</h1>
+                        <p>Waste Management Made Easy</p>
+                        <div class="loading-indicator"></div>
+                    `;
+                }
+            }
+        });
+    </script>
 </body>
 </html>

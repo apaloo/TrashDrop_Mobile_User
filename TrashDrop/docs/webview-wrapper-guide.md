@@ -262,7 +262,7 @@ webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
 
 To enable push notifications in your WebView app:
 
-1. Add Firebase Cloud Messaging to your Android project
+1. Add Supabase Push Notifications to your Android project
 2. Implement a message handler that communicates with your web app
 3. Use a JavaScript bridge to connect your web app with the native notification system
 

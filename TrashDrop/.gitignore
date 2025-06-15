@@ -48,6 +48,14 @@ jspm_packages/
 # dotenv environment variable files
 .env
 
+# Service account files and credentials
+config/service-account*.json
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+
 # Mac files
 .DS_Store
 

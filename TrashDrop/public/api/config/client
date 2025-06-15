@@ -1,0 +1,13 @@
+{
+  "supabase": {
+    "url": "https://glfseosbxoafanujgvwk.supabase.co", 
+    "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdsZnNlb3NieG9hZmFudWpndndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTY5ODUzNjYsImV4cCI6MjAxMjU2MTM2Nn0.RTg_QPJFnJwN40OA8m7CWOriMkMQjQnGtOqjgKBcLoI"
+  },
+  "api": {
+    "baseUrl": "/api"
+  },
+  "features": {
+    "enableOfflineMode": true,
+    "enableLocationHistory": true
+  }
+}

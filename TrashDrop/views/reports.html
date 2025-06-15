@@ -3,30 +3,127 @@
 <head>
     <!-- Protocol interceptor must be the first script to run, before even meta tags are processed -->
     <script src="/js/protocol-interceptor.js"></script>
+    
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <meta name="description" content="TrashDrop Reports - View and manage all illegal dumping reports">
     <title>Reports - TrashDrop</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/accessibility.css">
-    <!-- Navbar font consistency fix -->
-    <link rel="stylesheet" href="/css/navbar-fix.css" />
-    <link rel="stylesheet" href="/css/responsive-enhancements.css">
-    <link rel="stylesheet" href="/css/device-optimizations.css">
-    <link rel="stylesheet" href="/css/navbar-content-fix.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- Leaflet for maps -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <!-- Base URL handling for consistent navigation -->
     <script src="/js/base-url.js"></script>
+    
+    <!-- Dynamic resource loading -->
+    <script>
+        // Load CSS resources dynamically
+        async function loadStyles() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title and meta
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const pageTitle = window.AppConfig.get('ui.pages.reports.title') || 'Reports';
+                document.title = `${pageTitle} - ${appName}`;
+                
+                // Update meta description
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) {
+                    metaDesc.setAttribute('content', 
+                        window.AppConfig.get('ui.pages.reports.description') || 
+                        `${appName} Reports - View and manage all illegal dumping reports`);
+                }
+                
+                // Update theme color
+                const themeColor = document.querySelector('meta[name="theme-color"]');
+                if (themeColor) {
+                    themeColor.setAttribute('content', 
+                        window.AppConfig.get('theme.primaryColor') || '#4CAF50');
+                }
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css') || 
+                                        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = bootstrapCssUrl;
+                document.head.appendChild(bootstrapCss);
+                
+                // Load Bootstrap Icons
+                const bootstrapIconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons') || 
+                                         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css';
+                
+                const bootstrapIcons = document.createElement('link');
+                bootstrapIcons.rel = 'stylesheet';
+                bootstrapIcons.href = bootstrapIconsUrl;
+                document.head.appendChild(bootstrapIcons);
+                
+                // Load Leaflet resources
+                const leafletCssUrl = window.AppConfig.get('cdnResources.leaflet.css') || 
+                                     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                
+                const leafletCss = document.createElement('link');
+                leafletCss.rel = 'stylesheet';
+                leafletCss.href = leafletCssUrl;
+                document.head.appendChild(leafletCss);
+                
+                // Load application CSS
+                const cssFiles = [
+                    '/css/styles.css',
+                    '/css/accessibility.css',
+                    '/css/navbar-fix.css',
+                    '/css/responsive-enhancements.css',
+                    '/css/device-optimizations.css',
+                    '/css/navbar-content-fix.css',
+                    '/css/dark-theme.css',
+                    '/css/mobile-nav-fix.css'
+                ];
+                
+                cssFiles.forEach(file => {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = file;
+                    document.head.appendChild(link);
+                });
+                
+                console.log('Dynamic styles loaded successfully');
+                
+                // Load Leaflet JS
+                const leafletJsUrl = window.AppConfig.get('cdnResources.leaflet.js') || 
+                                    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                
+                const leafletJs = document.createElement('script');
+                leafletJs.src = leafletJsUrl;
+                document.head.appendChild(leafletJs);
+                
+            } catch (error) {
+                console.error('Error loading dynamic styles:', error);
+                
+                // Fallback to default CSS if configuration fails
+                const fallbackCss = document.createElement('link');
+                fallbackCss.rel = 'stylesheet';
+                fallbackCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                document.head.appendChild(fallbackCss);
+                
+                const fallbackIcons = document.createElement('link');
+                fallbackIcons.rel = 'stylesheet';
+                fallbackIcons.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css';
+                document.head.appendChild(fallbackIcons);
+            }
+        }
+        
+        // Initialize styles when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadStyles);
+    </script>
     
     <style>
         .report-icon {
@@ -82,77 +179,150 @@
 </head>
 <body class="d-flex flex-column min-vh-100" data-page="reports">
 
-    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
-        <div class="container">
-            <!-- Mobile view (simplified) -->
-            <div class="d-flex d-lg-none justify-content-between align-items-center w-100">
-                <a class="navbar-brand" href="/dashboard">
-                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                    TrashDrop
-                </a>
-                <div class="d-flex align-items-center">
-                    <span id="connection-status-mobile" class="badge text-bg-success me-2">Online</span>
-                    <span id="pickup-offline-indicator-mobile" class="badge rounded-pill text-bg-warning d-none">0</span>
-                    <a href="/rewards" class="text-white me-3 text-decoration-none">
-                        <i class="bi bi-award-fill"></i>
-                        <span id="user-points-mobile">0</span>
-                    </a>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-outline-light rounded-circle p-1" type="button" id="userDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownMobile">
-                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                            <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Desktop view (full) -->
-            <div class="d-none d-lg-flex justify-content-between align-items-center w-100">
-                <a class="navbar-brand" href="/dashboard">
-                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                    TrashDrop
-                </a>
-                <button class="navbar-toggler d-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse show" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        <!-- Navbar items removed as requested -->
-                    </ul>
-                    <div class="d-flex align-items-center">
-                        <div class="d-flex align-items-center me-3">
-                            <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                            <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+    <!-- Navbar placeholder (will be dynamically populated by JavaScript) -->
+    <div id="navbar-container"></div>
+
+    <script>
+        // Dynamically create navbar with AppConfig
+        async function createNavbar() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get branding information
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const logoPath = window.AppConfig.get('app.logoPath') || '/images/logo.svg';
+                const logoAlt = window.AppConfig.get('app.logoAlt') || `${appName} Logo`;
+                const logoWidth = window.AppConfig.get('app.logoWidth') || 30;
+                const logoHeight = window.AppConfig.get('app.logoHeight') || 30;
+                const dashboardUrl = window.AppConfig.get('navigation.dashboardUrl') || '/dashboard';
+                const rewardsUrl = window.AppConfig.get('navigation.rewardsUrl') || '/rewards';
+                const profileUrl = window.AppConfig.get('navigation.profileUrl') || '/profile';
+                const dbPerformanceUrl = window.AppConfig.get('navigation.dbPerformanceUrl') || '/views/db-performance.html';
+                const emergencyLogoutText = window.AppConfig.get('ui.navbar.emergencyLogoutText') || 'Emergency Logout';
+                const logoutText = window.AppConfig.get('ui.navbar.logoutText') || 'Logout';
+                const darkModeText = window.AppConfig.get('ui.navbar.darkModeText') || 'Dark Mode';
+                const profileText = window.AppConfig.get('ui.navbar.profileText') || 'Profile';
+                const dbPerformanceText = window.AppConfig.get('ui.navbar.dbPerformanceText') || 'DB Performance';
+                const pointsText = window.AppConfig.get('ui.navbar.pointsText') || 'points';
+                const onlineText = window.AppConfig.get('ui.navbar.onlineText') || 'Online';
+                
+                const navbarHtml = `
+                    <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+                        <div class="container">
+                            <!-- Mobile view (simplified) -->
+                            <div class="d-flex d-lg-none justify-content-between align-items-center w-100">
+                                <a class="navbar-brand" href="${dashboardUrl}">
+                                    <img src="${logoPath}" alt="${logoAlt}" width="${logoWidth}" height="${logoHeight}" class="d-inline-block align-top me-2">
+                                    ${appName}
+                                </a>
+                                <div class="d-flex align-items-center">
+                                    <span id="connection-status-mobile" class="badge text-bg-success me-2">${onlineText}</span>
+                                    <span id="pickup-offline-indicator-mobile" class="badge rounded-pill text-bg-warning d-none">0</span>
+                                    <a href="${rewardsUrl}" class="text-white me-3 text-decoration-none">
+                                        <i class="bi bi-award-fill"></i>
+                                        <span id="user-points-mobile">0</span>
+                                    </a>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-light rounded-circle p-1" type="button" id="userDropdownMobile" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-person-circle"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdownMobile">
+                                            <li><a class="dropdown-item" href="${profileUrl}"><i class="bi bi-person me-2"></i>${profileText}</a></li>
+                                            <li><a class="dropdown-item" href="#" id="toggle-theme-mobile"><i class="bi bi-moon me-2"></i>${darkModeText}</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" id="emergency-logout-mobile" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>${emergencyLogoutText}</a></li>
+                                            <li><a class="dropdown-item" href="#" id="logout-mobile"><i class="bi bi-box-arrow-right me-2"></i>${logoutText}</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Desktop view (full) -->
+                            <div class="d-none d-lg-flex justify-content-between align-items-center w-100">
+                                <a class="navbar-brand" href="${dashboardUrl}">
+                                    <img src="${logoPath}" alt="${logoAlt}" width="${logoWidth}" height="${logoHeight}" class="d-inline-block align-top me-2">
+                                    ${appName}
+                                </a>
+                                <button class="navbar-toggler d-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                                    <span class="navbar-toggler-icon"></span>
+                                </button>
+                                <div class="collapse navbar-collapse show" id="navbarNav">
+                                    <ul class="navbar-nav me-auto">
+                                        <!-- Navbar items will be dynamically populated if needed -->
+                                    </ul>
+                                    <div class="d-flex align-items-center">
+                                        <div class="d-flex align-items-center me-3">
+                                            <span id="connection-status" class="badge text-bg-success me-2">${onlineText}</span>
+                                            <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
+                                        </div>
+                                        <a href="${rewardsUrl}" class="text-white me-3 text-decoration-none">
+                                            <i class="bi bi-award-fill me-1"></i>
+                                            <span id="user-points">0</span> ${pointsText}
+                                        </a>
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="bi bi-person-circle me-1"></i>
+                                                <span id="user-name">User</span>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                                <li><a class="dropdown-item" href="${profileUrl}"><i class="bi bi-person me-2"></i>${profileText}</a></li>
+                                                <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>${darkModeText}</a></li>
+                                                <li><a class="dropdown-item" href="${dbPerformanceUrl}"><i class="bi bi-speedometer2 me-2"></i>${dbPerformanceText}</a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>${emergencyLogoutText}</a></li>
+                                                <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>${logoutText}</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <a href="/rewards" class="text-white me-3 text-decoration-none">
-                            <i class="bi bi-award-fill me-1"></i>
-                            <span id="user-points">0</span> points
-                        </a>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="bi bi-person-circle me-1"></i>
-                                <span id="user-name">User</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-                                <li><a class="dropdown-item" href="#" id="toggle-theme"><i class="bi bi-moon me-2"></i>Dark Mode</a></li>
-                                <li><a class="dropdown-item" href="/views/db-performance.html"><i class="bi bi-speedometer2 me-2"></i>DB Performance</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" id="emergency-logout" data-bs-toggle="modal" data-bs-target="#emergencyLogoutModal"><i class="bi bi-exclamation-triangle me-2"></i>Emergency Logout</a></li>
-                                <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+                    </nav>
+                `;
+                
+                // Insert navbar into the page
+                const navbarContainer = document.getElementById('navbar-container');
+                if (navbarContainer) {
+                    navbarContainer.innerHTML = navbarHtml;
+                }
+            } catch (error) {
+                console.error('Error creating navbar:', error);
+                
+                // Fallback to default navbar if configuration fails
+                const navbarContainer = document.getElementById('navbar-container');
+                if (navbarContainer) {
+                    navbarContainer.innerHTML = `
+                        <nav class="navbar navbar-dark bg-success" role="navigation" aria-label="Main Navigation">
+                            <div class="container">
+                                <a class="navbar-brand" href="/dashboard">
+                                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+                                    TrashDrop
+                                </a>
+                                <div class="d-flex align-items-center">
+                                    <span id="connection-status" class="badge text-bg-success me-2">Online</span>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-person-circle me-1"></i>
+                                            <span id="user-name">User</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                                            <li><a class="dropdown-item" href="#" id="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </nav>
+                    `;
+                }
+            }
+        }
+        
+        // Initialize navbar when DOM is ready
+        document.addEventListener('DOMContentLoaded', createNavbar);
+    </script>
 
     <main id="main-content" class="container py-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -472,22 +642,102 @@
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="mt-auto py-3 bg-light">
-        <div class="container">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
-                <div class="mb-2 mb-md-0">
-                    <img src="/images/logo.svg" alt="TrashDrop Logo" width="24" height="24" class="d-inline-block align-top me-2">
-                    <span>© 2025 TrashDrop</span>
-                </div>
-                <div>
-                    <a href="/terms" class="text-decoration-none text-muted me-3">Terms</a>
-                    <a href="/privacy" class="text-decoration-none text-muted me-3">Privacy</a>
-                    <a href="/help" class="text-decoration-none text-muted">Help</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <!-- Footer placeholder will be populated by JavaScript -->
+    <div id="footer-container"></div>
+
+    <script>
+        // Dynamically create footer with AppConfig
+        async function createFooter() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Get branding information
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const logoPath = window.AppConfig.get('app.logoPath') || '/images/logo.svg';
+                const logoAlt = window.AppConfig.get('app.logoAlt') || `${appName} Logo`;
+                const logoWidth = window.AppConfig.get('app.logoWidthSmall') || 24;
+                const logoHeight = window.AppConfig.get('app.logoHeightSmall') || 24;
+                const currentYear = new Date().getFullYear();
+                const copyrightText = window.AppConfig.get('ui.footer.copyrightText') || 
+                                     `&copy; ${currentYear} ${appName}. All rights reserved.`;
+                const dashboardUrl = window.AppConfig.get('navigation.dashboardUrl') || '/dashboard';
+                const privacyUrl = window.AppConfig.get('navigation.privacyUrl') || '/privacy';
+                const termsUrl = window.AppConfig.get('navigation.termsUrl') || '/terms';
+                const privacyText = window.AppConfig.get('ui.footer.privacyText') || 'Privacy Policy';
+                const termsText = window.AppConfig.get('ui.footer.termsText') || 'Terms of Service';
+                
+                const footerHtml = `
+                    <footer class="mt-auto py-3 bg-success text-white">
+                        <div class="container">
+                            <div class="row align-items-center">
+                                <div class="col-md-4 text-center text-md-start mb-2 mb-md-0">
+                                    <a href="${dashboardUrl}" class="text-white text-decoration-none">
+                                        <img src="${logoPath}" alt="${logoAlt}" width="${logoWidth}" height="${logoHeight}" class="d-inline-block me-2">
+                                        <span>${appName}</span>
+                                    </a>
+                                </div>
+                                <div class="col-md-4 text-center mb-2 mb-md-0">
+                                    <small>${copyrightText}</small>
+                                </div>
+                                <div class="col-md-4 text-center text-md-end">
+                                    <a href="${privacyUrl}" class="text-white text-decoration-none me-3">
+                                        <small>${privacyText}</small>
+                                    </a>
+                                    <a href="${termsUrl}" class="text-white text-decoration-none">
+                                        <small>${termsText}</small>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
+                `;
+                
+                // Insert footer into the page
+                const footerContainer = document.getElementById('footer-container');
+                if (footerContainer) {
+                    footerContainer.innerHTML = footerHtml;
+                }
+            } catch (error) {
+                console.error('Error creating footer:', error);
+                
+                // Fallback to default footer if configuration fails
+                const footerContainer = document.getElementById('footer-container');
+                if (footerContainer) {
+                    const currentYear = new Date().getFullYear();
+                    footerContainer.innerHTML = `
+                        <footer class="mt-auto py-3 bg-success text-white">
+                            <div class="container">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4 text-center text-md-start mb-2 mb-md-0">
+                                        <a href="/dashboard" class="text-white text-decoration-none">
+                                            <img src="/images/logo.svg" alt="TrashDrop Logo" width="24" height="24" class="d-inline-block me-2">
+                                            <span>TrashDrop</span>
+                                        </a>
+                                    </div>
+                                    <div class="col-md-4 text-center mb-2 mb-md-0">
+                                        <small>&copy; ${currentYear} TrashDrop. All rights reserved.</small>
+                                    </div>
+                                    <div class="col-md-4 text-center text-md-end">
+                                        <a href="/privacy" class="text-white text-decoration-none me-3">
+                                            <small>Privacy Policy</small>
+                                        </a>
+                                        <a href="/terms" class="text-white text-decoration-none">
+                                            <small>Terms of Service</small>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </footer>
+                    `;
+                }
+            }
+        }
+        
+        // Initialize footer when DOM is ready
+        document.addEventListener('DOMContentLoaded', createFooter);
+    </script>
 
     <!-- Emergency Logout Modal -->
     <div class="modal fade" id="emergencyLogoutModal" tabindex="-1" aria-labelledby="emergencyLogoutModalLabel" aria-hidden="true">
@@ -517,11 +767,128 @@
         </div>
     </div>
 
-    <!-- Required Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/remove-emergency-logout.js"></script>
-    <script src="/js/theme-switcher.js"></script>
-    <script src="/js/theme-switcher-enhanced.js"></script>
+    <!-- Dynamic JavaScript loading -->
+    <script>
+        async function loadJavaScriptDependencies() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Load Bootstrap JS
+                const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js') || 
+                                      'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                
+                const bootstrapJs = document.createElement('script');
+                bootstrapJs.src = bootstrapJsUrl;
+                document.body.appendChild(bootstrapJs);
+                
+                // Load Chart.js
+                const chartJsUrl = window.AppConfig.get('cdnResources.chartJs') || 
+                                 'https://cdn.jsdelivr.net/npm/chart.js';
+                
+                const chartJs = document.createElement('script');
+                chartJs.src = chartJsUrl;
+                document.body.appendChild(chartJs);
+                
+                // Load Supabase JS SDK
+                const supabaseUrl = window.AppConfig.get('cdnResources.supabase.js') || 
+                                  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js';
+                
+                const supabaseScript = document.createElement('script');
+                supabaseScript.src = supabaseUrl;
+                
+                // Wait for Supabase script to load before initializing
+                supabaseScript.onload = initializeSupabase;
+                document.body.appendChild(supabaseScript);
+                
+                console.log('Dynamic JavaScript dependencies loaded successfully');
+            } catch (error) {
+                console.error('Error loading JavaScript dependencies:', error);
+                
+                // Fallback to default scripts if configuration fails
+                const fallbackScripts = [
+                    'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+                    'https://cdn.jsdelivr.net/npm/chart.js',
+                    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js'
+                ];
+                
+                fallbackScripts.forEach(src => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    document.body.appendChild(script);
+                });
+                
+                // Initialize Supabase with fallback values
+                setTimeout(initializeFallbackSupabase, 1000);
+            }
+        }
+        
+        // Initialize Supabase with AppConfig values
+        async function initializeSupabase() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                const supabaseUrl = window.AppConfig.get('supabase.url');
+                const supabaseKey = window.AppConfig.get('supabase.anonKey');
+                
+                if (!supabaseUrl || !supabaseKey) {
+                    throw new Error('Supabase credentials not found in AppConfig');
+                }
+                
+                // Initialize Supabase client
+                window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                
+                console.log('Supabase client initialized successfully');
+                
+                // Now that supabase is initialized, you can initialize the page functionality
+                initializeReportsPage();
+            } catch (error) {
+                console.error('Error initializing Supabase client:', error);
+                initializeFallbackSupabase();
+            }
+        }
+        
+        // Fallback initialization
+        function initializeFallbackSupabase() {
+            // This is just a placeholder - in a real implementation you would not hardcode these values
+            // They would be supplied via environment variables or some other secure method
+            console.warn('Using fallback Supabase initialization - FOR DEVELOPMENT ONLY');
+            
+            // Initialize with fallback values
+            try {
+                window.supabaseClient = window.supabase.createClient(
+                    'https://your-fallback-project-url.supabase.co',
+                    'your-fallback-public-anon-key'
+                );
+                
+                // Initialize the page with fallback client
+                initializeReportsPage();
+            } catch (error) {
+                console.error('Fallback Supabase initialization failed:', error);
+                // Display error message to user
+                showErrorMessage('Failed to initialize application. Please check console for details.');
+            }
+        }
+        
+        function showErrorMessage(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger mt-3';
+            alertDiv.textContent = message;
+            
+            const mainContent = document.getElementById('main-content');
+            if (mainContent) {
+                mainContent.prepend(alertDiv);
+            } else {
+                document.body.prepend(alertDiv);
+            }
+        }
+        
+        // Load dependencies when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadJavaScriptDependencies);
+    </script>
     <script src="/js/reports.js"></script>
     <script src="/js/mobile-nav.js"></script>
     <script src="/js/navbar.js"></script>

@@ -17,8 +17,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes">
     <meta name="description" content="TrashDrop Dashboard - Manage your waste collection, view upcoming pickups, and track your recycling points">
     <title>Dashboard - TrashDrop</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- CSS will be loaded dynamically from AppConfig -->
+    <script>
+        // Ensure AppConfig is created if missing
+        if (typeof window.AppConfig === 'undefined') {
+            console.warn('AppConfig was not defined. Creating a default instance.');
+            window.AppConfig = {
+                initialized: false,
+                initialize: async function() {
+                    console.log('Using default AppConfig initialization');
+                    this.initialized = true;
+                    return true;
+                },
+                get: function(key) {
+                    return null; // Default implementation returns null for all keys
+                }
+            };
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title if defined
+                const pageName = window.AppConfig.get('ui.pages.dashboard.title') || 'Dashboard';
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                document.title = `${pageName} - ${appName}`;
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css');
+                if (bootstrapCssUrl) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = bootstrapCssUrl;
+                    document.head.appendChild(link);
+                } else {
+                    console.warn('Bootstrap CSS URL not found in config, using fallback');
+                    const fallbackLink = document.createElement('link');
+                    fallbackLink.rel = 'stylesheet';
+                    fallbackLink.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                    document.head.appendChild(fallbackLink);
+                }
+                
+                // Load Bootstrap Icons
+                const iconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons');
+                if (iconsUrl) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = iconsUrl;
+                    document.head.appendChild(link);
+                } else {
+                    console.warn('Bootstrap Icons URL not found in config, using fallback');
+                    const fallbackLink = document.createElement('link');
+                    fallbackLink.rel = 'stylesheet';
+                    fallbackLink.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css';
+                    document.head.appendChild(fallbackLink);
+                }
+            } catch (e) {
+                console.error('Error loading CSS from AppConfig:', e);
+                // Add fallback CSS loading here
+                const fallbackCssLink = document.createElement('link');
+                fallbackCssLink.rel = 'stylesheet';
+                fallbackCssLink.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                document.head.appendChild(fallbackCssLink);
+                
+                const fallbackIconsLink = document.createElement('link');
+                fallbackIconsLink.rel = 'stylesheet';
+                fallbackIconsLink.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css';
+                document.head.appendChild(fallbackIconsLink);
+            }
+        });
+    </script>
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/accessibility.css">
     <link rel="stylesheet" href="/css/navbar-fix.css">
@@ -142,10 +218,7 @@
                         <!-- Navbar items removed as requested -->
                     </ul>
                     <div class="d-flex align-items-center">
-                        <div class="d-flex align-items-center me-3">
-                            <span id="connection-status" class="badge text-bg-success me-2">Online</span>
-                            <span id="pickup-offline-indicator" class="badge rounded-pill text-bg-warning d-none">0</span>
-                        </div>
+                        <!-- Connection status indicators removed as requested -->
                         <a href="/rewards" class="text-white me-3 text-decoration-none">
                             <i class="bi bi-award-fill me-1"></i>
                             <span id="user-points">0</span> points
@@ -955,8 +1028,37 @@
 
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS will be loaded dynamically -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Ensure AppConfig is initialized
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Load Bootstrap JS
+                const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js');
+                if (bootstrapJsUrl) {
+                    const script = document.createElement('script');
+                    script.src = bootstrapJsUrl;
+                    script.async = false; // Ensure sequential loading
+                    document.body.appendChild(script);
+                } else {
+                    console.warn('Bootstrap JS URL not found in config, using fallback');
+                    const fallbackScript = document.createElement('script');
+                    fallbackScript.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                    document.body.appendChild(fallbackScript);
+                }
+            } catch (e) {
+                console.error('Error loading Bootstrap JS from AppConfig:', e);
+                // Fallback if config loading fails
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                document.body.appendChild(fallbackScript);
+            }
+        });
+    </script>
     <!-- Theme Switcher (must be early) -->
     <script src="/js/theme-switcher.js"></script>
     <script src="/js/theme-switcher-enhanced.js"></script>
@@ -975,13 +1077,140 @@
     <script src="/js/offline-points-sync.js"></script>
     <script src="/js/map-offline.js"></script>
     <script src="/js/dashboard.js"></script>
-    <!-- Leaflet Map -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css">
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <!-- External libraries will be loaded dynamically -->
+    <script>
+        // Load external libraries from configuration
+        async function loadExternalLibraries() {
+            try {
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Load Leaflet CSS
+                const leafletCssUrl = window.AppConfig.get('cdnResources.leaflet.css') ||
+                                     'https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css';
+                const leafletCssLink = document.createElement('link');
+                leafletCssLink.rel = 'stylesheet';
+                leafletCssLink.href = leafletCssUrl;
+                document.head.appendChild(leafletCssLink);
+                
+                // Load Leaflet JS
+                const leafletJsUrl = window.AppConfig.get('cdnResources.leaflet.js') ||
+                                    'https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js';
+                const leafletScript = document.createElement('script');
+                leafletScript.src = leafletJsUrl;
+                await appendScriptWithPromise(leafletScript);
+                
+                // Load Chart.js
+                const chartJsUrl = window.AppConfig.get('cdnResources.chartJs') ||
+                                 'https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js';
+                const chartScript = document.createElement('script');
+                chartScript.src = chartJsUrl;
+                await appendScriptWithPromise(chartScript);
+                
+                // Load Bootstrap JS (missing in original code)
+                const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js') ||
+                                     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                const bootstrapScript = document.createElement('script');
+                bootstrapScript.src = bootstrapJsUrl;
+                await appendScriptWithPromise(bootstrapScript);
+                console.log('Bootstrap JS loaded successfully');
+                
+                // Load Supabase client
+                const supabaseUrl = window.AppConfig.get('cdnResources.supabaseJs') ||
+                                  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js';
+                const supabaseScript = document.createElement('script');
+                supabaseScript.src = supabaseUrl;
+                await appendScriptWithPromise(supabaseScript);
+                
+                // Initialize Supabase client if needed
+                await initializeSupabaseClient();
+                
+                console.log('All external libraries loaded successfully');
+            } catch (error) {
+                console.error('Error loading external libraries:', error);
+            }
+        }
+        
+        // Helper function to load script with promise
+        function appendScriptWithPromise(scriptElement) {
+            return new Promise((resolve, reject) => {
+                scriptElement.onload = () => resolve();
+                scriptElement.onerror = () => reject(new Error(`Failed to load script: ${scriptElement.src}`));
+                document.body.appendChild(scriptElement);
+            });
+        }
+        
+        // Initialize Supabase client with configuration values
+        async function initializeSupabaseClient() {
+            try {
+                // Check if SupabaseAuthManager is available
+                if (window.SupabaseAuthManager) {
+                    // Use the existing SupabaseAuthManager instead of creating a new client
+                    const client = await window.SupabaseAuthManager.getClient();
+                    
+                    if (client) {
+                        console.log('Using existing Supabase client from SupabaseAuthManager');
+                        window.supabaseClient = client;
+                        return true;
+                    }
+                }
+                
+                // Fallback: Check if AppConfig and Supabase are available
+                if (!window.AppConfig || !window.supabase) {
+                    console.error('AppConfig or Supabase not loaded');
+                    return false;
+                }
+                
+                // Get Supabase credentials from configuration
+                const supabaseUrl = window.AppConfig.get('supabase.url');
+                const supabaseKey = window.AppConfig.get('supabase.key');
+                
+                if (!supabaseUrl || !supabaseKey) {
+                    console.log('Supabase credentials not found in configuration, using meta tags instead');
+                    // Try to get from meta tags
+                    const urlMeta = document.querySelector('meta[name="supabase-url"]') || document.querySelector('meta[id="supabase-url"]');
+                    const keyMeta = document.querySelector('meta[name="supabase-anon-key"]') || document.querySelector('meta[id="supabase-anon-key"]');
+                    
+                    if (urlMeta && keyMeta && urlMeta.content && keyMeta.content) {
+                        // Initialize Supabase client from meta tags
+                        const supabase = window.supabase.createClient(urlMeta.content, keyMeta.content, {
+                            auth: {
+                                autoRefreshToken: true,
+                                persistSession: true,
+                                detectSessionInUrl: true
+                            }
+                        });
+                        
+                        // Store client globally for access throughout the application
+                        window.supabaseClient = supabase;
+                        return true;
+                    }
+                    
+                    return false;
+                }
+                
+                // Initialize Supabase client
+                const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
+                    auth: {
+                        autoRefreshToken: true,
+                        persistSession: true,
+                        detectSessionInUrl: true
+                    }
+                });
+                
+                // Store client globally for access throughout the application
+                window.supabaseClient = supabase;
+                return true;
+            } catch (error) {
+                console.error('Error initializing Supabase client:', error);
+                return false;
+            }
+        }
+        
+        // Execute library loading when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadExternalLibraries);
+    </script>
     <!-- Custom JS -->
     <!-- Report Dumping Modal -->
     <div class="modal fade report-modal" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true" role="dialog" aria-modal="true">
@@ -1292,43 +1521,8 @@
     <script src="/js/active-pickup-persistence.js"></script>
     <!-- Initialize persistence immediately during page load -->
     <script>
-        // Sync mobile and desktop UI elements
-        function syncMobileDesktopElements() {
-            // Sync user information
-            const userData = JSON.parse(localStorage.getItem('userData')) || {};
-            const userName = userData.name || 'User';
-            const userPoints = userData.points || '0';
-            
-            // Update desktop elements
-            document.getElementById('user-name').textContent = userName;
-            document.getElementById('user-points').textContent = userPoints;
-            
-            // Update mobile elements
-            document.getElementById('user-points-mobile').textContent = userPoints;
-            
-            // Sync connection status
-            const isOnline = navigator.onLine;
-            const connectionStatus = document.getElementById('connection-status');
-            const connectionStatusMobile = document.getElementById('connection-status-mobile');
-            
-            if (isOnline) {
-                connectionStatus.textContent = 'Online';
-                connectionStatus.classList.remove('text-bg-danger');
-                connectionStatus.classList.add('text-bg-success');
-                
-                connectionStatusMobile.textContent = 'Online';
-                connectionStatusMobile.classList.remove('text-bg-danger');
-                connectionStatusMobile.classList.add('text-bg-success');
-            } else {
-                connectionStatus.textContent = 'Offline';
-                connectionStatus.classList.remove('text-bg-success');
-                connectionStatus.classList.add('text-bg-danger');
-                
-                connectionStatusMobile.textContent = 'Offline';
-                connectionStatusMobile.classList.remove('text-bg-success');
-                connectionStatusMobile.classList.add('text-bg-danger');
-            }
-        }
+        // DEPRECATED: syncMobileDesktopElements has been removed due to null reference errors
+        // All functionality has been moved to setupMobileDesktopSync and online/offline event handlers
         
         // Sync mobile/desktop event handlers
         function setupMobileDesktopSync() {
@@ -1343,12 +1537,24 @@
         
         // Setup responsive behaviors when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            syncMobileDesktopElements();
+            // Removed syncMobileDesktopElements call to fix null reference errors
+            // We're using a static navbar now, so dynamic sync is not needed
+            
+            // Only keep the setupMobileDesktopSync function which safely handles only UI elements
             setupMobileDesktopSync();
             
-            // Update on network status change
-            window.addEventListener('online', syncMobileDesktopElements);
-            window.addEventListener('offline', syncMobileDesktopElements);
+            // Handle online/offline events directly without using syncMobileDesktopElements
+            window.addEventListener('online', function() {
+                console.log('Online status: Connected');
+                const offlineAlert = document.getElementById('offline-alert');
+                if (offlineAlert) offlineAlert.classList.add('d-none');
+            });
+            
+            window.addEventListener('offline', function() {
+                console.log('Online status: Disconnected');
+                const offlineAlert = document.getElementById('offline-alert');
+                if (offlineAlert) offlineAlert.classList.remove('d-none');
+            });
         });
         
         // Run persistence check as early as possible during page load
@@ -1366,12 +1572,32 @@
     <!-- Initialize Bootstrap components -->
     <script>
         // Ensure Bootstrap is fully loaded before initializing modals
+        function initializeModals() {
+            // Check if Bootstrap is loaded
+            if (typeof bootstrap === 'undefined') {
+                console.warn('Bootstrap not yet loaded, waiting 500ms before trying again...');
+                setTimeout(initializeModals, 500);
+                return;
+            }
+            
+            try {
+                // Pre-initialize all modals on the page
+                const modals = document.querySelectorAll('.modal');
+                modals.forEach(modalEl => {
+                    if (modalEl && typeof bootstrap.Modal === 'function') {
+                        new bootstrap.Modal(modalEl);
+                    }
+                });
+                console.log('Bootstrap modals initialized successfully');
+            } catch (err) {
+                console.error('Error initializing Bootstrap modals:', err);
+            }
+        }
+        
+        // Wait for DOM and then try to initialize modals
         document.addEventListener('DOMContentLoaded', function() {
-            // Pre-initialize all modals on the page
-            const modals = document.querySelectorAll('.modal');
-            modals.forEach(modalEl => {
-                new bootstrap.Modal(modalEl);
-            });
+            // Give time for external libraries to load first
+            setTimeout(initializeModals, 1000);
         });
     </script>
     <!-- Base URL script to handle navigation URLs correctly -->

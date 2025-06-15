@@ -293,6 +293,6 @@ To create a release version:
 ## Customization options
 
 - **Splash screen:** Add a custom splash screen while the web app loads
-- **Push notifications:** Implement Firebase Cloud Messaging
+- **Push notifications:** Implement Supabase Push Notifications
 - **Deep linking:** Add support for custom URL schemes
 - **Offline mode:** Enhance with a custom offline page

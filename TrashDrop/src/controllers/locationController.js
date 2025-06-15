@@ -4,9 +4,11 @@
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const config = require('../../app.config');
+const supabase = createClient(
+    config.supabase.url,
+    config.supabase.anonKey || config.supabase.serviceRoleKey
+);
 const { v4: uuidv4 } = require('uuid');
 
 /**

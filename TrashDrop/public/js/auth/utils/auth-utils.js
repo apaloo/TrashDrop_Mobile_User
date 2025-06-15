@@ -4,7 +4,7 @@
  */
 
 // Storage keys
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   AUTH: 'trashdrop_auth',
   SESSION: 'sb_session',
   TOKEN: 'sb_token',
@@ -12,7 +12,7 @@ const STORAGE_KEYS = {
 };
 
 // Validation patterns
-const VALIDATION = {
+export const VALIDATION = {
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   PASSWORD: {
     MIN_LENGTH: 8,
@@ -25,7 +25,7 @@ const VALIDATION = {
 /**
  * Form Validation
  */
-class FormValidator {
+export class FormValidator {
   constructor(formId) {
     this.form = document.getElementById(formId);
     this.fields = {};
@@ -115,7 +115,7 @@ class FormValidator {
 /**
  * Storage Management
  */
-class AuthStorage {
+export class AuthStorage {
   // Clear only auth-related data
   static clearAuthData() {
     try {
@@ -183,7 +183,7 @@ class AuthStorage {
 /**
  * UI Helpers
  */
-const AuthUI = {
+export const AuthUI = {
   // Set form loading state
   setLoading(form, isLoading) {
     const submitButton = form.querySelector('button[type="submit"]');
@@ -249,4 +249,22 @@ const AuthUI = {
   }
 };
 
-export { FormValidator, AuthStorage, AuthUI, STORAGE_KEYS, VALIDATION };
+// Make utilities available globally
+window.AuthUtils = {
+  FormValidator, 
+  AuthStorage, 
+  AuthUI, 
+  STORAGE_KEYS, 
+  VALIDATION
+};
+
+// Support module environments if needed
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    FormValidator, 
+    AuthStorage, 
+    AuthUI, 
+    STORAGE_KEYS, 
+    VALIDATION
+  };
+}

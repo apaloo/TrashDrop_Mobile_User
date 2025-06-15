@@ -3,8 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Default title, will be updated dynamically -->
     <title>TrashDrop - Account Access</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    
+    <!-- Dynamic resource loading -->
+    <script>
+        // Load CSS resources dynamically
+        async function loadStyles() {
+            try {
+                // Ensure AppConfig exists
+                if (typeof window.AppConfig === 'undefined') {
+                    console.warn('AppConfig was not defined. Creating a default instance.');
+                    window.AppConfig = {
+                        initialized: false,
+                        initialize: async function() {
+                            console.log('Using default AppConfig initialization');
+                            this.initialized = true;
+                            return { cdnResources: { bootstrap: {} } }; // Minimal default config
+                        },
+                        get: function(key) {
+                            return null; // Default implementation returns null for all keys
+                        }
+                    };
+                }
+                
+                if (!window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const pageTitle = window.AppConfig.get('ui.pages.access.title') || 'Account Access';
+                document.title = `${appName} - ${pageTitle}`;
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css') || 
+                                        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = bootstrapCssUrl;
+                document.head.appendChild(bootstrapCss);
+                
+                console.log('Dynamic styles loaded successfully');
+                return true;
+            } catch (error) {
+                console.error('Error loading dynamic styles:', error);
+                
+                // Fallback to default CSS if configuration fails
+                const fallbackCss = document.createElement('link');
+                fallbackCss.rel = 'stylesheet';
+                fallbackCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                document.head.appendChild(fallbackCss);
+                
+                return false;
+            }
+        }
+        
+        // Initialize styles when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadStyles);
+    </script>
     <style>
         body {
             padding-top: 50px;
@@ -30,36 +93,178 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="access-container">
-            <div class="logo">
-                <img src="/images/logo.svg" alt="TrashDrop Logo" width="60" height="60">
-                <h2 class="mt-3 text-success">TrashDrop</h2>
-            </div>
-            
-            <h3 class="text-center mb-4">Account Options</h3>
-            
-            <div class="row">
-                <div class="col-12 mb-4">
-                    <!-- Using direct navigation with window.location.href to avoid form submissions -->
-                    <button onclick="window.location.href='http://127.0.0.1:3000/login'" class="btn btn-success btn-access">
-                        <i class="bi bi-box-arrow-in-right me-2"></i>Access Your Account
-                    </button>
-                    
-                    <button onclick="window.location.href='http://127.0.0.1:3000/signup'" class="btn btn-outline-success btn-access">
-                        <i class="bi bi-person-plus me-2"></i>Create New Account
-                    </button>
-                </div>
-            </div>
-            
-            <div class="text-center mt-3">
-                <a href="http://127.0.0.1:3000/" class="text-decoration-none text-success">
-                    <i class="bi bi-arrow-left"></i> Back to Home
-                </a>
+    <div class="container" id="content-container">
+        <!-- Content will be dynamically populated -->
+        <div id="loading-placeholder" class="text-center" style="padding-top: 100px;">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
         </div>
     </div>
+    
+    <script>
+        // Initialize page content with dynamic configuration
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Ensure configuration is loaded
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                const contentContainer = document.getElementById('content-container');
+                if (!contentContainer) return;
+                
+                // Create access container
+                const accessContainer = document.createElement('div');
+                accessContainer.className = 'access-container';
+                contentContainer.innerHTML = ''; // Clear loading spinner
+                contentContainer.appendChild(accessContainer);
+                
+                // Get content from configuration
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const logoUrl = window.AppConfig.get('ui.branding.logoUrl') || '/images/logo.svg';
+                const logoAlt = window.AppConfig.get('ui.branding.logoAlt') || `${appName} Logo`;
+                const titleText = window.AppConfig.get('ui.pages.access.headerText') || 'Account Options';
+                const copyRightYear = new Date().getFullYear();
+                const copyrightText = window.AppConfig.get('ui.branding.copyrightText') || `&copy; ${copyRightYear} ${appName}. All rights reserved.`;
+                
+                // Get login, signup and forgot password text and routes from config
+                const loginText = window.AppConfig.get('ui.navigation.login') || 'Access Your Account';
+                const loginIcon = window.AppConfig.get('ui.icons.login') || 'bi bi-box-arrow-in-right me-2';
+                const loginUrl = window.AppConfig.get('routes.login') || '/login';
+                
+                const signupText = window.AppConfig.get('ui.navigation.signup') || 'Create New Account';
+                const signupIcon = window.AppConfig.get('ui.icons.signup') || 'bi bi-person-plus me-2';
+                const signupUrl = window.AppConfig.get('routes.signup') || '/signup';
+                
+                const forgotPasswordText = window.AppConfig.get('ui.navigation.forgotPassword') || 'Forgot Password?';
+                const forgotPasswordUrl = window.AppConfig.get('routes.forgotPassword') || '/forgot-password';
+                
+                // Create logo section
+                const logoDiv = document.createElement('div');
+                logoDiv.className = 'logo';
+                
+                const logoImg = document.createElement('img');
+                logoImg.src = logoUrl;
+                logoImg.alt = logoAlt;
+                logoImg.width = 60;
+                logoImg.height = 60;
+                
+                const brandName = document.createElement('h2');
+                brandName.className = 'mt-3 text-success';
+                brandName.textContent = appName;
+                
+                logoDiv.appendChild(logoImg);
+                logoDiv.appendChild(brandName);
+                accessContainer.appendChild(logoDiv);
+                
+                // Create title
+                const heading = document.createElement('h3');
+                heading.className = 'text-center mb-4';
+                heading.textContent = titleText;
+                accessContainer.appendChild(heading);
+                
+                // Create row and column for buttons
+                const row = document.createElement('div');
+                row.className = 'row';
+                
+                const col = document.createElement('div');
+                col.className = 'col-12 mb-4';
+                
+                // Create login button
+                const loginButton = document.createElement('button');
+                loginButton.className = 'btn btn-success btn-access';
+                loginButton.innerHTML = `<i class="${loginIcon}"></i>${loginText}`;
+                loginButton.onclick = function() {
+                    window.location.href = loginUrl;
+                };
+                
+                // Create signup button
+                const signupButton = document.createElement('button');
+                signupButton.className = 'btn btn-outline-success btn-access';
+                signupButton.innerHTML = `<i class="${signupIcon}"></i>${signupText}`;
+                signupButton.onclick = function() {
+                    window.location.href = signupUrl;
+                };
+                
+                // Create forgot password link
+                const forgotPasswordDiv = document.createElement('div');
+                forgotPasswordDiv.className = 'text-center mt-4';
+                
+                const forgotPasswordLink = document.createElement('a');
+                forgotPasswordLink.href = forgotPasswordUrl;
+                forgotPasswordLink.className = 'text-muted text-decoration-none';
+                
+                const forgotPasswordTextElement = document.createElement('small');
+                forgotPasswordTextElement.textContent = forgotPasswordText;
+                
+                forgotPasswordLink.appendChild(forgotPasswordTextElement);
+                forgotPasswordDiv.appendChild(forgotPasswordLink);
+                
+                // Add buttons and links to column
+                col.appendChild(loginButton);
+                col.appendChild(signupButton);
+                col.appendChild(forgotPasswordDiv);
+                
+                // Add column to row and row to container
+                row.appendChild(col);
+                accessContainer.appendChild(row);
+                
+                // Add copyright
+                const copyrightDiv = document.createElement('div');
+                copyrightDiv.className = 'text-center mt-4';
+                
+                const copyrightP = document.createElement('p');
+                copyrightP.className = 'text-muted';
+                
+                const copyrightSmall = document.createElement('small');
+                copyrightSmall.textContent = copyrightText;
+                
+                copyrightP.appendChild(copyrightSmall);
+                copyrightDiv.appendChild(copyrightP);
+                accessContainer.appendChild(copyrightDiv);
+                
+            } catch (error) {
+                console.error('Error initializing page content:', error);
+                // Fallback to static content
+                const contentContainer = document.getElementById('content-container');
+                if (contentContainer) {
+                    contentContainer.innerHTML = `
+                        <div class="access-container">
+                            <div class="logo">
+                                <img src="/images/logo.svg" alt="TrashDrop Logo" width="60" height="60">
+                                <h2 class="mt-3 text-success">TrashDrop</h2>
+                            </div>
+                            
+                            <h3 class="text-center mb-4">Account Options</h3>
+                            
+                            <div class="row">
+                                <div class="col-12 mb-4">
+                                    <button onclick="window.location.href='/login'" class="btn btn-success btn-access">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i>Access Your Account
+                                    </button>
+                                    
+                                    <button onclick="window.location.href='/signup'" class="btn btn-outline-success btn-access">
+                                        <i class="bi bi-person-plus me-2"></i>Create New Account
+                                    </button>
 
+                                    <div class="text-center mt-4">
+                                        <a href="/forgot-password" class="text-muted text-decoration-none">
+                                            <small>Forgot Password?</small>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <p class="text-muted"><small>&copy; ${new Date().getFullYear()} TrashDrop. All rights reserved.</small></p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        });
+    </script>
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <!-- Bootstrap JS Bundle -->

@@ -2,86 +2,168 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Log in to your TrashDrop account - Access waste collection scheduling, tracking, and rewards">
+    <meta name="theme-color" content="#4CAF50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Application metadata -->
+    <meta name="app-name" content="TrashDrop">
+    <meta name="app-version" content="2.1.0">
+    <meta name="environment" content="development">
+    
+    <!-- Feature flags -->
+    <meta name="feature-offline-support" content="true">
+    <meta name="feature-dark-mode" content="true">
+    
+    <!-- Supabase configuration - dynamically loaded via AppConfig -->
+    <meta name="supabase-url" id="supabase-url" content="">
+    <meta name="supabase-anon-key" id="supabase-anon-key" content="">
+    
     <title>Login - TrashDrop</title>
     
-    <!-- Bootstrap 5 CSS -->
+    <!-- App Configuration and Loader -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Bootstrap CSS (explicit load to ensure UI works) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/accessibility.css">
     <link rel="stylesheet" href="css/dark-theme.css">
+    <link rel="stylesheet" href="css/responsive-enhancements.css">
     
-    <!-- Supabase Configuration -->
-    <!-- The URL is hardcoded but the key will be set by the server -->
-    <meta name="SUPABASE_URL" content="https://cpeyavpxqcloupolbvyh.supabase.co">
-    <meta name="SUPABASE_ANON_KEY" id="supabase-anon-key" content="">
-    
-    <!-- Supabase UMD Script - Load synchronously for guaranteed availability -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-    
-    <!-- Initialize Supabase after fetching the anon key -->
+    <!-- Load App Config First - already loaded above -->
+    <!-- App configuration was already included above -->
+
+    <!-- Supabase Auth Loader Script -->    
+    <script src="/js/auth/supabase-auth-loader.js"></script>
+        
+    <!-- Initialize Supabase with consolidated auth module -->
     <script>
-      // Will be initialized after script loads and key is fetched
+      // Will be initialized after configuration is loaded
       window.supabaseClient = null;
       
-      // Function to initialize Supabase
-      function initSupabase(supabaseUrl, supabaseKey) {
-        try {
-          // Log configuration (without exposing the actual key)
-          console.log('Initializing Supabase with URL:', supabaseUrl);
-          
-          if (!supabaseUrl || !supabaseKey) {
-            console.error('Missing Supabase configuration');
-            return null;
-          }
-          
-          if (window.supabase && typeof window.supabase.createClient === 'function') {
-            console.log('Creating Supabase client with key...'); // Don't log the actual key
-            const client = window.supabase.createClient(supabaseUrl, supabaseKey, {
-              auth: {
-                autoRefreshToken: true,
-                persistSession: true,
-                detectSessionInUrl: true
-              }
-            });
-            
-            // Update the key in the meta tag for debugging purposes only
-            document.getElementById('supabase-anon-key').content = '[Key Available]';
-            
-            console.log('Supabase initialized:', !!client);
-            console.log('Auth available:', !!client.auth);
-            return client;
-          } else {
-            console.error('Supabase library not loaded properly');
-            return null;
-          }
-        } catch (e) {
-          console.error('Error initializing Supabase:', e);
-          return null;
-        }
-      }
-      
-      // Get config and initialize when DOM is loaded
+      // Initialize when DOM is loaded
       document.addEventListener('DOMContentLoaded', async function() {
         try {
-          // Fetch the Supabase key from the server
-          const response = await fetch('/api/config/supabase');
-          if (!response.ok) {
-            throw new Error('Failed to load Supabase configuration');
+          // Ensure AppConfig exists
+          if (typeof window.AppConfig === 'undefined') {
+            console.warn('AppConfig was not defined. Creating a default instance.');
+            window.AppConfig = {
+              initialized: false,
+              initialize: async function() {
+                console.log('Using default AppConfig initialization');
+                this.initialized = true;
+                return { cdnResources: { bootstrap: {} } }; // Minimal default config
+              },
+              get: function(key) {
+                return null; // Default implementation returns null for all keys
+              }
+            };
           }
           
-          const config = await response.json();
-          console.log('Supabase configuration loaded from server');
+          // Wait for AppConfig to initialize
+          const config = await window.AppConfig.initialize();
+          console.log('App config initialized:', !!config);
+
+          // Load external dependencies
+          await loadExternalDependencies(config);
           
-          // Initialize Supabase with both URL and key from server
-          window.supabaseClient = initSupabase(config.url, config.anonKey);
+          // Update Supabase meta tags with values from AppConfig
+          const supabaseUrl = config && config.supabase && config.supabase.url;
+          const supabaseAnonKey = config && config.supabase && config.supabase.anonKey;
           
-          // Update the meta tags with server values for consistency
-          document.querySelector('meta[name="SUPABASE_URL"]').content = config.url;
+          if (supabaseUrl && supabaseAnonKey) {
+            console.log('Setting Supabase configuration from AppConfig');
+            document.getElementById('supabase-url').content = supabaseUrl;
+            document.getElementById('supabase-anon-key').content = supabaseAnonKey;
+          } else {
+            console.warn('Supabase configuration not available in AppConfig');
+          }
+          
+          // Load Supabase directly to ensure it's available
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js';
+            script.onload = () => {
+              console.log('Supabase library loaded directly');
+              resolve();
+            };
+            script.onerror = (err) => {
+              console.error('Failed to load Supabase library:', err);
+              reject(err);
+            };
+            document.head.appendChild(script);
+          });
+          
+          // Initialize Supabase using the consolidated auth module
+          console.log('Initializing Supabase using consolidated auth module...');
+          if (!window.SupabaseAuthLoader) {
+            console.error('Auth loader not available, initializing failed');
+            throw new Error('Auth loader not available');
+          }
+          
+          // Pass the Supabase config from AppConfig to the auth loader
+          await window.SupabaseAuthLoader.initialize({
+            supabaseUrl: supabaseUrl,
+            supabaseKey: supabaseAnonKey
+          });
+          
+          window.supabaseClient = await window.SupabaseAuthLoader.getClient();
+          console.log('Supabase client initialized successfully:', !!window.supabaseClient);
+          
+          // Load external dependencies based on configuration
+          async function loadExternalDependencies(config) {
+            
+            // Function to load CSS dynamically
+            function loadCss(url) {
+              return new Promise((resolve, reject) => {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = url;
+                link.onload = () => resolve();
+                link.onerror = () => reject(new Error(`Failed to load CSS: ${url}`));
+                document.head.appendChild(link);
+              });
+            }
+            
+            // Function to load JS dynamically
+            function loadScript(url) {
+              return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.async = true;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
+                document.head.appendChild(script);
+              });
+            }
+            
+            try {
+              // Load Bootstrap CSS
+              await loadCss(config.cdnResources.bootstrap.css);
+              
+              // Load Bootstrap Icons
+              await loadCss(config.cdnResources.bootstrap.icons);
+              
+              // Load Bootstrap JS
+              await loadScript(config.cdnResources.bootstrap.js);
+              
+              // Load Supabase if not already loaded
+              if (!window.supabase) {
+                await loadScript(config.cdnResources.supabase);
+              }
+              
+              console.log('External dependencies loaded successfully');
+            } catch (error) {
+              console.error('Failed to load external dependencies:', error);
+            }
+          }
           
           // Handle email confirmation flow
           const hash = window.location.hash;
@@ -170,32 +252,7 @@
     <!-- Skip to content link for accessibility -->
     <a href="#main-content" class="skip-to-content">Skip to main content</a>
     
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                TrashDrop
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/about.html">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/contact.html">Contact</a>
-                    </li>
-                    <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
-                        <a href="signup-new.html" class="btn btn-outline-light">Sign Up</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <!-- Navigation - Will be inserted by navbar.js -->
 
     <!-- Main Content -->
     <main id="main-content" class="container my-auto py-5">
@@ -238,7 +295,7 @@
                                         Remember me
                                     </label>
                                 </div>
-                                <a href="forgot-password.html" class="text-decoration-none">Forgot password?</a>
+                                <a href="#" id="forgot-password-link" class="text-decoration-none">Forgot password?</a>
                             </div>
 
                             <!-- Submit Button -->
@@ -254,15 +311,29 @@
                             <div class="d-grid gap-2">
                                 <button type="button" class="btn btn-google d-flex align-items-center justify-content-center" 
                                         id="google-login">
-                                    <img src="https://www.google.com/favicon.ico" alt="Google" width="20" height="20" class="me-2">
+                                    <img id="google-icon" alt="Google" width="20" height="20" class="me-2">
                                     Continue with Google
                                 </button>
+                                <script>
+                                    // Dynamically set Google icon from configuration
+                                    document.addEventListener('DOMContentLoaded', async function() {
+                                        try {
+                                            await window.AppConfig.initialize();
+                                            const googleIconUrl = window.AppConfig.get('ui.icons.google', 'https://www.google.com/favicon.ico');
+                                            document.getElementById('google-icon').src = googleIconUrl;
+                                        } catch (e) {
+                                            console.error('Failed to load Google icon from config:', e);
+                                            // Fallback
+                                            document.getElementById('google-icon').src = 'https://www.google.com/favicon.ico';
+                                        }
+                                    });
+                                </script>
                             </div>
                         </form>
 
                         <!-- Sign Up Link -->
                         <div class="text-center">
-                            <a href="signup-new.html" class="text-decoration-none">
+                            <a href="#" id="signup-footer-link" class="text-decoration-none">
                                 Don't have an account? <span class="text-success fw-semibold">Sign up</span>
                             </a>
                         </div>
@@ -283,10 +354,10 @@
                 <div class="col-md-3">
                     <h6>Quick Links</h6>
                     <ul class="list-unstyled">
-                        <li><a href="/about.html" class="text-white-50 text-decoration-none">About Us</a></li>
-                        <li><a href="/contact.html" class="text-white-50 text-decoration-none">Contact</a></li>
-                        <li><a href="/privacy.html" class="text-white-50 text-decoration-none">Privacy Policy</a></li>
-                        <li><a href="/terms.html" class="text-white-50 text-decoration-none">Terms of Service</a></li>
+                        <li><a href="#" id="about-link" class="text-white-50 text-decoration-none">About Us</a></li>
+                        <li><a href="#" id="contact-link" class="text-white-50 text-decoration-none">Contact</a></li>
+                        <li><a href="#" id="privacy-link" class="text-white-50 text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="#" id="terms-link" class="text-white-50 text-decoration-none">Terms of Service</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
@@ -301,19 +372,62 @@
             </div>
             <hr class="my-4">
             <div class="text-center">
-                <p class="mb-0">&copy; 2023 TrashDrop. All rights reserved.</p>
+                <p class="mb-0" id="copyright-text"></p>
+                <script>
+                    document.addEventListener('DOMContentLoaded', async function() {
+                        try {
+                            await window.AppConfig.initialize();
+                            const year = window.AppConfig.get('app.copyrightYear', new Date().getFullYear());
+                            const companyName = window.AppConfig.get('app.companyName', 'TrashDrop');
+                            document.getElementById('copyright-text').textContent = `© ${year} ${companyName}. All rights reserved.`;
+                        } catch (e) {
+                            console.error('Failed to load copyright info from config:', e);
+                            // Fallback
+                            document.getElementById('copyright-text').textContent = `© ${new Date().getFullYear()} TrashDrop. All rights reserved.`;
+                        }
+                    });
+                </script>
             </div>
         </div>
     </footer>
 
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS will be loaded via AppConfig -->
     
     <!-- Removed duplicate Supabase configuration and UMD script - now in head -->
     
     <!-- Direct in-page authentication script -->
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('DOMContentLoaded', async function() {
+        // Initialize config if not already done
+        if (window.AppConfig && !window.AppConfig.initialized) {
+          try {
+            await window.AppConfig.initialize();
+          } catch (e) {
+            console.warn('Could not initialize AppConfig:', e);
+          }
+        }
+        
+        // Set up navigation links from config
+        try {
+          // Set route URLs from configuration
+          const routes = {
+            'signup-link': window.AppConfig.get('routes.signup', '/signup-new.html'),
+            'signup-footer-link': window.AppConfig.get('routes.signup', '/signup-new.html'),
+            'forgot-password-link': window.AppConfig.get('routes.forgotPassword', '/forgot-password.html'),
+            'about-link': window.AppConfig.get('routes.about', '/about.html'),
+            'contact-link': window.AppConfig.get('routes.contact', '/contact.html'),
+            'privacy-link': window.AppConfig.get('routes.privacy', '/privacy.html'),
+            'terms-link': window.AppConfig.get('routes.terms', '/terms.html')
+          };
+          
+          // Update all navigation links
+          Object.entries(routes).forEach(([id, url]) => {
+            const element = document.getElementById(id);
+            if (element) element.href = url;
+          });
+        } catch (e) {
+          console.warn('Error setting up navigation links:', e);
+        }
         // Get the login form
         const form = document.getElementById('login-form');
         const submitButton = form.querySelector('button[type="submit"]');
@@ -360,18 +474,23 @@
             console.log('Client auth available:', !!client.auth);
             
             // Attempt login using the client
-            const { data, error } = await client.auth.signInWithPassword({ 
-              email, 
-              password 
-            });
+            // Use signInWithEmail which is the method exposed by our auth module
+            // SupabaseAuthManager is already a singleton instance, not a class with getInstance()
+            const result = await window.SupabaseAuthManager.signInWithEmail(email, password);
+            
+            // Extract data and error from result
+            const { success, data, error } = result;            
+            
+            if (!success) throw new Error(error || 'Login failed');
             
             if (error) throw error;
             
-            // Success - store session if remember me is checked
+            // Success - session is automatically stored by Supabase Auth
+            // Additional storage for remember-me feature
             if (rememberMe && data.session) {
-              localStorage.setItem('sb-auth-token', data.session.access_token);
-              localStorage.setItem('sb-refresh-token', data.session.refresh_token);
-              localStorage.setItem('sb-user', JSON.stringify(data.user));
+              // The main session is already handled by our auth module
+              // Just store a flag that remember-me was enabled
+              localStorage.setItem('td-remember-me', 'true');
             }
             
             // Redirect to dashboard or original requested page
@@ -438,10 +557,41 @@
       });
     </script>
     <script type="module" src="/js/auth/handlers/logout-handler.js"></script>
+    <script src="/js/navbar.js"></script>
     
     <script>
         // Theme Toggle Functionality
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+        // Initialize config if not already done
+        if (window.AppConfig && !window.AppConfig.initialized) {
+          try {
+            await window.AppConfig.initialize();
+          } catch (e) {
+            console.warn('Could not initialize AppConfig:', e);
+          }
+        }
+        
+        // Set up navigation links from config
+        try {
+          // Set route URLs from configuration
+          const routes = {
+            'signup-link': window.AppConfig.get('routes.signup', '/signup-new.html'),
+            'signup-footer-link': window.AppConfig.get('routes.signup', '/signup-new.html'),
+            'forgot-password-link': window.AppConfig.get('routes.forgotPassword', '/forgot-password.html'),
+            'about-link': window.AppConfig.get('routes.about', '/about.html'),
+            'contact-link': window.AppConfig.get('routes.contact', '/contact.html'),
+            'privacy-link': window.AppConfig.get('routes.privacy', '/privacy.html'),
+            'terms-link': window.AppConfig.get('routes.terms', '/terms.html')
+          };
+          
+          // Update all navigation links
+          Object.entries(routes).forEach(([id, url]) => {
+            const element = document.getElementById(id);
+            if (element) element.href = url;
+          });
+        } catch (e) {
+          console.warn('Error setting up navigation links:', e);
+        }
             // Theme toggle button
             const themeToggle = document.getElementById('theme-toggle');
             if (themeToggle) {

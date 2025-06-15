@@ -1,35 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Authentication Stabilizer - Consolidated solution for preventing refresh loops -->
-    <script src="/js/auth-stabilizer.js"></script>
+    <!-- AppConfig and dependencies -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
+    
+    <!-- Protocol interceptor must run early, before meta tags are processed -->
+    <script src="/js/protocol-interceptor.js"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="Sign up for TrashDrop - Join our community and help keep neighborhoods clean">
     <title>Sign Up - TrashDrop</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/navbar-fix.css">
-    <link rel="stylesheet" href="/css/hide-emergency-logout.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4CAF50">
-    <link rel="stylesheet" href="/css/dark-theme.css">
+
+    <!-- Dynamic resource loading -->
+    <script>
+        // Load CSS resources dynamically
+        async function loadStyles() {
+            try {
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
+                }
+                
+                // Update page title and meta
+                const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                const pageTitle = window.AppConfig.get('ui.pages.signup.title') || 'Sign Up';
+                document.title = `${pageTitle} - ${appName}`;
+                
+                // Update meta description
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) {
+                    metaDesc.setAttribute('content', 
+                        window.AppConfig.get('ui.pages.signup.description') || 
+                        `Sign up for ${appName} - Join our community and help keep neighborhoods clean`);
+                }
+                
+                // Update theme color
+                const themeColor = document.querySelector('meta[name="theme-color"]');
+                if (themeColor) {
+                    themeColor.setAttribute('content', 
+                        window.AppConfig.get('theme.primaryColor') || '#4CAF50');
+                }
+                
+                // Load Bootstrap CSS
+                const bootstrapCssUrl = window.AppConfig.get('cdnResources.bootstrap.css') || 
+                                        'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
+                
+                const bootstrapCss = document.createElement('link');
+                bootstrapCss.rel = 'stylesheet';
+                bootstrapCss.href = bootstrapCssUrl;
+                document.head.appendChild(bootstrapCss);
+                
+                // Load Bootstrap Icons
+                const bootstrapIconsUrl = window.AppConfig.get('cdnResources.bootstrap.icons') || 
+                                         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css';
+                
+                const bootstrapIcons = document.createElement('link');
+                bootstrapIcons.rel = 'stylesheet';
+                bootstrapIcons.href = bootstrapIconsUrl;
+                document.head.appendChild(bootstrapIcons);
+                
+                // Load application CSS
+                const cssFiles = [
+                    '/css/styles.css',
+                    '/css/accessibility.css',
+                    '/css/dark-theme.css'
+                ];
+                
+                cssFiles.forEach(file => {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = file;
+                    document.head.appendChild(link);
+                });
+                
+                console.log('Dynamic styles loaded successfully');
+            } catch (error) {
+                console.error('Error loading dynamic styles:', error);
+                
+                // Use constants from config-manager's defaults
+                const configDefaults = window.AppConfig ? window.AppConfig.getDefaults() : {};
+                
+                const fallbackCss = document.createElement('link');
+                fallbackCss.rel = 'stylesheet';
+                fallbackCss.href = configDefaults.bootstrap?.css || '/css/bootstrap-fallback.min.css';
+                document.head.appendChild(fallbackCss);
+                
+                const fallbackIcons = document.createElement('link');
+                fallbackIcons.rel = 'stylesheet';
+                fallbackIcons.href = configDefaults.bootstrap?.icons || '/css/bootstrap-icons-fallback.min.css';
+                document.head.appendChild(fallbackIcons);
+            }
+        }
+        
+        // Initialize styles when DOM is ready
+        document.addEventListener('DOMContentLoaded', loadStyles);
+    </script>
     <link rel="stylesheet" href="/css/mobile-nav-fix.css">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-success">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
+            <a class="navbar-brand" href="/" id="navbarBrand">
+                <img id="navLogo" src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
                 TrashDrop
             </a>
+            <script>
+                // Dynamically update navbar brand and logo from AppConfig
+                document.addEventListener('DOMContentLoaded', async () => {
+                    try {
+                        if (!window.AppConfig || !window.AppConfig.initialized) {
+                            await window.AppConfig.initialize();
+                        }
+                        
+                        const appName = window.AppConfig.get('app.name') || 'TrashDrop';
+                        const logoPath = window.AppConfig.get('branding.logo') || '/images/logo.svg';
+                        
+                        // Update brand text
+                        const brandElement = document.getElementById('navbarBrand');
+                        if (brandElement) {
+                            const textNode = Array.from(brandElement.childNodes)
+                                .find(node => node.nodeType === 3);
+                            if (textNode) {
+                                textNode.nodeValue = appName;
+                            } else {
+                                brandElement.appendChild(document.createTextNode(appName));
+                            }
+                        }
+                        
+                        // Update logo image
+                        const logoElement = document.getElementById('navLogo');
+                        if (logoElement) {
+                            logoElement.src = logoPath;
+                            logoElement.alt = appName + ' Logo';
+                        }
+                    } catch (error) {
+                        console.error('Error updating navbar brand:', error);
+                    }
+                });
+            </script>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <!-- Navigation items removed as requested -->
+                <ul class="navbar-nav ms-auto" id="main-nav-links">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/signup">Sign Up</a>
+                    </li>
                 </ul>
             </div>
+            <script>
+                // Dynamically update navigation links from AppConfig
+                document.addEventListener('DOMContentLoaded', async () => {
+                    try {
+                        if (window.AppConfig && window.AppConfig.initialized) {
+                            const navLinks = window.AppConfig.get('navigation.main') || [];
+                            if (navLinks.length > 0) {
+                                const navContainer = document.getElementById('main-nav-links');
+                                if (navContainer) {
+                                    // Build new nav items from config
+                                    let navContent = '';
+                                    navLinks.forEach(link => {
+                                        const isActive = window.location.pathname.endsWith('/signup') && 
+                                                       link.url.endsWith('/signup');
+                                        navContent += `
+                                            <li class="nav-item">
+                                                <a class="nav-link${isActive ? ' active' : ''}" 
+                                                   href="${link.url}"${isActive ? ' aria-current="page"' : ''}>
+                                                   ${link.label}
+                                                </a>
+                                            </li>
+                                        `;
+                                    });
+                                    navContainer.innerHTML = navContent;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error updating navigation links:', error);
+                    }
+                });
+            </script>
         </div>
     </nav>
 
@@ -131,21 +289,98 @@
                     </ul>
                 </div>
             </div>
-        </div>
-    </footer>
+        </footer>
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Theme Switcher (must be early) -->
-    <script src="/js/theme-switcher.js"></script>
-    <script src="/js/theme-switcher-enhanced.js"></script>
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-    <!-- Custom JS -->
-    <script src="/js/auth.js"></script>
-    <script src="/js/signup.js"></script>
-    <script src="/js/pwa-fullscreen.js"></script>
-</body>
+        <!-- Content ends -->    
+        <!-- Dynamic loading of Bootstrap and Supabase -->
+        <script>
+            // Load Bootstrap JS dynamically
+            async function loadBootstrap() {
+                try {
+                    if (!window.AppConfig || !window.AppConfig.initialized) {
+                        await window.AppConfig.initialize();
+                    }
+                    
+                    const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js') || 
+                                          'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                    
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = bootstrapJsUrl;
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error('Failed to load Bootstrap script'));
+                        document.body.appendChild(script);
+                    });
+                    
+                    console.log('Bootstrap JS loaded successfully');
+                } catch (error) {
+                    console.error('Error loading Bootstrap JS:', error);
+                    // Use constants from config-manager's defaults
+                    const configDefaults = window.AppConfig ? window.AppConfig.getDefaults() : {};
+                    
+                    const fallbackScript = document.createElement('script');
+                    fallbackScript.src = configDefaults.bootstrap?.js || '/js/lib/bootstrap.bundle.min.js';
+                    document.body.appendChild(fallbackScript);
+                }
+            }
+            
+            // Load Supabase dynamically from AppConfig
+            async function loadSupabase() {
+                try {
+                    // Wait for AppConfig to be initialized
+                    if (!window.AppConfig || !window.AppConfig.initialized) {
+                        await window.AppConfig.initialize();
+                    }
+                    
+                    // Get Supabase URL and key from AppConfig
+                    const SUPABASE_URL = window.AppConfig.get('supabase.url');
+                    const SUPABASE_ANON_KEY = window.AppConfig.get('supabase.anonKey');
+                    
+                    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+                        throw new Error('Missing Supabase configuration');
+                    }
+                    
+                    // Load Supabase JS library dynamically
+                    const supabaseUrl = window.AppConfig.get('cdnResources.supabase.js') || 
+                                       'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+                    
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = supabaseUrl;
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error('Failed to load Supabase script'));
+                        document.head.appendChild(script);
+                    });
+                    
+                    // Initialize Supabase client
+                    window.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log('Supabase client initialized successfully');
+                    
+                    // Initialize form handling
+                    initializeFormHandling();
+                } catch (error) {
+                    console.error('Error initializing Supabase client:', error);
+                    // Show error to user
+                    const errorContainer = document.getElementById('signup-error-message');
+                    if (errorContainer) {
+                        errorContainer.textContent = 'Error connecting to authentication service. Please refresh the page or try again later.';
+                        errorContainer.style.display = 'block';
+                    }
+                }
+            }
+            
+            // Initialize both dependencies
+            document.addEventListener('DOMContentLoaded', async function() {
+                await Promise.all([loadBootstrap(), loadSupabase()]);
+            });
+            
+            // Form submission handling
+            function initializeFormHandling() {
+                // ... rest of the code remains the same ...
+            }
+        </script>
+        <script src="/js/auth.js"></script>
+        <script src="/js/signup.js"></script>
+        <script src="/js/pwa-fullscreen.js"></script>
+    </body>
 </html>

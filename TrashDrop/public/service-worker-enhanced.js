@@ -12,17 +12,11 @@ const SPLASH_PAGE = '/splash.html';
 // Version tracking for cache updates
 const SW_VERSION = '1.0.1';
 
-// Message handling for control and lifecycle management
-self.addEventListener('message', (event) => {
-  // Handle skip waiting message to activate immediately
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('[Service Worker] Skip waiting and activate immediately');
-    self.skipWaiting();
-  }
-});
+// Configurable external resources - will be populated via messaging
+let externalResources = [];
 
-// Static assets to cache on install
-const ASSETS_TO_CACHE = [
+// Base assets to cache on install - static app files
+const BASE_ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/dashboard',
@@ -57,6 +51,7 @@ const ASSETS_TO_CACHE = [
   '/js/map-offline.js',
   '/js/emergency-logout.js',
   '/js/register-sw.js',
+  '/js/sw-config.js',
   '/js/pwa-install-prompt.js',
   '/js/active-pickup-persistence.js',
   '/js/distanceCalculator.js',
@@ -67,7 +62,11 @@ const ASSETS_TO_CACHE = [
   '/images/icon-167.png',
   '/images/icon-180.png',
   '/images/icon-192.png',
-  '/images/icon-512.png',
+  '/images/icon-512.png'
+];
+
+// Default external resources (CDN URLs) to use if configuration is not received
+const DEFAULT_EXTERNAL_RESOURCES = [
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
@@ -77,13 +76,63 @@ const ASSETS_TO_CACHE = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js'
 ];
 
+// Message handling for control and lifecycle management
+self.addEventListener('message', (event) => {
+  // Handle skip waiting message to activate immediately
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[Service Worker] Skip waiting and activate immediately');
+    self.skipWaiting();
+  }
+  
+  // Handle configuration message from the client
+  if (event.data && event.data.type === 'CONFIG') {
+    console.log('[Service Worker] Received configuration from client');
+    
+    // Update external resources with values from client config
+    if (event.data.data && Array.isArray(event.data.data.cdnResources) && event.data.data.cdnResources.length > 0) {
+      externalResources = event.data.data.cdnResources;
+      console.log('[Service Worker] Updated external resources:', externalResources);
+      
+      // If already installed and activated, update the cache with the new resources
+      if (self.registration && self.registration.active) {
+        cacheExternalResources();
+      }
+    } else {
+      console.log('[Service Worker] No valid CDN resources in config, using defaults');
+      externalResources = DEFAULT_EXTERNAL_RESOURCES;
+    }
+  }
+});
+
+// Function to cache external resources
+async function cacheExternalResources() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    console.log('[Service Worker] Caching external resources');
+    return cache.addAll(externalResources);
+  } catch (error) {
+    console.error('[Service Worker] Failed to cache external resources:', error);
+  }
+}
+
+// Function to get complete list of assets to cache
+function getAssetsToCache() {
+  // If we have configured external resources, use those
+  if (externalResources && externalResources.length > 0) {
+    return [...BASE_ASSETS_TO_CACHE, ...externalResources];
+  }
+  
+  // Otherwise fall back to default external resources
+  return [...BASE_ASSETS_TO_CACHE, ...DEFAULT_EXTERNAL_RESOURCES];
+}
+
 // Install event - cache assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Caching static assets');
-        return cache.addAll(ASSETS_TO_CACHE);
+        console.log('Caching app shell assets');
+        return cache.addAll(getAssetsToCache());
       })
       .then(() => self.skipWaiting())
   );

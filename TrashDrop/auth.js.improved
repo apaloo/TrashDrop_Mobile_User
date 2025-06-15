@@ -1,0 +1,66 @@
+/**
+ * Fixed Supabase client timeout handling for auth.js
+ * This function should replace both instances of the timeout handler in auth.js
+ */
+
+// More robust timeout handler with fallbacks
+setTimeout(() => {
+  clearInterval(checkSupabase);
+  console.warn('[AUTH] Timeout waiting for Supabase client');
+  
+  // Try to create a client if one doesn't exist already
+  if (!window.supabase?.auth) {
+    console.log('[AUTH] Attempting to initialize Supabase manually after timeout');
+    
+    // Try using the SupabaseAuthLoader if available
+    if (window.SupabaseAuthLoader && typeof window.SupabaseAuthLoader.getClient === 'function') {
+      console.log('[AUTH] Using SupabaseAuthLoader.getClient()...');
+      window.SupabaseAuthLoader.getClient()
+        .then(client => {
+          if (client?.auth) {
+            console.log('[AUTH] Successfully created client via SupabaseAuthLoader');
+            window.supabase = client;
+          } else {
+            console.warn('[AUTH] SupabaseAuthLoader returned client without auth');
+          }
+          resolve();
+        })
+        .catch(err => {
+          console.error('[AUTH] SupabaseAuthLoader fallback failed:', err);
+          // Try direct client creation as last resort
+          try {
+            if (getSupabaseClient && typeof getSupabaseClient === 'function') {
+              getSupabaseClient().then(client => {
+                console.log('[AUTH] Created client via getSupabaseClient():', !!client);
+                resolve();
+              });
+            } else {
+              resolve(); // Give up and unblock the app
+            }
+          } catch (e) {
+            console.error('[AUTH] Final client creation attempt failed:', e);
+            resolve(); // Give up and unblock the app
+          }
+        });
+    } else {
+      // Try direct client creation if SupabaseAuthLoader not available
+      try {
+        if (getSupabaseClient && typeof getSupabaseClient === 'function') {
+          getSupabaseClient().then(client => {
+            console.log('[AUTH] Created client via getSupabaseClient():', !!client);
+            resolve();
+          });
+        } else {
+          resolve(); // Give up and unblock the app
+        }
+      } catch (e) {
+        console.error('[AUTH] Final client creation attempt failed:', e);
+        resolve(); // Give up and unblock the app
+      }
+    }
+  } else {
+    // Client exists but may not be fully initialized
+    console.log('[AUTH] Supabase client exists but may not be fully initialized');
+    resolve(); // Resolve anyway to unblock the app
+  }
+}, 8000); // Increased from 5 to 8 seconds for better reliability on slower connections

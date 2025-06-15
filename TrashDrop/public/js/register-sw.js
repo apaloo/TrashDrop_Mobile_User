@@ -5,11 +5,40 @@
 
 // Check if service workers are supported
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
+  window.addEventListener('load', async function() {
+    // Wait for SW Config to be ready
+    try {
+      if (window.SwConfig && !window.SwConfig.initialized) {
+        await window.SwConfig.initialize();
+      }
+    } catch (err) {
+      console.warn('Failed to initialize SwConfig, using default values:', err);
+    }
+    
+    // Prepare configuration for the service worker
+    const swConfigMessage = {
+      type: 'CONFIG',
+      data: {
+        cdnResources: window.SwConfig ? window.SwConfig.getCdnResourcesArray() : []
+      }
+    };
+    
     // Use the enhanced service worker
     navigator.serviceWorker.register('/service-worker-enhanced.js')
       .then(function(registration) {
         console.log('Enhanced ServiceWorker registration successful with scope: ', registration.scope);
+        
+        // Send configuration to service worker
+        if (registration.active) {
+          registration.active.postMessage(swConfigMessage);
+        }
+        
+        // Also listen for the controller change to send config to the new service worker
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage(swConfigMessage);
+          }
+        });
         
         // Check if background sync is available
         if ('SyncManager' in window) {

@@ -31,8 +31,9 @@ class AppConfig {
         currentUrl: window.location.href
       },
       supabase: {
-        url: 'https://glfseosbxoafanujgvwk.supabase.co',
-        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdsZnNlb3NieG9hZmFudWpndndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTY5ODUzNjYsImV4cCI6MjAxMjU2MTM2Nn0.RTg_QPJFnJwN40OA8m7CWOriMkMQjQnGtOqjgKBcLoI'
+        // No hardcoded credentials - will be populated from the API
+        url: '',
+        anonKey: ''
       },
       api: {
         baseUrl: '/api'
@@ -256,49 +257,18 @@ class AppConfig {
         const rootResponse = await fetch('/client-config.json');
         
         if (!rootResponse.ok) {
-          throw new Error(`Root config returned ${rootResponse.status}: ${rootResponse.statusText}`);
+          throw new Error(`Failed to load client-config.json: ${rootResponse.status}`);
         }
         
         const rootConfig = await rootResponse.json();
-        
-        // Merge root configuration with the current config
         this._mergeConfig(rootConfig);
-        
-        console.log('Configuration loaded from root client-config.json');
+        console.log('Configuration loaded from client-config.json');
         return this.config;
       } catch (rootError) {
-        console.warn('Failed to load from root config file:', rootError);
-      }
-      
-      // Try loading from the static JSON file (for development with http-server)
-      try {
-        const staticResponse = await fetch('/api/config/client.json');
-        
-        if (!staticResponse.ok) {
-          throw new Error(`Static config returned ${staticResponse.status}: ${staticResponse.statusText}`);
-        }
-        
-        const staticConfig = await staticResponse.json();
-        
-        // Merge static configuration with the current config
-        this._mergeConfig(staticConfig);
-        
-        console.log('Configuration loaded from static JSON file');
+        console.warn('Failed to load configuration from client-config.json:', rootError);
+        // Fall back to using default configuration
         return this.config;
-      } catch (staticError) {
-        console.warn('Failed to load from static config file:', staticError);
       }
-      
-      // Try loading from the legacy endpoint as last resort
-      try {
-        await this._loadSupabaseConfigFromLegacyEndpoint();
-        return this.config;
-      } catch (legacyError) {
-        console.warn('Failed to load from legacy endpoint:', legacyError);
-      }
-      
-      // Re-throw the original error
-      throw error;
     }
   }
   

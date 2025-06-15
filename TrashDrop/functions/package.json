@@ -1,12 +1,11 @@
 {
   "name": "functions",
-  "description": "Cloud Functions for Firebase",
+  "description": "API Functions for TrashDrop",
   "scripts": {
-    "serve": "firebase emulators:start --only functions",
-    "shell": "firebase functions:shell",
-    "start": "npm run shell",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "serve": "node index.js",
+    "start": "node index.js",
+    "deploy": "echo 'Deploy command needs to be updated for Supabase'",
+    "logs": "echo 'Logs command needs to be updated for Supabase'"
   },
   "engines": {
     "node": "18"
@@ -14,8 +13,7 @@
   "main": "index.js",
   "dependencies": {
     "express": "^4.21.2",
-    "firebase-admin": "^11.11.1",
-    "firebase-functions": "^4.9.0"
+    "@supabase/supabase-js": "^2.39.0"
   },
   "private": true
 }

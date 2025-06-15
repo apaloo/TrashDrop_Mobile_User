@@ -1,0 +1,912 @@
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const { v4: uuidv4 } = require('uuid');
+const { createClient } = require('@supabase/supabase-js');
+
+// Import and initialize centralized configuration
+const configManager = require('./src/config/config-manager');
+
+// Initialize configuration asynchronously but ensure we await it before using
+(async function initServer() {
+  try {
+    // Initialize config and get the instance
+    await configManager.initialize();
+    
+    // After initialization, we can use the configManager methods directly
+        // Check environment
+    const isDevelopment = configManager.get('app.env') === 'development';
+    
+    console.log(`Starting server in ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} mode`);
+    
+    // Initialize Supabase client using service role key for server-side operations
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      configManager.get('supabase.url'),
+      configManager.get('supabase.serviceRoleKey') || configManager.get('supabase.anonKey')
+    );
+    console.log('Supabase admin client initialized successfully');
+    
+    const app = express();
+    const PORT = configManager.get('server.port') || process.env.PORT || 3000; // Use port from centralized config
+
+// Generate a unique instance ID for this server instance
+const instanceId = uuidv4();
+const startTime = new Date();
+
+// Request ID middleware
+app.use((req, res, next) => {
+  req.id = uuidv4();
+  next();
+});
+
+// Log startup mode
+console.log(`Starting server in ${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'} mode`);
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https: http:"],
+      connectSrc: ["'self'", "https://*.firebaseio.com", "https://*.googleapis.com"],
+      fontSrc: ["'self'", "https: data:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  hsts: !isDevelopment,
+  noCache: isDevelopment,
+  referrerPolicy: { policy: 'same-origin' },
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+// Apply rate limiting to API routes
+app.use('/api/', limiter);
+
+// Enhanced CORS configuration to handle ngrok domains
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Always allow ngrok domains for testing
+    if (origin.includes('ngrok-free.app')) {
+      console.log(`Allowing CORS for ngrok domain: ${origin}`);
+      return callback(null, true);
+    }
+    
+    // Allow same origin and localhost variations
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    // Default allow all in development
+    if (isDevelopment) {
+      return callback(null, true);
+    }
+    
+    // In production, only allow specific domains from config
+    const allowedDomains = configManager.get('cors.allowedDomains') || [
+      'https://trashdrop-app.web.app',
+      'https://staging.trashdrop-app.web.app'
+    ];
+    
+    if (allowedDomains.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true, // Allow cookies to be sent with requests
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-ID']
+}));
+
+// Request logging
+app.use(morgan(isDevelopment ? 'dev' : 'combined', {
+  skip: (req) => req.path === '/healthz' || req.path === '/ready' || req.path === '/live'
+}));
+
+// Parse JSON and urlencoded request bodies
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parser for authentication tokens
+app.use(cookieParser());
+
+// Compression (gzip)
+app.use(compression());
+
+// Special route for Digital Asset Links (TWA support)
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.sendFile(path.join(__dirname, 'public', '.well-known', 'assetlinks.json'));
+});
+
+// Health check endpoint for container monitoring
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Redirect middleware for handling requests without port specified and protocol issues
+app.use((req, res, next) => {
+  const host = req.get('host');
+  const isSafari = /^((?!chrome|android).)*safari/i.test(req.headers['user-agent'] || '');
+  
+  // For Safari browsers, detect if they're trying to access via HTTPS on localhost
+  // and redirect them to the special Safari entry page
+  if (isSafari && req.protocol === 'https' && 
+      (host.includes('localhost') || host.includes('127.0.0.1'))) {
+    // Instead of just redirecting to HTTP, send them to our special Safari entry page
+    if (req.path !== '/safari-entry.html') {
+      console.log(`Safari detected trying to use HTTPS. Redirecting to Safari entry page`);
+      return res.redirect('/safari-entry.html');
+    }
+  }
+  
+  // Force HTTP for localhost and 127.0.0.1 to avoid HTTPS issues in Safari
+  if ((host === '127.0.0.1' || host === 'localhost' || host === '127.0.0.1:80' || host === 'localhost:80') && 
+      req.protocol === 'https') {
+    const newUrl = `http://${host.split(':')[0]}:${PORT}${req.originalUrl}`;
+    console.log(`Redirecting from ${req.protocol}://${host}${req.originalUrl} to ${newUrl} (HTTPS→HTTP)`);
+    return res.redirect(newUrl);
+  }
+  
+  // If accessed via 127.0.0.1 or localhost without port, redirect to include port 3000
+  if (host === '127.0.0.1' || host === 'localhost' || host === '127.0.0.1:80' || host === 'localhost:80') {
+    const newUrl = `http://${host.split(':')[0]}:${PORT}${req.originalUrl}`;
+    console.log(`Redirecting from ${req.protocol}://${host}${req.originalUrl} to ${newUrl} (adding port)`);
+    return res.redirect(newUrl);
+  }
+  
+  next();
+});
+
+// Configure Helmet with relaxed CSP for local development
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "unpkg.com"],
+      imgSrc: ["'self'", "data:", "blob:", "*.openstreetmap.org", "*.tile.openstreetmap.org", "*.osm.org", "https://*"],
+      connectSrc: ["'self'", process.env.SUPABASE_URL, "*.openstreetmap.org", "*.tile.openstreetmap.org", "*.osm.org", "https://*"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+      objectSrc: ["'none'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      baseUri: ["'self'"]
+    }
+  },
+  // Disable HSTS to prevent HTTPS enforcement for localhost
+  hsts: false
+}));
+console.log('Content Security Policy configured with unsafe-inline for development and HSTS disabled for localhost');
+app.use(compression());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Session configuration
+app.use(session({
+  secret: config.security.sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    // Force secure:false for localhost/development to avoid HTTPS requirements
+    secure: !config.server.isDevelopment && !['localhost', '127.0.0.1'].includes(process.env.HOST || ''),
+    maxAge: config.security.sessionDuration
+  }
+}));
+
+// Redirect loop detection middleware
+const redirectLoopDetection = (req, res, next) => {
+  const redirectCount = parseInt(req.cookies.redirect_count || '0');
+  
+  // Check if URL contains redirect parameters
+  const hasRedirectParams = req.query.redirected || req.query.corrected;
+  
+  if (redirectCount > 3) {
+    // Too many redirects - automatically redirect to login with no user interaction needed
+    console.log('⚠️ Too many redirects detected, auto-redirecting to clean login page');
+    
+    // Clear the redirect count cookie
+    res.cookie('redirect_count', '0', { path: '/' });
+    
+    // Set a special flag to indicate this is an emergency redirect
+    res.cookie('emergency_redirect', 'true', { path: '/', maxAge: 5000 });
+    
+    // Redirect to login with special parameters to prevent further loops
+    return res.redirect('/login?reset=true&clean=true&t=' + Date.now());
+  }
+  
+  // Increment redirect count if this appears to be a redirect
+  if (hasRedirectParams) {
+    res.cookie('redirect_count', redirectCount + 1, { path: '/' });
+  }
+  
+  // Reset redirect count when user explicitly navigates
+  if (req.query.reset) {
+    res.cookie('redirect_count', '0', { path: '/' });
+  }
+  
+  next();
+};
+
+// Apply redirect loop detection to all routes
+app.use(redirectLoopDetection);
+
+// Special handling for the problematic /views/login.html path
+app.get('/views/login.html', (req, res) => {
+  console.log('Caught attempt to access /views/login.html, redirecting to /login');
+  res.redirect('/login?redirected=true');
+});
+
+// Special handling for any /views/* paths that should be served from the root
+app.get('/views/:page', (req, res) => {
+  const page = req.params.page;
+  const pageName = page.replace('.html', '');
+  console.log(`Caught attempt to access /views/${page}, redirecting to /${pageName}`);
+  res.redirect(`/${pageName}`);
+});
+
+// Add an endpoint to clear all problematic storage and cookies
+app.get('/clear-session', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Clearing Session</title>
+      <script>
+        // Clear everything
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Redirect after clearing
+        setTimeout(function() {
+          window.location.href = '/login?reset=true';
+        }, 1000);
+      </script>
+    </head>
+    <body>
+      <h1>Clearing session data...</h1>
+      <p>You will be redirected to the login page shortly.</p>
+    </body>
+    </html>
+  `);
+});
+
+// Add a dedicated logout endpoint that ensures a clean logout experience
+app.get('/api/logout', (req, res) => {
+  // Clear any server-side session data
+  if (req.session) {
+    req.session.destroy();
+  }
+  
+  // Clear cookies
+  res.clearCookie('token');
+  res.clearCookie('jwt_token');
+  res.clearCookie('redirect_count');
+  
+  // Detect mobile clients
+  const userAgent = req.headers['user-agent'] || '';
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  
+  if (isMobile) {
+    // For mobile devices, return a special page with client-side cleanup
+    const logoutHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logging Out</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding-top: 50px; }
+    .spinner { margin: 20px auto; width: 50px; height: 50px; border: 3px solid rgba(0,0,0,0.1); 
+             border-radius: 50%; border-top-color: #4CAF50; animation: spin 1s ease-in-out infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .message { margin-top: 20px; font-size: 18px; }
+  </style>
+  <script>
+    // Clear all local storage and session data
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear all cookies
+    document.cookie.split(';').forEach(function(cookie) {
+      var name = cookie.split('=')[0].trim();
+      document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    });
+    
+    // Redirect to login page after a short delay
+    setTimeout(function() {
+      window.location.href = '/login?logout=true&clean=true&t=' + Date.now();
+    }, 1000);
+  </script>
+</head>
+<body>
+  <h2>Logging Out</h2>
+  <div class="spinner"></div>
+  <div class="message">Please wait...</div>
+</body>
+</html>
+`;
+    res.send(logoutHtml);
+  } else {
+    // For desktop devices, perform a standard redirect
+    res.redirect('/login?logout=true&t=' + Date.now());
+  }
+});
+
+// Redirect all traffic from port 58870 to port 3000
+app.use((req, res, next) => {
+  if (req.headers.host && req.headers.host.includes('58870')) {
+    const newUrl = new URL(req.url, 'http://localhost:3000');
+    return res.redirect(301, newUrl.toString());
+  }
+  next();
+});
+
+// Serve login page at the root path
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Define view routes BEFORE static middleware to ensure they take precedence
+// Scan page route
+app.get('/scan', (req, res) => {
+  console.log('Hit /scan route - serving scan.html');
+  res.sendFile(path.join(__dirname, 'views', 'scan.html'));
+});
+
+// Request pickup page route
+app.get('/request-pickup', (req, res) => {
+  console.log('Hit /request-pickup route - serving request-pickup.html');
+  res.sendFile(path.join(__dirname, 'views', 'request-pickup.html'));
+});
+
+// Report dumping page route
+app.get('/report-dumping', (req, res) => {
+  console.log('Hit /report-dumping route - serving report-dumping.html');
+  res.sendFile(path.join(__dirname, 'views', 'report-dumping.html'));
+});
+
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve JS files with proper MIME type
+app.use('/js', express.static(path.join(__dirname, 'public/js'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve auth utils
+app.use('/js/auth/utils', express.static(path.join(__dirname, 'public/js/auth/utils'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve auth handlers
+app.use('/js/auth/handlers', express.static(path.join(__dirname, 'public/js/auth/handlers'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve handlers
+app.use('/js/handlers', express.static(path.join(__dirname, 'public/js/handlers'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  },
+  fallthrough: true
+}));
+
+// Serve the new reset password page
+app.get('/reset-password-new.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reset-password-new.html'));
+});
+
+// Legacy redirect for old reset password links
+app.get('/reset-password.html', (req, res) => {
+  res.redirect('/reset-password-new.html');
+});
+
+// Handle password reset redirects from email links
+app.get('/reset-password-redirect', (req, res) => {
+  // Check if this is a password reset redirect with token in hash
+  const isPasswordReset = (
+    // Case 1: Coming from Supabase verify endpoint
+    (req.url === '/' && 
+     req.headers.referer && 
+     req.headers.referer.includes('supabase.co/auth/v1/verify') &&
+     req.headers.referer.includes('type=recovery')) ||
+    // Case 2: Has token in URL hash
+    (req.url.includes('#access_token') && req.url.includes('type=recovery'))
+  );
+
+  if (isPasswordReset) {
+    console.log('Intercepted password reset redirect for URL:', req.url);
+    // Set CSP header to allow inline scripts and styles for the reset password page
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self' https: data:; " +
+      "connect-src 'self' https://*.supabase.co;"
+    );
+    return res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+  }
+  
+  // If not a password reset, redirect to home
+  res.redirect('/');
+});
+
+// Handle root URL
+app.get('/', (req, res) => {
+  // Check if this is a password reset redirect with token in hash or query params
+  const hash = req.url.split('#')[1];
+  const params = new URLSearchParams(hash || '');
+  
+  if (params.get('type') === 'recovery' && params.get('access_token')) {
+    console.log('Handling password reset with token in hash');
+    // Set CSP header to allow inline scripts and styles for the reset password page
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; " +
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+      "img-src 'self' data: https:; " +
+      "font-src 'self' https: data:; " +
+      "connect-src 'self' https://*.supabase.co;"
+    );
+    return res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+  }
+  
+  // Check for token in query parameters (legacy support)
+  if (req.query.type === 'recovery' && req.query.access_token) {
+    console.log('Legacy password reset redirect');
+    return res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+  }
+  
+  // Default redirect to auth page
+  res.redirect('/auth-standalone.html');
+});
+
+// Handle direct reset password link with token
+app.get('/reset-password', (req, res) => {
+  if (req.query.token) {
+    return res.redirect(`/reset-password.html#access_token=${req.query.token}&type=recovery`);
+  }
+  res.redirect('/auth-standalone.html');
+});
+
+// These routes already exist earlier in the file (around line 549)
+// We've updated those to serve the correct files
+
+// Import routes and middleware
+const authRoutes = require('./src/routes/authRoutes');
+const locationRoutes = require('./src/routes/locationRoutes');
+const pickupRoutes = require('./src/routes/pickupRoutes');
+const bagRoutes = require('./src/routes/bagRoutes');
+const pointsRoutes = require('./src/routes/pointsRoutes');
+const userRoutes = require('./src/routes/userRoutes');
+
+// Import the ngrok authentication middleware
+const { handleNgrokAuth } = require('./src/middleware/ngrokAuthMiddleware');
+
+// Custom middleware to conditionally apply ngrok authentication
+const conditionalAuth = (req, res, next) => {
+  // Debug logging
+  console.log(`API Request: ${req.method} ${req.path}`);
+  console.log(`isDevelopment: ${isDevelopment}, NODE_ENV: ${process.env.NODE_ENV}`);
+  
+  // Always bypass authentication for /bags/user path (for testing)
+  if (req.path === '/bags/user' || req.path.endsWith('/bags/user')) {
+    console.log('FORCE BYPASS: Skipping authentication for /api/bags/user');
+    return next();
+  }
+  
+  // Otherwise apply normal ngrok authentication
+  return handleNgrokAuth(req, res, next);
+};
+
+// Apply conditional authentication middleware to all API routes
+app.use('/api', conditionalAuth);
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/locations', locationRoutes);
+app.use('/api/pickups', pickupRoutes);
+app.use('/api/bags', bagRoutes);
+app.use('/api/points', pointsRoutes);
+app.use('/api/user', userRoutes);
+
+// Serve HTML pages
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/signup', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'signup.html'));
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Alternative route to the same login page to bypass Safari security restrictions
+app.get('/account-access', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Login processing page specifically for Safari browser
+app.get('/login-process', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login-process.html'));
+});
+
+// These routes have been moved before the static middleware
+
+// Health check endpoints
+app.get('/healthz', (req, res) => {
+  const uptime = process.uptime();
+  const memoryUsage = process.memoryUsage();
+  
+  const healthCheck = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0',
+    instanceId,
+    environment: process.env.NODE_ENV || 'development',
+    uptime: Math.floor(uptime),
+    memory: {
+      rss: memoryUsage.rss,
+      heapTotal: memoryUsage.heapTotal,
+      heapUsed: memoryUsage.heapUsed,
+      external: memoryUsage.external,
+      arrayBuffers: memoryUsage.arrayBuffers,
+    },
+    services: {
+      database: 'connected',
+      cache: 'enabled',
+      auth: 'configured',
+    },
+  };
+
+  // Check if any critical service is down
+  const criticalServices = Object.values(healthCheck.services);
+  if (criticalServices.includes('error')) {
+    healthCheck.status = 'error';
+    return res.status(503).json(healthCheck);
+  } else if (criticalServices.includes('warning')) {
+    healthCheck.status = 'warning';
+    return res.status(200).json(healthCheck);
+  }
+
+  res.status(200).json(healthCheck);
+});
+
+// Readiness check
+app.get('/ready', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Liveness check
+app.get('/live', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+  });
+});
+
+// Special Safari entry point to help with Safari's security restrictions
+app.get('/safari', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'safari-entry.html'));
+});
+
+// '/scan' route is already defined earlier
+
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'reset-password.html'));
+});
+
+// PWA launch route - this is the PWA entry point
+app.get('/pwa-launch', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'pwa-launch.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  // Check if this is a PWA request (from our launch page or direct install)
+  const isPwa = req.query.pwa === 'true' || req.query.mode === 'pwa';
+  const isFullscreen = req.query.fullscreen === '1';
+  
+  // For now, always send the dashboard.html file
+  // The JS in this file will handle fullscreen mode based on URL params
+  res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
+});
+
+// '/scan', '/request-pickup', and '/report-dumping' routes are already defined earlier
+
+app.get('/schedule-pickup', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'schedule-pickup.html'));
+});
+
+app.get('/profile', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'profile.html'));
+});
+
+app.get('/locations', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'locations.html'));
+});
+
+app.get('/rewards', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'rewards.html'));
+});
+
+app.get('/activity', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'activity.html'));
+});
+
+app.get('/reports', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'reports.html'));
+});
+
+// Handle Order Bags route to redirect to dashboard with modal trigger
+app.get('/order-bags', (req, res) => {
+res.redirect('/dashboard?openModal=orderBags');
+});
+
+app.get('/scanner-test', (req, res) => {
+res.sendFile(path.join(__dirname, 'views', 'scanner-test.html'));
+});
+
+// Serve reset-password.html
+app.get('/reset-password.html', (req, res) => {
+res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
+
+// Health check endpoint for Docker/container orchestration
+app.get('/health', (req, res) => {
+res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Serve static files from public directory with proper caching
+app.use(express.static('public', {
+  maxAge: '1d',
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      // Don't cache HTML files
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
+    } else {
+      // Cache other static assets for 1 day
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }
+}));
+
+// Client configuration endpoints
+
+// Comprehensive client configuration endpoint
+app.get('/api/config/client', (req, res) => {
+  try {
+    // Create a safe client configuration subset
+    const clientConfig = {
+      app: {
+        name: config.app.name,
+        env: config.app.env,
+        version: config.app.version,
+        currentUrl: `${req.protocol}://${req.get('host')}`,
+      },
+      supabase: {
+        url: config.supabase.url,
+        anonKey: config.supabase.anonKey,
+      },
+      features: {
+        isDevelopment: config.server.isDevelopment,
+        isProduction: config.server.isProduction,
+      },
+      // Include any other client-side configuration from config.client
+      ...(config.client || {})
+    };
+    
+    // Cache control for development vs production
+    if (config.server.isDevelopment) {
+      res.setHeader('Cache-Control', 'no-cache, no-store');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes for production
+    }
+    
+    res.json(clientConfig);
+  } catch (error) {
+    console.error('Error serving client config:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Secure endpoint to get Supabase configuration
+app.get('/api/config/supabase', (req, res) => {
+  try {
+    // Only expose the necessary public configuration
+    res.json({
+      url: config.supabase.url,
+      anonKey: config.supabase.anonKey,
+      // Add any other public configuration needed by the client
+    });
+  } catch (error) {
+    console.error('Error serving Supabase config:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API route for getting user's bags (mock data for development)
+app.get('/api/bags/user', (req, res) => {
+  console.log('API: /api/bags/user requested - ALWAYS BYPASSING AUTH FOR TESTING');
+  
+  // COMPLETELY BYPASS AUTHENTICATION FOR TESTING
+  // Return mock bag data for testing without any auth checks
+  const mockBags = [
+    {
+      id: 'bag1',
+      batchCode: 'BATCH123',
+      type: 'Recyclables',
+      quantity: 1,
+      createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 minutes ago
+      status: 'confirmed'
+    },
+    {
+      id: 'bag2',
+      batchCode: 'BATCH456',
+      type: 'Compost',
+      quantity: 2,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
+      status: 'confirmed'
+    },
+    {
+      id: 'bag3',
+      batchCode: 'BATCH789',
+      type: 'Trash',
+      quantity: 1,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+      status: 'confirmed'
+    },
+    {
+      id: 'bag4',
+      batchCode: 'TEST123',
+      type: 'Testing',
+      quantity: 1,
+      createdAt: new Date().toISOString(),
+      status: 'confirmed'
+    }
+  ];
+  
+  // Always return mock data regardless of auth status
+  return res.json(mockBags);
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  const errorId = req.id || uuidv4();
+  const timestamp = new Date().toISOString();
+  const clientIp = req.ip || req.connection.remoteAddress;
+  const userAgent = req.get('User-Agent') || 'unknown';
+  const requestInfo = {
+    method: req.method,
+    url: req.originalUrl,
+    params: req.params,
+    query: req.query,
+    headers: {
+      'user-agent': userAgent,
+      'x-forwarded-for': req.get('x-forwarded-for'),
+    },
+    body: req.body,
+  };
+
+  // Log the error with context
+  console.error(`[${timestamp}] [${errorId}] [${clientIp}] Error:`, {
+    message: err.message,
+    stack: err.stack,
+    request: requestInfo,
+  });
+
+  // Determine the status code
+  const statusCode = err.statusCode || 500;
+  
+  // Prepare error response
+  const errorResponse = {
+    error: {
+      id: errorId,
+      code: err.code || 'INTERNAL_SERVER_ERROR',
+      message: statusCode >= 500 && !isDevelopment ? 'Internal Server Error' : err.message,
+      timestamp,
+      ...(isDevelopment && { stack: err.stack }),
+    },
+  };
+
+  // Send the error response
+  res.status(statusCode).json(errorResponse);
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      code: 'NOT_FOUND',
+      message: 'The requested resource was not found',
+    },
+  });
+});
+
+// Export the Express app for Firebase Functions
+module.exports = { app };
+
+// Only start the server if this file is run directly (not required by Firebase Functions)
+if (require.main === module) {
+  // Start server with optional HTTPS support
+  if (process.env.HTTPS_ENABLED === 'true' && process.env.SSL_KEY && process.env.SSL_CERT) {
+    const fs = require('fs');
+    const https = require('https');
+    const options = {
+      key: fs.readFileSync(process.env.SSL_KEY),
+      cert: fs.readFileSync(process.env.SSL_CERT)
+    };
+    
+    https.createServer(options, app).listen(PORT, '0.0.0.0', () => {
+      console.log(`HTTPS Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Server running in ${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'} mode`);
+    });
+  } else {
+    // Start HTTP server
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`HTTP Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Server running in ${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'} mode`);
+    });
+  }
+}
+

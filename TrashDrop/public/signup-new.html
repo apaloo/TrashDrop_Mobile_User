@@ -6,13 +6,17 @@
     <meta name="description" content="Create a TrashDrop account - Join our waste management and recycling platform">
     <title>Sign Up - TrashDrop</title>
     
-    <!-- Supabase UMD Script - Must be loaded before usage -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <!-- App Configuration and Loader -->
+    <script src="/js/config/app-config.js"></script>
+    <script src="/js/config/config-loader.js"></script>
     
-    <!-- Bootstrap 5 CSS -->
+    <!-- Supabase Auth Loader Script -->    
+    <script src="/js/auth/supabase-auth-loader.js"></script>
+    
+    <!-- Bootstrap CSS (explicit load to ensure UI works) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/accessibility.css">
@@ -98,32 +102,7 @@
     <!-- Skip to content link for accessibility -->
     <a href="#main-content" class="skip-to-content">Skip to main content</a>
     
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <img src="images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                TrashDrop
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/about.html">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/contact.html">Contact</a>
-                    </li>
-                    <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
-                        <a href="/" class="btn btn-outline-light">Log In</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <!-- Navigation - Will be inserted by navbar.js -->
 
     <!-- Main Content -->
     <main id="main-content" class="container my-auto py-5">
@@ -258,16 +237,30 @@
                             <div class="d-grid gap-2">
                                 <button type="button" class="btn btn-google d-flex align-items-center justify-content-center" 
                                         id="google-signup">
-                                    <img src="https://www.google.com/favicon.ico" alt="Google" width="20" height="20" class="me-2">
+                                    <img id="google-icon" alt="Google" width="20" height="20" class="me-2">
                                     Continue with Google
                                 </button>
+                                <script>
+                                    // Dynamically set Google icon from configuration
+                                    document.addEventListener('DOMContentLoaded', async function() {
+                                        try {
+                                            await window.AppConfig.initialize();
+                                            const googleIconUrl = window.AppConfig.get('ui.icons.google', 'https://www.google.com/favicon.ico');
+                                            document.getElementById('google-icon').src = googleIconUrl;
+                                        } catch (e) {
+                                            console.error('Failed to load Google icon from config:', e);
+                                            // Fallback
+                                            document.getElementById('google-icon').src = 'https://www.google.com/favicon.ico';
+                                        }
+                                    });
+                                </script>
                             </div>
                         </form>
 
                         <!-- Login Link -->
                         <div class="text-center mt-4">
                             <p class="mb-0">Already have an account? 
-                                <a href="/" class="text-success text-decoration-none fw-semibold">Log in</a>
+                                <a href="#" id="login-link" class="text-success text-decoration-none fw-semibold">Log in</a>
                             </p>
                         </div>
                     </div>
@@ -287,10 +280,10 @@
                 <div class="col-md-3">
                     <h6>Quick Links</h6>
                     <ul class="list-unstyled">
-                        <li><a href="/about.html" class="text-white-50 text-decoration-none">About Us</a></li>
-                        <li><a href="/contact.html" class="text-white-50 text-decoration-none">Contact</a></li>
-                        <li><a href="/privacy.html" class="text-white-50 text-decoration-none">Privacy Policy</a></li>
-                        <li><a href="/terms.html" class="text-white-50 text-decoration-none">Terms of Service</a></li>
+                        <li><a href="#" id="about-link" class="text-white-50 text-decoration-none">About Us</a></li>
+                        <li><a href="#" id="contact-link" class="text-white-50 text-decoration-none">Contact</a></li>
+                        <li><a href="#" id="privacy-link" class="text-white-50 text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="#" id="terms-link" class="text-white-50 text-decoration-none">Terms of Service</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
@@ -305,40 +298,99 @@
             </div>
             <hr class="my-4">
             <div class="text-center">
-                <p class="mb-0">&copy; 2023 TrashDrop. All rights reserved.</p>
+                <p class="mb-0" id="copyright-text"></p>
+                <script>
+                    document.addEventListener('DOMContentLoaded', async function() {
+                        try {
+                            await window.AppConfig.initialize();
+                            const year = window.AppConfig.get('app.copyrightYear', new Date().getFullYear());
+                            const companyName = window.AppConfig.get('app.companyName', 'TrashDrop');
+                            document.getElementById('copyright-text').textContent = `© ${year} ${companyName}. All rights reserved.`;
+                        } catch (e) {
+                            console.error('Failed to load copyright info from config:', e);
+                            // Fallback
+                            document.getElementById('copyright-text').textContent = `© ${new Date().getFullYear()} TrashDrop. All rights reserved.`;
+                        }
+                    });
+                </script>
             </div>
         </div>
     </footer>
 
-    <!-- Bootstrap JS Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS will be loaded via AppConfig -->
+    <script>
+        // Load Bootstrap JS dynamically from AppConfig
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                await window.AppConfig.initialize();
+                const bootstrapJsUrl = window.AppConfig.get('cdnResources.bootstrap.js');
+                if (bootstrapJsUrl) {
+                    const script = document.createElement('script');
+                    script.src = bootstrapJsUrl;
+                    script.async = true;
+                    document.head.appendChild(script);
+                }
+            } catch (e) {
+                console.error('Failed to load Bootstrap JS from config:', e);
+                // Fallback to direct CDN
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js';
+                script.async = true;
+                document.head.appendChild(script);
+            }
+        });
+    </script>
     
-    <!-- Our authentication scripts -->
+    <!-- Configuration and authentication scripts -->
+    <!-- App Configuration is already loaded in head -->
+    <script src="/js/config/config-loader.js"></script>
     <script type="module" src="/js/auth/utils/auth-utils.js"></script>
     <script type="module" src="/js/handlers/signup-handler.js"></script>
     
     <script>
-        // Initialize Supabase with secure key loading
+        // Initialize Supabase with consolidated auth module
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                // Fetch the Supabase configuration from server
-                const response = await fetch('/api/config/supabase');
-                if (!response.ok) {
-                    throw new Error('Failed to load Supabase configuration');
+                // Initialize AppConfig if not already done
+                if (!window.AppConfig || !window.AppConfig.initialized) {
+                    await window.AppConfig.initialize();
                 }
                 
-                const config = await response.json();
-                if (!config.url || !config.anonKey) {
-                    throw new Error('Incomplete Supabase configuration');
+                // Initialize Supabase using the consolidated auth module
+                console.log('Initializing Supabase using consolidated auth module...');
+                if (!window.SupabaseAuthLoader) {
+                    console.error('Auth loader not available, initializing failed');
+                    throw new Error('Auth loader not available');
                 }
                 
-                // Initialize Supabase client
-                window.supabase = supabase.createClient(
-                    config.url,
-                    config.anonKey
-                );
+                await window.SupabaseAuthLoader.initialize();
+                window.supabaseClient = await window.SupabaseAuthLoader.getClient();
+                window.supabase = window.supabaseClient; // For backward compatibility
                 
-                console.log('Supabase client initialized successfully');
+                if (!window.supabaseClient) {
+                    throw new Error('Failed to initialize Supabase client');
+                }
+                
+                console.log('Supabase client initialized successfully:', !!window.supabaseClient);
+                
+                // Set up navigation links from configuration
+                try {
+                    const routes = {
+                        'login-link': window.AppConfig.get('routes.login', '/login.html'),
+                        'about-link': window.AppConfig.get('routes.about', '/about.html'),
+                        'contact-link': window.AppConfig.get('routes.contact', '/contact.html'),
+                        'privacy-link': window.AppConfig.get('routes.privacy', '/privacy.html'),
+                        'terms-link': window.AppConfig.get('routes.terms', '/terms.html')
+                    };
+                    
+                    // Update all navigation links
+                    Object.entries(routes).forEach(([id, url]) => {
+                        const element = document.getElementById(id);
+                        if (element) element.href = url;
+                    });
+                } catch (e) {
+                    console.warn('Error setting up navigation links:', e);
+                }
             } catch (error) {
                 console.error('Failed to initialize Supabase:', error);
                 showError('Authentication service initialization failed. Please try again later.');
@@ -403,13 +455,64 @@
                     submitButton.disabled = true;
                     
                     try {
+                        // Wait for AppConfig to initialize if it hasn't already
+                        if (!window.AppConfig || !window.AppConfig.initialized) {
+                            try {
+                                await window.AppConfig.initialize();
+                            } catch (e) {
+                                console.warn('Could not initialize AppConfig:', e);
+                                throw new Error('Configuration service failed to initialize');
+                            }
+                        }
+                        
+                        // Initialize Supabase if needed
+                        if (!window.supabaseClient) {
+                            try {
+                                const supabaseUrl = window.AppConfig.get('supabase.url');
+                                const supabaseKey = window.AppConfig.get('supabase.anonKey');
+                                
+                                if (!supabaseUrl || !supabaseKey) {
+                                    throw new Error('Missing Supabase configuration');
+                                }
+                                
+                                if (!window.supabase) {
+                                    // Load Supabase script
+                                    await new Promise((resolve, reject) => {
+                                        const script = document.createElement('script');
+                                        script.src = window.AppConfig.get('cdnResources.supabase');
+                                        script.async = true;
+                                        script.onload = resolve;
+                                        script.onerror = reject;
+                                        document.head.appendChild(script);
+                                    });
+                                }
+                                
+                                if (window.supabase) {
+                                    window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                                } else {
+                                    throw new Error('Failed to load Supabase library');
+                                }
+                            } catch (initError) {
+                                console.error('Error initializing Supabase:', initError);
+                                throw new Error('Authentication service initialization failed');
+                            }
+                        }
+                        
                         // Check if Supabase client is available
-                        if (!window.supabase || !window.supabase.auth) {
+                        if (!window.supabaseClient || !window.supabaseClient.auth) {
                             throw new Error('Authentication service not available');
                         }
                         
+                        // Get the Supabase client from our consolidated auth module
+                        let client;
+                        if (window.SupabaseAuthLoader) {
+                            client = await window.SupabaseAuthLoader.getClient();
+                        } else {
+                            client = window.supabaseClient; // Fallback to global variable
+                        }
+                        
                         // Register user with Supabase Auth
-                        const { data, error } = await window.supabase.auth.signUp({
+                        const { data, error } = await client.auth.signUp({
                             email,
                             password,
                             options: {
@@ -436,7 +539,7 @@
                         
                         // Redirect to login page after a short delay
                         setTimeout(() => {
-                            window.location.href = '/login.html?registered=true';
+                            window.location.href = window.AppConfig.get('routes.login', '/login.html') + '?registered=true';
                         }, 2000);
                         
                     } catch (error) {
@@ -568,5 +671,6 @@
             }
         });
     </script>
+    <script src="/js/navbar.js"></script>
 </body>
 </html>

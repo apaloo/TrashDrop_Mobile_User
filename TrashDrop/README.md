@@ -18,6 +18,86 @@ A mobile-optimized Progressive Web Application (PWA) for managing waste pickup r
 - **Frontend**: HTML5, CSS3, JavaScript, Bootstrap 5
 - **Backend**: Node.js, Express
 - **Database**: Supabase (PostgreSQL)
+
+## Secure Configuration
+
+TrashDrop uses a centralized configuration manager to securely handle environment variables and sensitive information.
+
+### Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```
+# App Configuration
+APP_NAME=TrashDrop
+APP_ENV=development
+APP_VERSION=1.0.0
+APP_URL=http://localhost:3000
+SERVER_PORT=3000
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Security Configuration
+SESSION_SECRET=your_session_secret_here
+JWT_SECRET=your_jwt_secret_here
+SESSION_DURATION=86400000
+
+# External APIs
+SMS_API_ENDPOINT=your_sms_api_endpoint
+MAPS_API_KEY=your_maps_api_key
+
+# CORS Configuration
+CORS_ALLOWED_DOMAINS=http://localhost:3000,https://trashdrop.example.com
+
+# CDN Resources (used by client-side code)
+CDN_BOOTSTRAP_CSS=https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css
+CDN_BOOTSTRAP_JS=https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js
+CDN_BOOTSTRAP_ICONS=https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css
+CDN_LEAFLET_CSS=https://unpkg.com/leaflet@1.9.3/dist/leaflet.css
+CDN_LEAFLET_JS=https://unpkg.com/leaflet@1.9.3/dist/leaflet.js
+CDN_LEAFLET_GEOCODER=https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js
+CDN_SUPABASE_JS=https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js
+CDN_FONTAWESOME_CSS=https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css
+
+# SMS Service Configuration
+SMS_API_ENDPOINT=https://api.sms-service.com/send
+SMS_API_KEY=your-sms-api-key
+```
+
+### Service Account Files
+
+Place any service account JSON files in the `config/` directory. These files are automatically ignored by Git.
+
+```
+config/service-account.json
+```
+
+### Configuration Manager
+
+The application uses a centralized configuration manager (`src/config/config-manager.js`) to access all environment variables securely. To access configuration values:
+
+```javascript
+// Server-side (Node.js)
+const configManager = require('./src/config/config-manager');
+const config = configManager.getConfig();
+const supabaseUrl = config.get('supabase.url');
+
+// Client-side (browser)
+window.AppConfig.get('cdnResources.bootstrap.css');
+```
+
+### Running in Development Mode
+
+For local development without setting up all environment variables, use:
+
+```bash
+npm run dev
+```
+
+This will use sensible defaults while still allowing you to override specific values in your `.env` file.
 - **Authentication**: JWT, Supabase Auth
 - **Storage**: IndexedDB for offline data
 - **Maps**: Leaflet.js

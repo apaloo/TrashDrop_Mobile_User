@@ -2,13 +2,20 @@ const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 
 // Import centralized configuration
-const config = require('./index');
+const configManager = require('../config/config-manager');
+
+// Initialize config if not already initialized
+if (!configManager.initialized) {
+  configManager.initialize().catch(err => {
+    console.error('Failed to initialize configuration:', err);
+  });
+}
 
 // Get configuration values from centralized config
-const isDevelopment = config.server.isDevelopment;
-const supabaseUrl = config.supabase.url;
-const supabaseKey = config.supabase.anonKey;
-const jwtSecret = config.security.jwtSecret;
+const isDevelopment = configManager.get('app.env') === 'development';
+const supabaseUrl = configManager.get('supabase.url');
+const supabaseKey = configManager.get('supabase.anonKey');
+const jwtSecret = configManager.get('security.jwtSecret');
 
 /**
  * Performance monitoring initialization
