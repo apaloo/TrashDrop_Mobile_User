@@ -105,90 +105,9 @@
         document.addEventListener('DOMContentLoaded', loadStyles);
     </script>
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100" data-page="login" data-no-navbar="true">
     <!-- Skip to content link for accessibility -->
     <a href="#main-content" class="skip-to-content">Skip to main content</a>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
-        <div class="container">
-            <a class="navbar-brand" href="/" id="navbarBrand">
-                <img id="navLogo" src="/images/logo.svg" alt="TrashDrop Logo" width="30" height="30" class="d-inline-block align-top me-2">
-                TrashDrop
-            </a>
-            <script>
-                // Dynamically update navbar brand and logo from AppConfig
-                document.addEventListener('DOMContentLoaded', async () => {
-                    try {
-                        if (window.AppConfig && window.AppConfig.initialized) {
-                            const appName = window.AppConfig.get('app.name') || 'TrashDrop';
-                            const logoPath = window.AppConfig.get('branding.logo') || '/images/logo.svg';
-                            
-                            // Update brand text
-                            const brandElement = document.getElementById('navbarBrand');
-                            if (brandElement) {
-                                const textNode = Array.from(brandElement.childNodes)
-                                    .find(node => node.nodeType === 3);
-                                if (textNode) {
-                                    textNode.nodeValue = appName;
-                                } else {
-                                    brandElement.appendChild(document.createTextNode(appName));
-                                }
-                            }
-                            
-                            // Update logo image
-                            const logoElement = document.getElementById('navLogo');
-                            if (logoElement) {
-                                logoElement.src = logoPath;
-                                logoElement.alt = appName + ' Logo';
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error updating navbar brand:', error);
-                    }
-                });
-            </script>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav" id="main-nav-links">
-                </ul>
-            </div>
-            <script>
-                // Dynamically update navigation links from AppConfig
-                document.addEventListener('DOMContentLoaded', async () => {
-                    try {
-                        if (!window.AppConfig || !window.AppConfig.initialized) {
-                            await window.AppConfig.initialize();
-                        }
-                        
-                        const navLinks = window.AppConfig.get('navigation.main') || [];
-                        if (navLinks.length > 0) {
-                            const navContainer = document.getElementById('main-nav-links');
-                            if (navContainer) {
-                                // Build new nav items from config
-                                let navContent = '';
-                                navLinks.forEach(link => {
-                                    const isActive = window.location.pathname.endsWith('/login.html') && 
-                                                   link.url.endsWith('/login.html');
-                                    navContent += `
-                                        <li class="nav-item">
-                                            <a class="nav-link${isActive ? ' active' : ''}" 
-                                               href="${link.url}"${isActive ? ' aria-current="page"' : ''}>
-                                               ${link.label}
-                                            </a>
-                                        </li>
-                                    `;
-                                });
-                                navContainer.innerHTML = navContent;
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error updating navigation links:', error);
-                    }
-                });
-            </script>
-        </div>
-    </nav>
 
     <main id="main-content" class="container py-5" role="main">
         <div class="row justify-content-center">
@@ -367,6 +286,23 @@
     <script src="/js/remove-emergency-logout.js"></script>
     <script src="/js/navigation-fix.js"></script>
     <script src="/js/mobile-logout-fix.js"></script>
+    <style>
+        /* Force hide any navbars on login page */
+        body[data-page="login"] nav.navbar,
+        body[data-no-navbar="true"] nav.navbar,
+        .mobile-bottom-nav,
+        .navbar-dark.bg-success {
+            display: none !important;
+            visibility: hidden !important;
+        }
+        
+        /* Reset body padding added by navbar scripts */
+        body[data-page="login"],
+        body[data-no-navbar="true"] {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+    </style>
     <script>
         // Password visibility toggle
         document.addEventListener('DOMContentLoaded', function() {

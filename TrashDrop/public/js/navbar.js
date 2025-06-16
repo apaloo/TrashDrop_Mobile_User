@@ -570,14 +570,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset the initialization flag
     window.trashDropNavbarInitialized = false;
     
-    // Check if this is a home page - if so, skip navbar creation
+    // Check if this is a home page or login page - if so, skip navbar creation
     const path = window.location.pathname;
     const isHomePage = path === '/' || path === '/index.html' || path.endsWith('/views/index.html');
+    const isLoginPage = path.includes('/login') || document.body.getAttribute('data-page') === 'login' || document.body.hasAttribute('data-no-navbar');
     
     console.log('Checking path for navbar creation:', path);
     
     if (isHomePage) {
         console.log('Home page detected - skipping navbar creation as requested');
+        return;
+    }
+    
+    if (isLoginPage) {
+        console.log('Login page detected - skipping navbar creation as requested');
         return;
     }
     

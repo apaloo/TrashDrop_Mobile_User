@@ -227,6 +227,14 @@ window.MobileNavigation = class MobileNavigation {
 
 // Initialize the navigation when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    // Skip navigation bar on login page or if explicitly marked as no-navbar
+    if (document.body.hasAttribute('data-no-navbar') || 
+        document.body.getAttribute('data-page') === 'login' ||
+        window.location.pathname.includes('/login')) {
+        console.log('Login page detected, skipping mobile navigation');
+        return;
+    }
+    
     // Only initialize once
     if (!window.mobileNavInitialized) {
         const mobileNav = new MobileNavigation();
